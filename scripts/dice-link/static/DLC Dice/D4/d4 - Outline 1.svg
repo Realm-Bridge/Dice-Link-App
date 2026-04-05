@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW 2023 -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="233.102mm" height="218.793mm" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 232.8912 218.5944"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil0 {fill:#5d9eca;fill-rule:nonzero}
+    .numStyle {fill:#5d9eca; font-family:Arial, sans-serif; font-weight:bold; font-size:50px;}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g>
+   <!-- YOUR ORIGINAL PYRAMID CODE -->
+   <path class="fil0" d="M136.2114 208.889l89.0809 -76.2776 -101.0191 -120.0956 11.9383 196.3732zm-13.114 -207.5805l108.9153 129.4828c0.0405,0.0423 0.08,0.0858 0.1185,0.1308 1.136,1.3276 0.9806,3.3249 -0.347,4.4609l-96.2216 82.392c-0.5161,0.468 -1.1892,0.7697 -1.9388,0.8138 -0.7088,0.0417 -1.3769,-0.1534 -1.9272,-0.5164l-8.5992 -216.7638zm6.818 208.3396l-12.0727 -198.5865 12.0727 198.5865zm0 0l-12.0727 -198.5865 -109.8095 125.9319 121.8822 72.6546zm1.7818 8.4247l-130.1591 -77.5885c-0.1597,-0.0961 -0.3133,-0.2074 -0.4585,-0.3345 -1.3139,-1.1497 -1.4471,-3.1469 -0.2974,-4.4609l117.2685 -134.4863c0.5405,-0.6833 1.359,-1.1419 2.2971,-1.197 1.1192,-0.0658 2.1369,0.4583 2.7498,1.3031l8.5996 216.764z"/>
+   
+   <!-- NEW EDITABLE NUMBERS -->
+   <!-- Left Number -->
+   <text x="95" y="75" class="numStyle" text-anchor="middle" transform="rotate(18, 95, 75)">1</text>
+   
+   <!-- Right Number -->
+   <text x="148" y="75" class="numStyle" text-anchor="middle" transform="rotate(-18, 148, 75)">1</text>
+  </g>
+ </g>
+</svg>
