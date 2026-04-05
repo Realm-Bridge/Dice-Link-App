@@ -308,8 +308,7 @@ function renderDiceDisplay(dice) {
         dieElement.className = 'dice-item';
         const iconPath = getDiceIconPath(die.type);
         dieElement.innerHTML = `
-            <img src="${iconPath}" alt="${die.type}" class="dice-icon">
-            <span class="dice-type">${die.type}</span>
+            <img src="${iconPath}" alt="${die.type}" class="dice-icon" title="${die.type}">
             <span class="dice-count">${die.count > 1 ? `x${die.count}` : ''}</span>
         `;
         elements.diceDisplay.appendChild(dieElement);
@@ -439,8 +438,7 @@ function renderDiceInputs() {
             const inputGroup = document.createElement('div');
             inputGroup.className = 'dice-input-group';
             inputGroup.innerHTML = `
-                <img src="${iconPath}" alt="${die.type}" class="dice-input-icon" data-index="${inputIndex}">
-                <span class="dice-input-label">${die.type}</span>
+                <img src="${iconPath}" alt="${die.type}" class="dice-input-icon" data-index="${inputIndex}" title="${die.type}">
                 <input type="number" 
                     class="dice-input-field" 
                     data-index="${inputIndex}"
