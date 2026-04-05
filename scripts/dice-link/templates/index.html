@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="app-title">{{ app_name }}</h1>
+            <div class="header-actions">
+                <button id="settings-btn" class="icon-btn" title="Settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </button>
+                <div id="connection-status" class="connection-status disconnected">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Waiting State -->
+            <div id="waiting-state" class="state-panel">
+                <div class="waiting-content">
+                    <div class="waiting-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                        </svg>
+                    </div>
+                    <h2>Waiting for Foundry VTT</h2>
+                    <p class="waiting-description">
+                        Make sure the Dice Link Companion module is installed and enabled in Foundry VTT.
+                        <br>
+                        DLC will connect to <code>ws://localhost:8765/ws/dlc</code>
+                    </p>
+                    <div class="test-section">
+                        <p class="test-description">Or test the app without Foundry VTT:</p>
+                        <button id="test-roll-btn" class="btn btn-primary">
+                            Send Test Roll
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Roll Request Panel -->
+            <div id="roll-panel" class="state-panel hidden">
+                <!-- Roll Header -->
+                <div class="roll-header">
+                    <h2 id="roll-title" class="roll-title">Attack Roll</h2>
+                    <p id="roll-subtitle" class="roll-subtitle">Melee Weapon Attack</p>
+                </div>
+
+                <!-- Dice Display -->
+                <div class="dice-section">
+                    <h3 class="section-title">Dice Required</h3>
+                    <div id="dice-display" class="dice-display">
+                        <!-- Dice will be rendered here -->
+                    </div>
+                    <p id="roll-formula" class="roll-formula">1d20 + 5</p>
+                </div>
+
+                <!-- Configuration Fields -->
+                <div id="config-section" class="config-section">
+                    <h3 class="section-title">Configuration</h3>
+                    <div id="config-fields" class="config-fields">
+                        <!-- Config fields will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-section">
+                    <h3 class="section-title">Roll Type</h3>
+                    <div id="action-buttons" class="action-buttons">
+                        <!-- Action buttons will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dice Entry Panel -->
+            <div id="dice-entry-panel" class="state-panel hidden">
+                <div class="dice-entry-header">
+                    <h2>Enter Dice Results</h2>
+                    <p id="selected-action" class="selected-action">Normal Roll</p>
+                </div>
+
+                <div id="dice-inputs" class="dice-inputs">
+                    <!-- Dice input fields will be rendered here -->
+                </div>
+
+                <div class="entry-actions">
+                    <button id="submit-results" class="btn btn-primary" disabled>
+                        Submit Results
+                    </button>
+                    <button id="back-to-config" class="btn btn-secondary">
+                        Back
+                    </button>
+                </div>
+            </div>
+
+            <!-- Roll Cancelled/Complete State -->
+            <div id="complete-state" class="state-panel hidden">
+                <div class="complete-content">
+                    <div id="complete-icon" class="complete-icon success">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                    </div>
+                    <h2 id="complete-title">Roll Submitted</h2>
+                    <p id="complete-message">Waiting for next roll...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <button id="cancel-roll" class="btn btn-danger hidden">
+                Cancel Roll
+            </button>
+            <span class="version">v{{ app_version }}</span>
+        </footer>
+    </div>
+
+    <!-- Settings Panel Overlay -->
+    <div id="settings-overlay" class="settings-overlay hidden">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button id="settings-close" class="icon-btn" title="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Connection</h3>
+                    <div class="settings-field">
+                        <label for="settings-host">WebSocket Host</label>
+                        <input type="text" id="settings-host" value="localhost" placeholder="localhost">
+                    </div>
+                    <div class="settings-field">
+                        <label for="settings-port">WebSocket Port</label>
+                        <input type="number" id="settings-port" value="8765" min="1" max="65535">
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Appearance</h3>
+                    <div class="settings-field">
+                        <label for="settings-theme">Theme</label>
+                        <select id="settings-theme">
+                            <option value="dark" selected>Dark</option>
+                            <option value="light" disabled>Light (Coming Soon)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Camera</h3>
+                    <div class="settings-field">
+                        <label for="settings-camera">Camera Device</label>
+                        <select id="settings-camera" disabled>
+                            <option value="">Coming in Phase 3</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="settings-save" class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/client.js"></script>
+</body>
+</html>

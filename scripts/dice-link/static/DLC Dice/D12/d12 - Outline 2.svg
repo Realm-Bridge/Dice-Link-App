@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW 2019 (64-Bit) -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="233mm" height="218mm" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 8500 11000" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil0 {fill:#5d9eca;fill-rule:nonzero}
+    /* Controls the Number Appearance */
+    .numStyle {fill:#5d9eca; font-family:Arial, sans-serif; font-weight:bold; font-size:2400px;}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  
+  <!-- THE D12 DRAWING -->
+  <path class="fil0" d="M536.19 4195.37l1185.5 608.85 2403.31 -1701.04 0 -1511.01 -2208.98 713.95 -1379.83 1889.24zm1093.69 841.56l-1155.06 -593.22 0 2277.24 1373.85 1881.05 704.16 -797.32 -458.24 -1373.83c-0.68,-2.03 -1.31,-4.07 -1.87,-6.11l-462.84 -1387.81zm1432.83 -877.13l-1183.59 837.73 449.75 1348.54c0.72,1.87 1.41,3.76 2.06,5.68l452.46 1356.52 2933.22 0 452.46 -1356.52c0.64,-1.92 1.33,-3.81 2.06,-5.68l449.75 -1348.54 -2370.87 -1678.08 -1187.29 840.35zm1312.29 -2567.61l0 1511.01 2403.3 1701.04 1185.5 -608.85 -1379.83 -1889.24 -2208.97 -713.95zm-172.94 -286.83c14.76,-6.14 30.96,-9.53 47.94,-9.53 16.99,0 33.18,3.39 47.94,9.53l2400.6 775.89 -0.06 0.18c24.28,7.77 46.4,23.04 62.56,45.23l1482.61 2029.96c19.6,22.07 31.52,51.13 31.52,82.97l0 2521.19 -0.57 0c0.02,25.44 -7.72,51.11 -23.84,73.24l-1485.83 2034.37c-15.08,23.23 -37.96,41.61 -66.39,50.74l-2410.13 778.96c-24.02,7.81 -50.62,8.41 -76.5,0.11l-2410.46 -779.07 0.02 -0.07c-15.94,-5.11 -31.11,-13.52 -44.45,-25.33 -8.28,-7.33 -15.35,-15.52 -21.2,-24.31l-1479.48 -2025.67c-19.6,-22.07 -31.52,-51.13 -31.52,-82.97l0 -2521.19 0.5 0c-0.02,-19.09 4.37,-38.47 13.66,-56.64 3.64,-7.12 7.87,-13.73 12.6,-19.82l1483.48 -2031.15c15.08,-23.23 37.96,-41.61 66.39,-50.74l2400.61 -775.89zm3823.12 3138.35l-1155.06 593.22 -462.84 1387.81c-0.57,2.04 -1.19,4.08 -1.87,6.11l-458.24 1373.83 704.16 797.32 1373.85 -1881.05 0 -2277.24zm-1583.94 4296.65l-690.71 -782.08 -3001.06 0 -690.71 782.08 2191.24 708.21 2191.24 -708.21z"/>
+
+  <!-- THE EDITABLE NUMBER (Center Pentagon Face) -->
+  <!-- Change the "12" below to change the number -->
+  <g transform="translate(4250, 6100)">
+    <text x="0" y="0" class="numStyle" text-anchor="middle" dominant-baseline="middle">2</text>
+  </g>
+ </g>
+</svg>

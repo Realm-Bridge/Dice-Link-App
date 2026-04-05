@@ -1,0 +1,166 @@
+"""WebSocket message handling for Dice Link"""
+
+import json
+import time
+from typing import Any
+from .state import app_state
+from config import APP_NAME, APP_VERSION
+
+
+async def broadcast_to_ui(message: dict):
+    """Send a message to all connected browser UIs"""
+    if not app_state.ui_websockets:
+        return
+    
+    message_str = json.dumps(message)
+    disconnected = set()
+    
+    for ws in app_state.ui_websockets:
+        try:
+            await ws.send_text(message_str)
+        except Exception:
+            disconnected.add(ws)
+    
+    # Clean up disconnected sockets
+    for ws in disconnected:
+        app_state.remove_ui_websocket(ws)
+
+
+async def handle_dlc_message(websocket: Any, data: dict) -> dict | None:
+    """
+    Handle incoming message from DLC.
+    Returns a response message or None.
+    """
+    msg_type = data.get("type")
+    
+    if msg_type == "connect":
+        return await handle_connect(websocket, data)
+    elif msg_type == "rollRequest":
+        return await handle_roll_request(data)
+    elif msg_type == "requestVideoFeed":
+        # Phase 3 - not implemented yet
+        return {
+            "type": "error",
+            "code": "NOT_IMPLEMENTED",
+            "message": "Video feed not implemented in Phase 1"
+        }
+    else:
+        return {
+            "type": "error",
+            "code": "INVALID_MESSAGE",
+            "message": f"Unrecognized message type: {msg_type}"
+        }
+
+
+async def handle_connect(websocket: Any, data: dict) -> dict:
+    """Handle connection handshake from DLC"""
+    client_id = data.get("clientId", "unknown")
+    player_name = data.get("playerName", "Unknown Player")
+    player_id = data.get("playerId", "unknown")
+    version = data.get("version", "unknown")
+    
+    await app_state.set_dlc_connected(
+        client_id=client_id,
+        player_name=player_name,
+        player_id=player_id,
+        version=version,
+        websocket=websocket
+    )
+    
+    # Notify browser UI of connection
+    await broadcast_to_ui({
+        "type": "connectionStatus",
+        "connected": True,
+        "playerName": player_name,
+        "playerId": player_id
+    })
+    
+    return {
+        "type": "connected",
+        "version": APP_VERSION,
+        "serverName": APP_NAME
+    }
+
+
+async def handle_roll_request(data: dict) -> None:
+    """Handle incoming roll request from DLC"""
+    await app_state.set_roll_request(data)
+    
+    # Forward roll request to browser UI
+    await broadcast_to_ui({
+        "type": "rollRequest",
+        "data": data
+    })
+    
+    # No direct response to DLC - results come later
+    return None
+
+
+async def handle_dlc_disconnect():
+    """Handle DLC disconnection"""
+    await app_state.set_dlc_disconnected()
+    
+    # Notify browser UI
+    await broadcast_to_ui({
+        "type": "connectionStatus",
+        "connected": False,
+        "playerName": None,
+        "playerId": None
+    })
+
+
+async def send_roll_result(roll_id: str, button_clicked: str, config_changes: dict, results: list) -> bool:
+    """Send roll result back to DLC"""
+    if not app_state.dlc_websocket or not app_state.connection.connected:
+        return False
+    
+    message = {
+        "type": "rollResult",
+        "id": roll_id,
+        "timestamp": int(time.time() * 1000),
+        "buttonClicked": button_clicked,
+        "configChanges": config_changes,
+        "results": results
+    }
+    
+    try:
+        await app_state.dlc_websocket.send(json.dumps(message))
+        await app_state.clear_roll_request()
+        
+        # Notify UI that roll is complete
+        await broadcast_to_ui({
+            "type": "rollComplete",
+            "rollId": roll_id
+        })
+        
+        return True
+    except Exception as e:
+        print(f"Error sending roll result: {e}")
+        return False
+
+
+async def send_roll_cancelled(roll_id: str, reason: str = "User cancelled") -> bool:
+    """Send roll cancelled message to DLC"""
+    if not app_state.dlc_websocket or not app_state.connection.connected:
+        return False
+    
+    message = {
+        "type": "rollCancelled",
+        "id": roll_id,
+        "reason": reason
+    }
+    
+    try:
+        await app_state.dlc_websocket.send(json.dumps(message))
+        await app_state.clear_roll_request()
+        
+        # Notify UI that roll is cancelled
+        await broadcast_to_ui({
+            "type": "rollCancelled",
+            "rollId": roll_id
+        })
+        
+        return True
+    except Exception as e:
+        print(f"Error sending roll cancelled: {e}")
+        return False

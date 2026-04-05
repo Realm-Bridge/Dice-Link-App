@@ -26,11 +26,14 @@
 
 - **Python 3.10+** - Application backend and logic
 - **FastAPI** - WebSocket server and HTTP API
-- **HTML/CSS/JavaScript** - User interface (served by FastAPI)
+- **PyWebView** - Wraps the web UI in a native desktop window (NO browser required)
+- **HTML/CSS/JavaScript** - User interface (served by FastAPI, displayed in PyWebView window)
 - **OpenCV** - Video capture from webcam
 - **NumPy** - Image processing
 - **PyInstaller** - Packaging for distribution (Windows .exe, Mac .app, Linux AppImage)
 - **OpenCV/TensorFlow** - Dice detection and result reading (future phase)
+
+> **IMPORTANT: This is a desktop application, NOT a web app.** The final product must be a standalone executable that users download and install. It must open its own application window (via PyWebView) - users should NOT need to open a browser or navigate to a URL. The web technologies (HTML/CSS/JS) are used purely for building the UI inside the native window.
 
 ---
 
@@ -90,8 +93,9 @@
 **Key Architecture Decisions:**
 - FastAPI runs the WebSocket server AND serves the web UI
 - All camera, state, and detection logic runs in the same Python process (no inter-process communication overhead)
-- Web UI runs in the system's default browser (modern and cross-platform)
+- PyWebView wraps the HTML/CSS/JS UI in a native desktop window - NO browser required by the user
 - Single-threaded async processing via Python's asyncio (handles multiple concurrent connections efficiently)
+- The app launches a single window, starts the FastAPI server internally, and loads the UI - exactly like any other desktop application
 
 ---
 
@@ -345,17 +349,78 @@ The app should display:
 ## Development Phases
 
 ### Phase 1: Core Foundation (MVP)
-- FastAPI WebSocket server on port 8765
-- Web UI served at http://localhost:8765 (HTML/CSS/JavaScript)
-- Connection status display
+
+> **IMPORTANT: Must be built as a desktop application from the start.** Use PyWebView to open a native application window. The app must launch like any other desktop program - double-click to open, shows its own window, no browser required.
+
+- FastAPI WebSocket server on port 8765 (runs internally, user never sees a URL)
+- PyWebView desktop window displaying the HTML/CSS/JavaScript UI
+- Connection status display (waiting for DLC to connect)
 - Receive rollRequest messages from DLC
 - Parse and dynamically render dialog from JSON data:
   - Roll title, subtitle, formula, dice list
   - Configuration fields (render dropdowns, text inputs, etc.)
-  - Action buttons
-- Manual result entry (no camera - user types dice results)
+  - Action buttons (Advantage, Normal, Disadvantage, etc.)
+- Manual result entry (no camera - user types dice results per die)
 - Send rollResult back to DLC
 - Basic error handling
+
+**Test Mode (required for Phase 1):**
+Since DLC will not be connected during initial development, Phase 1 MUST include a "Test Roll" button visible when no DLC is connected. Clicking it simulates receiving the following rollRequest so the UI can be tested without Foundry running:
+
+```json
+{
+  "type": "rollRequest",
+  "id": "test-roll-001",
+  "timestamp": 1699999999999,
+  "player": { "id": "test-player", "name": "Test Player" },
+  "roll": {
+    "title": "Longsword Attack",
+    "subtitle": "Melee Weapon Attack",
+    "formula": "1d20 + 5 + 1d4",
+    "dice": [
+      { "type": "d20", "count": 1 },
+      { "type": "d4", "count": 1 }
+    ]
+  },
+  "config": {
+    "fields": [
+      {
+        "name": "attackMode",
+        "label": "Attack Mode",
+        "type": "select",
+        "options": [
+          { "value": "oneHanded", "label": "One-Handed" },
+          { "value": "twoHanded", "label": "Two-Handed" }
+        ],
+        "selected": "oneHanded"
+      },
+      {
+        "name": "rollMode",
+        "label": "Roll Mode",
+        "type": "select",
+        "options": [
+          { "value": "publicroll", "label": "Public Roll" },
+          { "value": "gmroll", "label": "GM Only" },
+          { "value": "blindroll", "label": "Blind Roll" },
+          { "value": "selfroll", "label": "Self" }
+        ],
+        "selected": "publicroll"
+      },
+      {
+        "name": "situationalBonus",
+        "label": "Situational Bonus",
+        "type": "text",
+        "value": ""
+      }
+    ]
+  },
+  "buttons": [
+    { "id": "advantage", "label": "Advantage" },
+    { "id": "normal", "label": "Normal" },
+    { "id": "disadvantage", "label": "Disadvantage" }
+  ]
+}
+```
 
 ### Phase 2: Enhanced UI
 - Polish dialog rendering (match DLC visual style)
@@ -429,7 +494,7 @@ dice-link/
 
 2. **Python runs everything in one process** - Camera capture, WebSocket handling, detection, and UI serving all share the same Python runtime (fast and simple)
 
-3. **Web UI served locally** - The web interface runs in your default browser but is served by FastAPI running on `localhost:8765`. This gives you a modern, responsive UI without additional packaging overhead.
+3. **Desktop application, not a web app** - This must be a standalone desktop application. PyWebView wraps the HTML/CSS/JS UI in a native window. Users install and launch it like any other program - no browser, no URL, no localhost. FastAPI runs internally and is never exposed to the user.
 
 4. **Results must include exact dice types** - DLC needs to know which die produced which value to correctly fulfill the Foundry roll
 
@@ -445,14 +510,21 @@ dice-link/
 
 When starting development in a new chat, begin with Phase 1:
 
-"Create a Python + FastAPI application called 'Dice Link' that:
-1. Runs a WebSocket server on port 8765
-2. Serves a web UI on http://localhost:8765
-3. Accepts WebSocket connections from DLC clients
-4. Displays connection status in the UI
-5. Receives 'rollRequest' messages and displays the configuration and dice requirements
-6. Allows manual entry of dice results
-7. Sends 'rollResult' messages back when the user submits
-8. Is packaged for distribution on Windows, Mac, and Linux
+"Create a Python desktop application called 'Dice Link' that:
+1. Opens as a native desktop window using PyWebView (NOT a browser or localhost URL)
+2. Runs a FastAPI WebSocket server on port 8765 internally
+3. Displays the HTML/CSS/JavaScript UI inside the PyWebView window
+4. Accepts WebSocket connections from DLC clients
+5. Displays connection status in the UI
+6. Receives 'rollRequest' messages and dynamically renders:
+   - Roll title, subtitle and formula
+   - Configuration fields (select dropdowns, text inputs) from config.fields array
+   - Action buttons (Advantage, Normal, Disadvantage, etc.) from buttons array
+7. Includes a 'Test Roll' button (visible when no DLC connected) that injects a mock rollRequest for UI testing
+8. Allows manual entry of dice results per die type
+9. Sends 'rollResult' messages back when the user submits
+10. Is packaged as a standalone executable using PyInstaller for Windows, Mac, and Linux
+
+IMPORTANT: This must behave as a desktop application from day one. Do NOT build it as a web app that requires opening a browser. Use PyWebView to wrap the UI in a native window.
 
 Use the message protocol defined in this document and prioritize clean separation between backend (Python/FastAPI) and frontend (HTML/CSS/JavaScript)."

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW 2019 (64-Bit) -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="233mm" height="218mm" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 8500 11000" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    /* Blue Fill Only - No Stroke defined here */
+    .fil0 {fill:#5d9eca}
+    /* Editable Number Style */
+    .numStyle {fill:#5d9eca; font-family:Arial, sans-serif; font-weight:bold; font-size:2000px;}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  
+  <!-- THE D20 DRAWING (Stroke removed from class) -->
+  <path class="fil0" d="M644.17 3531.87l1092.5 469.19 -1092.5 2958.66 0 -3427.85zm46.62 4022.26l1227.55 -3324.39 2101.64 3740.87 -3329.19 -416.49zm425.2 305.03l3009.52 376.5 -0.57 1360.72 -3008.94 -1737.22zm-666.21 -96.65c4.51,3.01 9.24,5.75 14.15,8.17l3722.93 2149.44 62.5 36.08c1262.28,-728.69 2524.51,-1457.48 3786.73,-2186.27 4.9,-2.42 9.6,-5.13 14.09,-8.13l55.65 -32.13 0 -4460.18 -53.67 -30.99c-5.72,-3.97 -11.76,-7.45 -18.03,-10.41 -1237.99,-714.83 -2476,-1429.61 -3714.07,-2144.32 -4.35,-2.9 -8.86,-5.49 -13.49,-7.79l-55.75 -32.18c-1262.68,729 -2525.37,1457.98 -3788.04,2187.02 -4.14,2.09 -8.17,4.42 -12.06,6.96l-56.55 32.65 0 4459.96 55.61 32.11zm1410.24 -3980.32l-1062.83 -456.44 2883.24 -1664.64 -1820.41 2121.09zm306.38 25.87l2084.61 -2428.93 2082.85 2428.93 -4167.47 0zm-58.17 250l4283.67 0 -2141.83 3812.41 -1068.73 -1902.31 -1073.1 -1910.1zm2371.94 3912.51l2101.63 -3740.83 1227.4 3323.7 -3329.03 417.14zm2159.91 -4188.46l-1819.68 -2122.03 2882.88 1664.43 -1063.2 457.6zm-2265.56 4453.54l3009.2 -377.06 -3009.77 1737.7 0.57 -1360.63zm3481.29 -1276.59l-1092.39 -2958.08 1092.39 -470.17 0 3428.25z"/>
+
+  <!-- THE EDITABLE NUMBER (Center Triangle Face) -->
+  <g transform="translate(4250, 5200)">
+    <text x="0" y="0" class="numStyle" text-anchor="middle" dominant-baseline="middle">18</text>
+  </g>
+ </g>
+</svg>
