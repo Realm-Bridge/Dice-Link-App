@@ -305,7 +305,6 @@ body {
     width: 48px;
     height: 48px;
     margin-bottom: 8px;
-    filter: brightness(0) invert(1);
 }
 
 /* Fallback dice badge if SVG fails to load */
@@ -456,12 +455,11 @@ body {
 .dice-input-icon {
     width: 48px;
     height: 48px;
-    filter: brightness(0) invert(1);
     transition: all var(--transition);
 }
 
 .dice-input-icon.has-value {
-    filter: brightness(0) invert(1) drop-shadow(0 0 4px var(--success));
+    filter: drop-shadow(0 0 4px var(--success));
 }
 
 .dice-input-badge {
