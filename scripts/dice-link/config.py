@@ -2,7 +2,7 @@
 
 # WebSocket settings
 WEBSOCKET_HOST = "localhost"
-WEBSOCKET_PORT = 8765
+WEBSOCKET_PORT = 47293
 
 # Application settings
 APP_NAME = "Dice Link"
