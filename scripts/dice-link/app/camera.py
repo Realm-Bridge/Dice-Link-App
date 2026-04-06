@@ -25,21 +25,36 @@ class CameraManager:
         Return list of available camera devices.
         Returns: List of dicts with {index, name}
         """
+        print(f"[Camera] Enumerating cameras...")
         cameras = []
         
-        # Try to detect cameras (check indices 0-4)
-        for i in range(5):
+        # Try to detect cameras (check indices 0-5)
+        for i in range(6):
+            print(f"[Camera] Testing camera index {i}...")
             cap = cv2.VideoCapture(i)
+            
+            # Set buffer size to 1 and disable backend warnings
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            
             if cap.isOpened():
-                # Try to get camera name (platform-dependent)
-                # OpenCV doesn't provide camera names directly on all platforms
-                # so we use a generic name with the index
-                cameras.append({
-                    "index": i,
-                    "name": f"Camera {i}"
-                })
+                print(f"[Camera] Camera {i} opened successfully!")
+                
+                # Try to read one frame to verify it works
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    print(f"[Camera] Camera {i} is readable (frame size: {frame.shape})")
+                    cameras.append({
+                        "index": i,
+                        "name": f"Camera {i}"
+                    })
+                else:
+                    print(f"[Camera] Camera {i} opened but cannot read frames")
+                
                 cap.release()
+            else:
+                print(f"[Camera] Camera {i} cannot be opened")
         
+        print(f"[Camera] Found {len(cameras)} usable cameras: {cameras}")
         return cameras
     
     def select_camera(self, index: int) -> bool:
