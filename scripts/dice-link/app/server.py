@@ -14,7 +14,9 @@ from .websocket_handler import (
     handle_dlc_disconnect,
     broadcast_to_ui,
     send_roll_result,
-    send_roll_cancelled
+    send_roll_cancelled,
+    send_button_select,
+    send_dice_result
 )
 from .camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
@@ -197,8 +199,35 @@ async def handle_ui_message(message: dict):
     """Handle messages from browser UI"""
     msg_type = message.get("type")
     
-    if msg_type == "submitResult":
-        # User submitted dice results
+    if msg_type == "buttonSelect":
+        # Phase A: User selected a button (Advantage/Normal/Disadvantage)
+        roll_id = message.get("rollId")
+        button = message.get("button")
+        config_changes = message.get("configChanges", {})
+        
+        success = await send_button_select(roll_id, button, config_changes)
+        
+        await broadcast_to_ui({
+            "type": "buttonSelectAck",
+            "success": success,
+            "rollId": roll_id
+        })
+    
+    elif msg_type == "submitDiceResult":
+        # Phase B: User submitted dice results after diceRequest
+        original_roll_id = message.get("originalRollId")
+        results = message.get("results", [])
+        
+        success = await send_dice_result(original_roll_id, results)
+        
+        await broadcast_to_ui({
+            "type": "submitResultAck",
+            "success": success,
+            "rollId": original_roll_id
+        })
+    
+    elif msg_type == "submitResult":
+        # Legacy: User submitted dice results (single-phase, kept for compatibility)
         roll_id = message.get("rollId")
         button_clicked = message.get("buttonClicked")
         config_changes = message.get("configChanges", {})

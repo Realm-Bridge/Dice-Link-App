@@ -73,7 +73,9 @@ const state = {
     reconnectTimeout: null,
     // Camera state (Phase 3)
     cameraList: [],
-    cameraStreamActive: false
+    cameraStreamActive: false,
+    // Two-phase communication state
+    pendingDiceRequest: null
 };
 
 // DOM Elements
@@ -230,6 +232,15 @@ function handleMessage(message) {
             break;
         case 'rollRequest':
             handleRollRequest(message.data);
+            break;
+        case 'diceRequest':
+            // Phase B: DLC tells us what dice to roll
+            handleDiceRequest(message);
+            break;
+        case 'buttonSelectAck':
+            if (!message.success) {
+                alert('Failed to send button selection. Please try again.');
+            }
             break;
         case 'rollComplete':
             showCompleteState('success', 'Roll Submitted', 'Results sent to Foundry VTT');
@@ -451,7 +462,7 @@ function renderActionButtons(buttons) {
 }
 
 /**
- * Select an action button and proceed to dice entry
+ * Select an action button and send buttonSelect to DLC (Phase A)
  */
 function selectActionButton(buttonId, buttonLabel) {
     state.selectedButton = buttonId;
@@ -461,10 +472,117 @@ function selectActionButton(buttonId, buttonLabel) {
         btn.classList.toggle('selected', btn.dataset.buttonId === buttonId);
     });
     
-    // Show dice entry panel
+    // Collect config changes
+    const configChanges = {};
+    elements.configFields.querySelectorAll('select, input').forEach(input => {
+        const fieldName = input.dataset.field;
+        if (fieldName) {
+            configChanges[fieldName] = input.value;
+        }
+    });
+    
+    // Phase A: Send buttonSelect to DLC - wait for diceRequest response
+    sendMessage({
+        type: 'buttonSelect',
+        rollId: state.currentRoll?.id,
+        button: buttonId,
+        configChanges: configChanges
+    });
+    
+    // Show a waiting state (dice entry will show when diceRequest arrives)
     elements.selectedAction.textContent = buttonLabel;
-    renderDiceInputs();
     showPanel('dice-entry');
+    
+    // Show waiting message in dice inputs area
+    elements.diceInputs.innerHTML = '<p class="text-muted">Waiting for dice info from Foundry...</p>';
+}
+
+/**
+ * Handle diceRequest from DLC (Phase B)
+ */
+function handleDiceRequest(message) {
+    // Store the dice info from DLC
+    state.pendingDiceRequest = {
+        originalRollId: message.originalRollId,
+        rollType: message.rollType,
+        formula: message.formula,
+        dice: message.dice
+    };
+    
+    // Update the selected action display
+    if (message.rollType) {
+        elements.selectedAction.textContent = message.rollType.charAt(0).toUpperCase() + message.rollType.slice(1);
+    }
+    
+    // Render dice inputs based on what DLC told us
+    renderDiceInputsFromRequest(message.dice, message.formula);
+    
+    // Make sure we're on the dice entry panel
+    showPanel('dice-entry');
+    
+    // Start camera if available
+    startCameraStream();
+}
+
+/**
+ * Render dice inputs from diceRequest (Phase B)
+ */
+function renderDiceInputsFromRequest(dice, formula) {
+    elements.diceInputs.innerHTML = '';
+    state.diceResults = [];
+    
+    if (!dice || dice.length === 0) {
+        elements.diceInputs.innerHTML = '<p class="text-muted">No dice specified</p>';
+        return;
+    }
+    
+    // Update formula display if available
+    if (formula && elements.rollFormula) {
+        elements.rollFormula.textContent = formula;
+    }
+    
+    dice.forEach((die) => {
+        for (let i = 0; i < die.count; i++) {
+            const inputIndex = state.diceResults.length;
+            state.diceResults.push({ type: die.type, value: null });
+            
+            const range = DICE_RANGES[die.type] || { min: 1, max: 20 };
+            const iconPath = getDiceIconPath(die.type);
+            
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'dice-input-group';
+            inputGroup.innerHTML = `
+                <img src="${iconPath}" alt="${die.type}" class="dice-input-icon" data-index="${inputIndex}" title="${die.type}">
+                <input type="number" 
+                    class="dice-input-field" 
+                    data-index="${inputIndex}"
+                    data-type="${die.type}"
+                    min="${range.min}" 
+                    max="${range.max}"
+                    placeholder="${range.min}-${range.max}">
+                <span class="dice-input-range">(${range.min}-${range.max})</span>
+            `;
+            
+            const input = inputGroup.querySelector('input');
+            input.addEventListener('input', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const value = e.target.value ? parseInt(e.target.value) : null;
+                state.diceResults[index].value = value;
+                
+                // Update icon to show result
+                updateDiceIcon(inputGroup, die.type, value, range);
+            });
+            
+            input.addEventListener('change', (e) => {
+                validateDiceInput(e.target);
+            });
+            
+            elements.diceInputs.appendChild(inputGroup);
+        }
+    });
+    
+    // Also update camera dice icons
+    displayCameraDiceIcons(dice);
 }
 
 /**
@@ -575,19 +693,6 @@ function updateSubmitButton() {
 function submitResults() {
     if (!state.currentRoll || !state.selectedButton) return;
     
-    // Build config changes (compare with original values)
-    const configChanges = {};
-    const originalFields = state.currentRoll.config?.fields || [];
-    
-    originalFields.forEach(field => {
-        const originalValue = field.selected || field.value || '';
-        const currentValue = state.configValues[field.name] || '';
-        
-        if (originalValue !== currentValue) {
-            configChanges[field.name] = currentValue;
-        }
-    });
-    
     // Build results array
     const results = state.diceResults.map(r => ({
         type: r.type,
@@ -603,14 +708,38 @@ function submitResults() {
         return;
     }
     
-    // Send to server (for real Foundry VTT rolls)
-    sendMessage({
-        type: 'submitResult',
-        rollId: state.currentRoll.id,
-        buttonClicked: state.selectedButton,
-        configChanges: configChanges,
-        results: results
-    });
+    // Check if we have a pending dice request (two-phase flow)
+    if (state.pendingDiceRequest) {
+        // Phase B response: Send diceResult
+        sendMessage({
+            type: 'submitDiceResult',
+            originalRollId: state.pendingDiceRequest.originalRollId,
+            results: results
+        });
+        state.pendingDiceRequest = null;
+    } else {
+        // Legacy single-phase flow (fallback)
+        // Build config changes (compare with original values)
+        const configChanges = {};
+        const originalFields = state.currentRoll.config?.fields || [];
+        
+        originalFields.forEach(field => {
+            const originalValue = field.selected || field.value || '';
+            const currentValue = state.configValues[field.name] || '';
+            
+            if (originalValue !== currentValue) {
+                configChanges[field.name] = currentValue;
+            }
+        });
+        
+        sendMessage({
+            type: 'submitResult',
+            rollId: state.currentRoll.id,
+            buttonClicked: state.selectedButton,
+            configChanges: configChanges,
+            results: results
+        });
+    }
 }
 
 /**
