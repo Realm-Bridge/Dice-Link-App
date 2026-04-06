@@ -37,6 +37,9 @@ async def handle_dlc_message(websocket: Any, data: dict) -> dict | None:
         return await handle_connect(websocket, data)
     elif msg_type == "rollRequest":
         return await handle_roll_request(data)
+    elif msg_type == "diceRequest":
+        # Phase B: DLC sends actual dice needed after button selection
+        return await handle_dice_request(data)
     elif msg_type == "requestVideoFeed":
         # Phase 3 - Video feed request from DLC
         enabled = data.get("enabled", False)
@@ -103,6 +106,27 @@ async def handle_roll_request(data: dict) -> None:
     return None
 
 
+async def handle_dice_request(data: dict) -> None:
+    """Handle dice request from DLC (Phase B of two-phase communication)"""
+    # DLC is telling us what dice to roll after button selection
+    original_roll_id = data.get("originalRollId")
+    roll_type = data.get("rollType")
+    formula = data.get("formula")
+    dice = data.get("dice", [])
+    
+    # Forward to browser UI to show dice entry
+    await broadcast_to_ui({
+        "type": "diceRequest",
+        "originalRollId": original_roll_id,
+        "rollType": roll_type,
+        "formula": formula,
+        "dice": dice
+    })
+    
+    # No direct response to DLC
+    return None
+
+
 async def handle_dlc_disconnect():
     """Handle DLC disconnection"""
     await app_state.set_dlc_disconnected()
@@ -116,8 +140,55 @@ async def handle_dlc_disconnect():
     })
 
 
+async def send_button_select(roll_id: str, button: str, config_changes: dict) -> bool:
+    """Send button selection to DLC (Phase A of two-phase communication)"""
+    if not app_state.dlc_websocket or not app_state.connection.connected:
+        return False
+    
+    message = {
+        "type": "buttonSelect",
+        "id": roll_id,
+        "button": button,
+        "configChanges": config_changes
+    }
+    
+    try:
+        await app_state.dlc_websocket.send_text(json.dumps(message))
+        return True
+    except Exception as e:
+        print(f"Error sending button select: {e}")
+        return False
+
+
+async def send_dice_result(original_roll_id: str, results: list) -> bool:
+    """Send dice results to DLC (Phase B response)"""
+    if not app_state.dlc_websocket or not app_state.connection.connected:
+        return False
+    
+    message = {
+        "type": "diceResult",
+        "originalRollId": original_roll_id,
+        "results": results
+    }
+    
+    try:
+        await app_state.dlc_websocket.send_text(json.dumps(message))
+        await app_state.clear_roll_request()
+        
+        # Notify UI that roll is complete
+        await broadcast_to_ui({
+            "type": "rollComplete",
+            "rollId": original_roll_id
+        })
+        
+        return True
+    except Exception as e:
+        print(f"Error sending dice result: {e}")
+        return False
+
+
 async def send_roll_result(roll_id: str, button_clicked: str, config_changes: dict, results: list) -> bool:
-    """Send roll result back to DLC"""
+    """Send roll result back to DLC (legacy single-phase - kept for compatibility)"""
     if not app_state.dlc_websocket or not app_state.connection.connected:
         return False
     
