@@ -155,34 +155,67 @@ class CameraManager:
         """
         print(f"[Camera] Capturing single frame from camera {self.camera_index}")
         
-        cap = cv2.VideoCapture(self.camera_index)
-        if not cap.isOpened():
-            print(f"[Camera] Failed to open camera {self.camera_index} for preview")
-            return None
-        
         try:
+            cap = cv2.VideoCapture(self.camera_index)
+            print(f"[Camera] VideoCapture created for index {self.camera_index}")
+            
+            if not cap.isOpened():
+                print(f"[Camera] ERROR: Failed to open camera {self.camera_index}")
+                cap.release()
+                return None
+            
+            print(f"[Camera] Camera opened successfully")
+            
             # Set properties
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer to get fresh frames
             
             # Capture a few frames to let camera adjust
-            for _ in range(5):
-                cap.read()
+            print(f"[Camera] Warming up camera...")
+            for i in range(5):
+                ret, frame = cap.read()
+                print(f"[Camera] Warmup {i+1}/5: ret={ret}, frame={'valid' if frame is not None else 'None'}")
             
+            print(f"[Camera] Reading final frame...")
             ret, frame = cap.read()
+            
             if not ret:
-                print(f"[Camera] Failed to read frame from camera {self.camera_index}")
+                print(f"[Camera] ERROR: read() returned False")
+                cap.release()
                 return None
             
-            print(f"[Camera] Successfully captured frame from camera {self.camera_index}")
+            if frame is None:
+                print(f"[Camera] ERROR: frame is None")
+                cap.release()
+                return None
+            
+            print(f"[Camera] Frame shape: {frame.shape}")
             
             # Encode as JPEG
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            
+            if not success:
+                print(f"[Camera] ERROR: imencode failed")
+                cap.release()
+                return None
+            
+            print(f"[Camera] Encoded successfully, buffer size: {len(buffer)}")
+            
             b64_frame = base64.b64encode(buffer.tobytes()).decode('utf-8')
-            return f"data:image/jpeg;base64,{b64_frame}"
-        
-        finally:
+            result = f"data:image/jpeg;base64,{b64_frame}"
+            
+            print(f"[Camera] Data URI created, length: {len(result)}")
             cap.release()
+            print(f"[Camera] Camera released")
+            
+            return result
+        
+        except Exception as e:
+            print(f"[Camera] EXCEPTION in capture_single_frame: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
 
 
 # Global camera manager instance
