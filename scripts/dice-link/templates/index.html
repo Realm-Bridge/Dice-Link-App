@@ -91,6 +91,20 @@
                     <p id="selected-action" class="selected-action">Normal Roll</p>
                 </div>
 
+                <!-- Camera Feed Area -->
+                <div id="camera-feed-container" class="camera-feed-container">
+                    <div class="camera-feed-header">
+                        <span class="camera-feed-title">Roll these dice:</span>
+                        <span id="camera-dice-icons" class="camera-dice-icons">
+                            <!-- Dice icons will be added here -->
+                        </span>
+                    </div>
+                    <div id="camera-feed" class="camera-feed">
+                        <canvas id="camera-canvas" width="640" height="480"></canvas>
+                        <p class="camera-feed-placeholder">Camera starting...</p>
+                    </div>
+                </div>
+
                 <div id="dice-inputs" class="dice-inputs">
                     <!-- Dice input fields will be rendered here -->
                 </div>
@@ -166,9 +180,17 @@
                     <h3 class="settings-section-title">Camera</h3>
                     <div class="settings-field">
                         <label for="settings-camera">Camera Device</label>
-                        <select id="settings-camera" disabled>
-                            <option value="">Coming in Phase 3</option>
+                        <select id="settings-camera">
+                            <option value="">Loading cameras...</option>
                         </select>
+                    </div>
+                    <div class="camera-preview-container">
+                        <div id="camera-preview" class="camera-preview">
+                            <p class="camera-preview-placeholder">Select a camera to see preview</p>
+                        </div>
+                        <button id="refresh-camera-preview" class="btn btn-secondary btn-small">
+                            Refresh Preview
+                        </button>
                     </div>
                 </div>
             </div>

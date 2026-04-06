@@ -38,11 +38,15 @@ async def handle_dlc_message(websocket: Any, data: dict) -> dict | None:
     elif msg_type == "rollRequest":
         return await handle_roll_request(data)
     elif msg_type == "requestVideoFeed":
-        # Phase 3 - not implemented yet
+        # Phase 3 - Video feed request from DLC
+        enabled = data.get("enabled", False)
+        fps = data.get("fps", 15)
+        
         return {
-            "type": "error",
-            "code": "NOT_IMPLEMENTED",
-            "message": "Video feed not implemented in Phase 1"
+            "type": "videoFeedStatus",
+            "enabled": enabled,
+            "fps": fps,
+            "message": "Video streaming to DLC available via WebSocket"
         }
     else:
         return {

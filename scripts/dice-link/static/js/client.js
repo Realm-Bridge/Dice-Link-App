@@ -2,6 +2,7 @@
  * Dice Link - Browser WebSocket Client
  * Handles communication with the FastAPI backend and UI updates
  * Phase 2: Enhanced UI with SVG dice icons and settings panel
+ * Phase 3: Camera integration for dice roll capture
  */
 
 // Dice value ranges for validation
@@ -26,22 +27,31 @@ function getDiceIconPath(dieType, value = null) {
     // Folder name is uppercase (D4, D6, etc.)
     const folder = type.toUpperCase();
     
+    let filename;
     if (value !== null && value !== undefined) {
         // Return numbered icon if it exists (d100 only has blank)
         if (type === 'd100') {
-            return `/static/DLC Dice/${folder}/${type}-blank.svg`;
+            filename = `${type}-blank.svg`;
+        } else {
+            // Numbered files have format "d20 - Outline 1.svg"
+            filename = `${type} - Outline ${value}.svg`;
         }
-        // Numbered files have format "d20 - Outline 1.svg"
-        return `/static/DLC Dice/${folder}/${type} - Outline ${value}.svg`;
+    } else {
+        filename = `${type}-blank.svg`;
     }
-    return `/static/DLC Dice/${folder}/${type}-blank.svg`;
+    
+    // URL encode the filename to handle spaces
+    const encodedFilename = encodeURIComponent(filename);
+    const encodedFolder = encodeURIComponent('DLC Dice');
+    return `/static/${encodedFolder}/${folder}/${encodedFilename}`;
 }
 
 // Default settings
 const DEFAULT_SETTINGS = {
     host: 'localhost',
     port: 8765,
-    theme: 'dark'
+    theme: 'dark',
+    cameraIndex: 0
 };
 
 // Connection constants
@@ -60,7 +70,10 @@ const state = {
     // Connection state
     reconnectAttempts: 0,
     reconnecting: false,
-    reconnectTimeout: null
+    reconnectTimeout: null,
+    // Camera state (Phase 3)
+    cameraList: [],
+    cameraStreamActive: false
 };
 
 // DOM Elements
@@ -85,7 +98,15 @@ const elements = {
     cancelRoll: document.getElementById('cancel-roll'),
     completeIcon: document.getElementById('complete-icon'),
     completeTitle: document.getElementById('complete-title'),
-    completeMessage: document.getElementById('complete-message')
+    completeMessage: document.getElementById('complete-message'),
+    // Camera elements (Phase 3)
+    cameraFeedContainer: document.getElementById('camera-feed-container'),
+    cameraFeed: document.getElementById('camera-feed'),
+    cameraCanvas: document.getElementById('camera-canvas'),
+    cameraDiceIcons: document.getElementById('camera-dice-icons'),
+    settingsCamera: document.getElementById('settings-camera'),
+    cameraPreview: document.getElementById('camera-preview'),
+    refreshCameraPreview: document.getElementById('refresh-camera-preview')
 };
 
 /**
@@ -225,6 +246,14 @@ function handleMessage(message) {
             if (!message.success) {
                 alert('Failed to cancel roll.');
             }
+            break;
+        // Camera messages (Phase 3)
+        case 'cameraFrame':
+            handleCameraFrame(message.frame);
+            break;
+        case 'cameraStreamStatus':
+            state.cameraStreamActive = message.active;
+            updateCameraFeedUI();
             break;
         default:
             console.warn('Unknown message type:', message.type);
@@ -602,6 +631,11 @@ function showPanel(panelName) {
     elements.diceEntryPanel.classList.add('hidden');
     elements.completeState.classList.add('hidden');
     
+    // Stop camera when leaving dice entry panel
+    if (state.cameraStreamActive && panelName !== 'dice-entry') {
+        stopCameraStream();
+    }
+    
     // Show requested panel
     switch (panelName) {
         case 'waiting':
@@ -615,6 +649,11 @@ function showPanel(panelName) {
         case 'dice-entry':
             elements.diceEntryPanel.classList.remove('hidden');
             elements.cancelRoll.classList.remove('hidden');
+            // Start camera stream when entering dice entry
+            if (state.cameraList.length > 0) {
+                displayCameraDiceIcons(state.currentRoll?.dice || []);
+                startCameraStream();
+            }
             break;
         case 'complete':
             elements.completeState.classList.remove('hidden');
@@ -747,10 +786,19 @@ function saveSettings() {
     const hostInput = document.getElementById('settings-host');
     const portInput = document.getElementById('settings-port');
     const themeSelect = document.getElementById('settings-theme');
+    const cameraSelect = document.getElementById('settings-camera');
     
     state.settings.host = hostInput?.value || DEFAULT_SETTINGS.host;
     state.settings.port = parseInt(portInput?.value) || DEFAULT_SETTINGS.port;
     state.settings.theme = themeSelect?.value || DEFAULT_SETTINGS.theme;
+    
+    // Save camera selection
+    const newCameraIndex = parseInt(cameraSelect?.value);
+    if (!isNaN(newCameraIndex) && newCameraIndex !== state.settings.cameraIndex) {
+        state.settings.cameraIndex = newCameraIndex;
+        // Also select the camera on the server
+        selectCamera(newCameraIndex);
+    }
     
     try {
         localStorage.setItem('dicelink-settings', JSON.stringify(state.settings));
@@ -769,6 +817,8 @@ function openSettings() {
     const overlay = document.getElementById('settings-overlay');
     if (overlay) {
         overlay.classList.remove('hidden');
+        // Load camera list when settings open
+        loadCameraList();
     }
 }
 
@@ -814,6 +864,183 @@ function initEventListeners() {
             }
         });
     }
+    
+    // Camera event listeners (Phase 3)
+    if (elements.refreshCameraPreview) {
+        elements.refreshCameraPreview.addEventListener('click', refreshCameraPreview);
+    }
+    if (elements.settingsCamera) {
+        elements.settingsCamera.addEventListener('change', onCameraSelect);
+    }
+}
+
+// ============== Camera Functions (Phase 3) ==============
+
+/**
+ * Load list of available cameras
+ */
+async function loadCameraList() {
+    try {
+        const response = await fetch('/api/cameras');
+        const data = await response.json();
+        
+        state.cameraList = data.cameras || [];
+        
+        // Populate camera dropdown
+        if (elements.settingsCamera) {
+            elements.settingsCamera.innerHTML = '';
+            
+            if (state.cameraList.length === 0) {
+                elements.settingsCamera.innerHTML = '<option value="">No cameras found</option>';
+            } else {
+                state.cameraList.forEach(camera => {
+                    const option = document.createElement('option');
+                    option.value = camera.index;
+                    option.textContent = camera.name;
+                    if (camera.index === state.settings.cameraIndex) {
+                        option.selected = true;
+                    }
+                    elements.settingsCamera.appendChild(option);
+                });
+            }
+        }
+        
+        // Load initial preview if cameras available
+        if (state.cameraList.length > 0) {
+            refreshCameraPreview();
+        }
+    } catch (error) {
+        console.error('Failed to load cameras:', error);
+        if (elements.settingsCamera) {
+            elements.settingsCamera.innerHTML = '<option value="">Error loading cameras</option>';
+        }
+    }
+}
+
+/**
+ * Select a camera on the server
+ */
+async function selectCamera(index) {
+    try {
+        const response = await fetch('/api/camera/select', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ index })
+        });
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error('Failed to select camera:', error);
+        return false;
+    }
+}
+
+/**
+ * Handle camera dropdown change
+ */
+async function onCameraSelect() {
+    const index = parseInt(elements.settingsCamera.value);
+    if (!isNaN(index)) {
+        await selectCamera(index);
+        refreshCameraPreview();
+    }
+}
+
+/**
+ * Refresh camera preview in settings
+ */
+async function refreshCameraPreview() {
+    if (!elements.cameraPreview) return;
+    
+    // Show loading state
+    elements.cameraPreview.innerHTML = '<p class="camera-preview-placeholder">Loading preview...</p>';
+    
+    try {
+        const response = await fetch('/api/camera/preview');
+        const data = await response.json();
+        
+        if (data.success && data.frame) {
+            elements.cameraPreview.innerHTML = `<img src="${data.frame}" alt="Camera preview">`;
+        } else {
+            elements.cameraPreview.innerHTML = '<p class="camera-preview-placeholder">Failed to load preview</p>';
+        }
+    } catch (error) {
+        console.error('Failed to get camera preview:', error);
+        elements.cameraPreview.innerHTML = '<p class="camera-preview-placeholder">Camera error</p>';
+    }
+}
+
+/**
+ * Start camera stream via WebSocket
+ */
+function startCameraStream() {
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ type: 'startCameraStream' }));
+    }
+}
+
+/**
+ * Stop camera stream
+ */
+function stopCameraStream() {
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ type: 'stopCameraStream' }));
+    }
+}
+
+/**
+ * Handle incoming camera frame
+ */
+function handleCameraFrame(frameData) {
+    if (!elements.cameraCanvas) return;
+    
+    const ctx = elements.cameraCanvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+        // Update canvas to match image dimensions
+        elements.cameraCanvas.width = img.width;
+        elements.cameraCanvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        // Mark feed as active
+        if (elements.cameraFeed && !elements.cameraFeed.classList.contains('active')) {
+            elements.cameraFeed.classList.add('active');
+        }
+    };
+    img.src = frameData;
+}
+
+/**
+ * Update camera feed UI state
+ */
+function updateCameraFeedUI() {
+    if (!elements.cameraFeed) return;
+    
+    if (state.cameraStreamActive) {
+        elements.cameraFeed.classList.add('active');
+    } else {
+        elements.cameraFeed.classList.remove('active');
+    }
+}
+
+/**
+ * Display dice icons in camera feed header
+ */
+function displayCameraDiceIcons(dice) {
+    if (!elements.cameraDiceIcons) return;
+    
+    elements.cameraDiceIcons.innerHTML = '';
+    
+    dice.forEach(die => {
+        for (let i = 0; i < die.count; i++) {
+            const iconPath = getDiceIconPath(die.type);
+            const img = document.createElement('img');
+            img.src = iconPath;
+            img.alt = die.type;
+            img.title = die.type;
+            elements.cameraDiceIcons.appendChild(img);
+        }
+    });
 }
 
 /**
@@ -823,6 +1050,8 @@ function init() {
     loadSettings();
     initEventListeners();
     initWebSocket();
+    // Load camera list in background (Phase 3)
+    loadCameraList();
 }
 
 // Start the app when DOM is ready

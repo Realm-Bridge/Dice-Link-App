@@ -9,6 +9,12 @@ APP_NAME = "Dice Link"
 APP_VERSION = "1.0.0"
 DEBUG = True
 
+# Camera settings
+DEFAULT_CAMERA_INDEX = 0
+CAMERA_FPS = 15
+CAMERA_WIDTH = 640
+CAMERA_HEIGHT = 480
+
 # Dice value ranges for validation
 DICE_RANGES = {
     "d4": {"min": 1, "max": 4},
