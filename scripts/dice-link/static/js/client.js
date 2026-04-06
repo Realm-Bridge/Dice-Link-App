@@ -40,10 +40,8 @@ function getDiceIconPath(dieType, value = null) {
         filename = `${type}-blank.svg`;
     }
     
-    // URL encode the filename to handle spaces
-    const encodedFilename = encodeURIComponent(filename);
-    const encodedFolder = encodeURIComponent('DLC Dice');
-    const path = `/static/${encodedFolder}/${folder}/${encodedFilename}`;
+    // Build path - spaces are OK in modern browsers and FastAPI handles them
+    const path = `/static/DLC Dice/${folder}/${filename}`;
     console.log(`[v0] getDiceIconPath(${dieType}, ${value}) => ${path}`);
     return path;
 }

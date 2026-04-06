@@ -25,15 +25,16 @@ class CameraManager:
         Return list of available camera devices.
         Returns: List of dicts with {index, name}
         """
-        print(f"[Camera] Enumerating cameras...")
+        print(f"[Camera] Enumerating cameras using DirectShow backend...")
         cameras = []
         
         # Try to detect cameras (check indices 0-5)
+        # Use CAP_DSHOW (DirectShow) on Windows for better compatibility
         for i in range(6):
             print(f"[Camera] Testing camera index {i}...")
-            cap = cv2.VideoCapture(i)
+            cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
             
-            # Set buffer size to 1 and disable backend warnings
+            # Set buffer size to 1
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
             if cap.isOpened():
@@ -67,8 +68,8 @@ class CameraManager:
         # Stop any current capture
         self.stop_capture()
         
-        # Try to open the new camera
-        test_cap = cv2.VideoCapture(index)
+        # Try to open the new camera using DirectShow
+        test_cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
         if test_cap.isOpened():
             test_cap.release()
             self.camera_index = index
@@ -86,7 +87,8 @@ class CameraManager:
         if self.is_capturing:
             return True
         
-        self.camera = cv2.VideoCapture(self.camera_index)
+        # Use DirectShow backend on Windows for better reliability
+        self.camera = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
         if not self.camera.isOpened():
             return False
         
@@ -171,8 +173,9 @@ class CameraManager:
         print(f"[Camera] Capturing single frame from camera {self.camera_index}")
         
         try:
-            cap = cv2.VideoCapture(self.camera_index)
-            print(f"[Camera] VideoCapture created for index {self.camera_index}")
+            # Use DirectShow backend on Windows for better reliability
+            cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
+            print(f"[Camera] VideoCapture created with DirectShow for index {self.camera_index}")
             
             if not cap.isOpened():
                 print(f"[Camera] ERROR: Failed to open camera {self.camera_index}")
