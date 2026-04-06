@@ -58,15 +58,17 @@ async def handle_dlc_message(websocket: Any, data: dict) -> dict | None:
 
 async def handle_connect(websocket: Any, data: dict) -> dict:
     """Handle connection handshake from DLC"""
-    client_id = data.get("clientId", "unknown")
-    player_name = data.get("playerName", "Unknown Player")
-    player_id = data.get("playerId", "unknown")
+    # Extract user info from the connect message
+    user = data.get("user", {})
+    user_id = user.get("id", "unknown")
+    user_name = user.get("name", "Unknown Player")
+    is_gm = user.get("isGM", False)
     version = data.get("version", "unknown")
     
     await app_state.set_dlc_connected(
-        client_id=client_id,
-        player_name=player_name,
-        player_id=player_id,
+        client_id=user_id,
+        player_name=user_name,
+        player_id=user_id,
         version=version,
         websocket=websocket
     )
@@ -75,8 +77,9 @@ async def handle_connect(websocket: Any, data: dict) -> dict:
     await broadcast_to_ui({
         "type": "connectionStatus",
         "connected": True,
-        "playerName": player_name,
-        "playerId": player_id
+        "playerName": user_name,
+        "playerId": user_id,
+        "isGM": is_gm
     })
     
     return {
