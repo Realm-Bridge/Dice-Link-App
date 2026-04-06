@@ -25,21 +25,37 @@ class CameraManager:
         Return list of available camera devices.
         Returns: List of dicts with {index, name}
         """
+        print(f"[Camera] Enumerating cameras using DirectShow backend...")
         cameras = []
         
-        # Try to detect cameras (check indices 0-4)
-        for i in range(5):
-            cap = cv2.VideoCapture(i)
+        # Try to detect cameras (check indices 0-5)
+        # Use CAP_DSHOW (DirectShow) on Windows for better compatibility
+        for i in range(6):
+            print(f"[Camera] Testing camera index {i}...")
+            cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+            
+            # Set buffer size to 1
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            
             if cap.isOpened():
-                # Try to get camera name (platform-dependent)
-                # OpenCV doesn't provide camera names directly on all platforms
-                # so we use a generic name with the index
-                cameras.append({
-                    "index": i,
-                    "name": f"Camera {i}"
-                })
+                print(f"[Camera] Camera {i} opened successfully!")
+                
+                # Try to read one frame to verify it works
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    print(f"[Camera] Camera {i} is readable (frame size: {frame.shape})")
+                    cameras.append({
+                        "index": i,
+                        "name": f"Camera {i}"
+                    })
+                else:
+                    print(f"[Camera] Camera {i} opened but cannot read frames")
+                
                 cap.release()
+            else:
+                print(f"[Camera] Camera {i} cannot be opened")
         
+        print(f"[Camera] Found {len(cameras)} usable cameras: {cameras}")
         return cameras
     
     def select_camera(self, index: int) -> bool:
@@ -52,8 +68,8 @@ class CameraManager:
         # Stop any current capture
         self.stop_capture()
         
-        # Try to open the new camera
-        test_cap = cv2.VideoCapture(index)
+        # Try to open the new camera using DirectShow
+        test_cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
         if test_cap.isOpened():
             test_cap.release()
             self.camera_index = index
@@ -71,7 +87,8 @@ class CameraManager:
         if self.is_capturing:
             return True
         
-        self.camera = cv2.VideoCapture(self.camera_index)
+        # Use DirectShow backend on Windows for better reliability
+        self.camera = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
         if not self.camera.isOpened():
             return False
         
@@ -155,34 +172,68 @@ class CameraManager:
         """
         print(f"[Camera] Capturing single frame from camera {self.camera_index}")
         
-        cap = cv2.VideoCapture(self.camera_index)
-        if not cap.isOpened():
-            print(f"[Camera] Failed to open camera {self.camera_index} for preview")
-            return None
-        
         try:
+            # Use DirectShow backend on Windows for better reliability
+            cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
+            print(f"[Camera] VideoCapture created with DirectShow for index {self.camera_index}")
+            
+            if not cap.isOpened():
+                print(f"[Camera] ERROR: Failed to open camera {self.camera_index}")
+                cap.release()
+                return None
+            
+            print(f"[Camera] Camera opened successfully")
+            
             # Set properties
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer to get fresh frames
             
             # Capture a few frames to let camera adjust
-            for _ in range(5):
-                cap.read()
+            print(f"[Camera] Warming up camera...")
+            for i in range(5):
+                ret, frame = cap.read()
+                print(f"[Camera] Warmup {i+1}/5: ret={ret}, frame={'valid' if frame is not None else 'None'}")
             
+            print(f"[Camera] Reading final frame...")
             ret, frame = cap.read()
+            
             if not ret:
-                print(f"[Camera] Failed to read frame from camera {self.camera_index}")
+                print(f"[Camera] ERROR: read() returned False")
+                cap.release()
                 return None
             
-            print(f"[Camera] Successfully captured frame from camera {self.camera_index}")
+            if frame is None:
+                print(f"[Camera] ERROR: frame is None")
+                cap.release()
+                return None
+            
+            print(f"[Camera] Frame shape: {frame.shape}")
             
             # Encode as JPEG
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            
+            if not success:
+                print(f"[Camera] ERROR: imencode failed")
+                cap.release()
+                return None
+            
+            print(f"[Camera] Encoded successfully, buffer size: {len(buffer)}")
+            
             b64_frame = base64.b64encode(buffer.tobytes()).decode('utf-8')
-            return f"data:image/jpeg;base64,{b64_frame}"
-        
-        finally:
+            result = f"data:image/jpeg;base64,{b64_frame}"
+            
+            print(f"[Camera] Data URI created, length: {len(result)}")
             cap.release()
+            print(f"[Camera] Camera released")
+            
+            return result
+        
+        except Exception as e:
+            print(f"[Camera] EXCEPTION in capture_single_frame: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
 
 
 # Global camera manager instance

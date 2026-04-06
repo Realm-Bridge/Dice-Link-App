@@ -40,10 +40,10 @@ function getDiceIconPath(dieType, value = null) {
         filename = `${type}-blank.svg`;
     }
     
-    // URL encode the filename to handle spaces
-    const encodedFilename = encodeURIComponent(filename);
-    const encodedFolder = encodeURIComponent('DLC Dice');
-    return `/static/${encodedFolder}/${folder}/${encodedFilename}`;
+    // Build path - spaces are OK in modern browsers and FastAPI handles them
+    const path = `/static/DLC Dice/${folder}/${filename}`;
+    console.log(`[v0] getDiceIconPath(${dieType}, ${value}) => ${path}`);
+    return path;
 }
 
 // Default settings
@@ -325,23 +325,43 @@ function handleRollRequest(data) {
  * Render dice display with SVG icons
  */
 function renderDiceDisplay(dice) {
+    console.log("[v0] renderDiceDisplay called with:", dice);
     elements.diceDisplay.innerHTML = '';
     
     if (!dice || dice.length === 0) {
+        console.log("[v0] No dice to display");
         elements.diceDisplay.innerHTML = '<p class="text-muted">No dice specified</p>';
         return;
     }
     
-    dice.forEach(die => {
+    dice.forEach((die, idx) => {
+        console.log(`[v0] Creating dice display for die ${idx}:`, die);
         const dieElement = document.createElement('div');
         dieElement.className = 'dice-item';
         const iconPath = getDiceIconPath(die.type);
+        console.log(`[v0] Icon path for ${die.type}:`, iconPath);
+        
         dieElement.innerHTML = `
             <img src="${iconPath}" alt="${die.type}" class="dice-icon" title="${die.type}">
             <span class="dice-count">${die.count > 1 ? `x${die.count}` : ''}</span>
         `;
+        
+        // Add event listener to image to debug loading
+        const img = dieElement.querySelector('img');
+        if (img) {
+            img.addEventListener('load', () => {
+                console.log(`[v0] Image loaded successfully: ${iconPath}`);
+            });
+            img.addEventListener('error', (e) => {
+                console.error(`[v0] Image failed to load: ${iconPath}`, e);
+            });
+        }
+        
         elements.diceDisplay.appendChild(dieElement);
+        console.log(`[v0] Appended dice element to display`);
     });
+    
+    console.log("[v0] renderDiceDisplay complete");
 }
 
 /**
