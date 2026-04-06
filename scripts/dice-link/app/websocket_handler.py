@@ -125,13 +125,13 @@ async def send_roll_result(roll_id: str, button_clicked: str, config_changes: di
         "type": "rollResult",
         "id": roll_id,
         "timestamp": int(time.time() * 1000),
-        "buttonClicked": button_clicked,
+        "button": button_clicked,
         "configChanges": config_changes,
         "results": results
     }
     
     try:
-        await app_state.dlc_websocket.send(json.dumps(message))
+        await app_state.dlc_websocket.send_text(json.dumps(message))
         await app_state.clear_roll_request()
         
         # Notify UI that roll is complete
@@ -158,7 +158,7 @@ async def send_roll_cancelled(roll_id: str, reason: str = "User cancelled") -> b
     }
     
     try:
-        await app_state.dlc_websocket.send(json.dumps(message))
+        await app_state.dlc_websocket.send_text(json.dumps(message))
         await app_state.clear_roll_request()
         
         # Notify UI that roll is cancelled
