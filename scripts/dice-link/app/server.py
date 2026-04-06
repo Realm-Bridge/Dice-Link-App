@@ -1,6 +1,7 @@
 """FastAPI application setup for Dice Link"""
 
 import json
+import asyncio
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
@@ -15,7 +16,8 @@ from .websocket_handler import (
     send_roll_result,
     send_roll_cancelled
 )
-from config import APP_NAME, APP_VERSION, DICE_RANGES
+from .camera import camera_manager
+from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
 
 # Get the base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -55,6 +57,63 @@ async def get_dice_ranges():
     return JSONResponse(DICE_RANGES)
 
 
+# ============== Camera Endpoints (Phase 3) ==============
+
+@app.get("/api/cameras")
+async def list_cameras():
+    """Get list of available cameras"""
+    cameras = camera_manager.list_cameras()
+    return JSONResponse({
+        "cameras": cameras,
+        "selectedIndex": camera_manager.camera_index
+    })
+
+
+@app.post("/api/camera/select")
+async def select_camera(request: Request):
+    """Select a camera by index"""
+    data = await request.json()
+    index = data.get("index", 0)
+    
+    success = camera_manager.select_camera(index)
+    return JSONResponse({
+        "success": success,
+        "selectedIndex": camera_manager.camera_index
+    })
+
+
+@app.get("/api/camera/preview")
+async def camera_preview():
+    """Get a single frame preview from the selected camera"""
+    frame = camera_manager.capture_single_frame()
+    if frame:
+        return JSONResponse({
+            "success": True,
+            "frame": frame
+        })
+    return JSONResponse({
+        "success": False,
+        "error": "Failed to capture frame"
+    })
+
+
+@app.post("/api/camera/start")
+async def start_camera():
+    """Start camera capture"""
+    success = camera_manager.start_capture(fps=CAMERA_FPS)
+    return JSONResponse({
+        "success": success,
+        "fps": CAMERA_FPS
+    })
+
+
+@app.post("/api/camera/stop")
+async def stop_camera():
+    """Stop camera capture"""
+    camera_manager.stop_capture()
+    return JSONResponse({"success": True})
+
+
 @app.websocket("/ws/ui")
 async def websocket_ui(websocket: WebSocket):
     """WebSocket endpoint for browser UI connections"""
@@ -77,6 +136,61 @@ async def websocket_ui(websocket: WebSocket):
     except Exception as e:
         print(f"UI WebSocket error: {e}")
         app_state.remove_ui_websocket(websocket)
+
+
+# Camera streaming state
+camera_stream_task = None
+camera_stream_active = False
+
+
+async def camera_stream_loop():
+    """Background task to stream camera frames to UI"""
+    global camera_stream_active
+    
+    frame_interval = 1.0 / CAMERA_FPS
+    
+    while camera_stream_active and camera_manager.is_capturing:
+        frame = camera_manager.get_frame()
+        if frame:
+            await broadcast_to_ui({
+                "type": "cameraFrame",
+                "frame": frame
+            })
+        await asyncio.sleep(frame_interval)
+
+
+async def start_camera_stream():
+    """Start streaming camera frames to UI"""
+    global camera_stream_task, camera_stream_active
+    
+    if camera_stream_active:
+        return True
+    
+    # Start camera capture
+    success = camera_manager.start_capture(fps=CAMERA_FPS)
+    if not success:
+        return False
+    
+    camera_stream_active = True
+    camera_stream_task = asyncio.create_task(camera_stream_loop())
+    return True
+
+
+async def stop_camera_stream():
+    """Stop streaming camera frames"""
+    global camera_stream_task, camera_stream_active
+    
+    camera_stream_active = False
+    
+    if camera_stream_task:
+        camera_stream_task.cancel()
+        try:
+            await camera_stream_task
+        except asyncio.CancelledError:
+            pass
+        camera_stream_task = None
+    
+    camera_manager.stop_capture()
 
 
 async def handle_ui_message(message: dict):
@@ -109,6 +223,22 @@ async def handle_ui_message(message: dict):
             "type": "cancelRollAck",
             "success": success,
             "rollId": roll_id
+        })
+    
+    elif msg_type == "startCameraStream":
+        # Start camera streaming
+        success = await start_camera_stream()
+        await broadcast_to_ui({
+            "type": "cameraStreamStatus",
+            "active": success
+        })
+    
+    elif msg_type == "stopCameraStream":
+        # Stop camera streaming
+        await stop_camera_stream()
+        await broadcast_to_ui({
+            "type": "cameraStreamStatus",
+            "active": False
         })
 
 
