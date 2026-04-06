@@ -47,6 +47,8 @@ class CameraManager:
         Select camera by index.
         Returns True if camera was selected successfully.
         """
+        print(f"[Camera] Selecting camera index {index}")
+        
         # Stop any current capture
         self.stop_capture()
         
@@ -55,8 +57,10 @@ class CameraManager:
         if test_cap.isOpened():
             test_cap.release()
             self.camera_index = index
+            print(f"[Camera] Successfully selected camera {index}")
             return True
         
+        print(f"[Camera] Failed to select camera {index}")
         return False
     
     def start_capture(self, fps: int = 15) -> bool:
@@ -149,8 +153,11 @@ class CameraManager:
         Useful for camera preview in settings.
         Returns base64 data URI or None.
         """
+        print(f"[Camera] Capturing single frame from camera {self.camera_index}")
+        
         cap = cv2.VideoCapture(self.camera_index)
         if not cap.isOpened():
+            print(f"[Camera] Failed to open camera {self.camera_index} for preview")
             return None
         
         try:
@@ -164,7 +171,10 @@ class CameraManager:
             
             ret, frame = cap.read()
             if not ret:
+                print(f"[Camera] Failed to read frame from camera {self.camera_index}")
                 return None
+            
+            print(f"[Camera] Successfully captured frame from camera {self.camera_index}")
             
             # Encode as JPEG
             _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
