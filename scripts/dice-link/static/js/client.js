@@ -49,7 +49,7 @@ function getDiceIconPath(dieType, value = null) {
 // Default settings
 const DEFAULT_SETTINGS = {
     host: 'localhost',
-    port: 8765,
+    port: 47293,
     theme: 'dark',
     cameraIndex: 0
 };
