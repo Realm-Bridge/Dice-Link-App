@@ -563,23 +563,23 @@ function renderDiceInputsFromRequest(dice, formula) {
                 <span class="dice-input-range">(${range.min}-${range.max})</span>
             `;
             
-            const input = inputGroup.querySelector('input');
-            input.addEventListener('input', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                const value = e.target.value ? parseInt(e.target.value) : null;
-                state.diceResults[index].value = value;
-                
-                // Update icon to show result
-                updateDiceIcon(inputGroup, die.type, value, range);
-            });
-            
-            input.addEventListener('change', (e) => {
-                validateDiceInput(e.target);
-            });
-            
             elements.diceInputs.appendChild(inputGroup);
         }
     });
+    
+    // Add input listeners using the same handler as renderDiceInputs
+    // This ensures updateSubmitButton() is called on every change
+    elements.diceInputs.querySelectorAll('.dice-input-field').forEach(input => {
+        input.addEventListener('input', handleDiceInput);
+    });
+    
+    // Focus first input
+    const firstInput = elements.diceInputs.querySelector('.dice-input-field');
+    if (firstInput) {
+        firstInput.focus();
+    }
+    
+    updateSubmitButton();
     
     // Also update camera dice icons
     displayCameraDiceIcons(dice);
