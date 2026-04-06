@@ -691,13 +691,23 @@ function updateSubmitButton() {
  * Submit dice results
  */
 function submitResults() {
-    if (!state.currentRoll || !state.selectedButton) return;
+    console.log("[v0] submitResults called");
+    console.log("[v0] state.currentRoll:", state.currentRoll);
+    console.log("[v0] state.selectedButton:", state.selectedButton);
+    console.log("[v0] state.pendingDiceRequest:", state.pendingDiceRequest);
+    console.log("[v0] state.diceResults:", state.diceResults);
+    
+    if (!state.currentRoll || !state.selectedButton) {
+        console.log("[v0] submitResults early return - missing currentRoll or selectedButton");
+        return;
+    }
     
     // Build results array
     const results = state.diceResults.map(r => ({
         type: r.type,
         value: r.value
     }));
+    console.log("[v0] Built results array:", results);
     
     // Check if this is a test roll (ID starts with "test-")
     if (state.currentRoll.id && state.currentRoll.id.startsWith('test-')) {
@@ -711,6 +721,8 @@ function submitResults() {
     // Check if we have a pending dice request (two-phase flow)
     if (state.pendingDiceRequest) {
         // Phase B response: Send diceResult
+        console.log("[v0] Sending submitDiceResult (two-phase flow)");
+        console.log("[v0] originalRollId:", state.pendingDiceRequest.originalRollId);
         sendMessage({
             type: 'submitDiceResult',
             originalRollId: state.pendingDiceRequest.originalRollId,
@@ -718,6 +730,7 @@ function submitResults() {
         });
         state.pendingDiceRequest = null;
     } else {
+        console.log("[v0] Sending submitResult (legacy single-phase flow)");
         // Legacy single-phase flow (fallback)
         // Build config changes (compare with original values)
         const configChanges = {};
