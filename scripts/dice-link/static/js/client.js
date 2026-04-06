@@ -481,11 +481,15 @@ function selectActionButton(buttonId, buttonLabel) {
         }
     });
     
+    // Use button label (lowercase) as the button identifier for Foundry
+    // This ensures "Critical Hit" label sends "critical hit" button name
+    const buttonName = buttonLabel.toLowerCase();
+    
     // Phase A: Send buttonSelect to DLC - wait for diceRequest response
     sendMessage({
         type: 'buttonSelect',
         rollId: state.currentRoll?.id,
-        button: buttonId,
+        button: buttonName,
         configChanges: configChanges
     });
     
