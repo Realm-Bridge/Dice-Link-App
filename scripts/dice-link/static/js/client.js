@@ -27,15 +27,23 @@ function getDiceIconPath(dieType, value = null) {
     // Folder name is uppercase (D4, D6, etc.)
     const folder = type.toUpperCase();
     
+    let filename;
     if (value !== null && value !== undefined) {
         // Return numbered icon if it exists (d100 only has blank)
         if (type === 'd100') {
-            return `/static/DLC Dice/${folder}/${type}-blank.svg`;
+            filename = `${type}-blank.svg`;
+        } else {
+            // Numbered files have format "d20 - Outline 1.svg"
+            filename = `${type} - Outline ${value}.svg`;
         }
-        // Numbered files have format "d20 - Outline 1.svg"
-        return `/static/DLC Dice/${folder}/${type} - Outline ${value}.svg`;
+    } else {
+        filename = `${type}-blank.svg`;
     }
-    return `/static/DLC Dice/${folder}/${type}-blank.svg`;
+    
+    // URL encode the filename to handle spaces
+    const encodedFilename = encodeURIComponent(filename);
+    const encodedFolder = encodeURIComponent('DLC Dice');
+    return `/static/${encodedFolder}/${folder}/${encodedFilename}`;
 }
 
 // Default settings
