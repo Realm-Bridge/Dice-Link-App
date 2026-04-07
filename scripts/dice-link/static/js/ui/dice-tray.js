@@ -71,6 +71,7 @@ function initDiceTray() {
         advBtn.textContent = 'ADV/DIS';
       }
       updateDiceTrayAdvMode(next);
+      updateDiceTrayDisplay(); // Refresh formula to show adv/dis
       debugLog(`ADV/DIS mode: ${next}`);
     });
   }
@@ -79,21 +80,41 @@ function initDiceTray() {
   const rollBtn = document.getElementById('dice-roll-btn');
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
+      console.log('[v0] Roll button clicked');
       const formula = buildDiceFormula();
+      console.log('[v0] Formula built:', formula);
       if (!formula) {
         debugLog('No dice selected, nothing to roll');
+        console.log('[v0] No dice selected, returning');
         return;
       }
       const advMode = getDiceTrayState().advMode;
       debugLog(`Rolling formula: ${formula}, advMode: ${advMode}`);
+      console.log('[v0] About to call sendMessage with manualRoll');
+      
+      // Check if sendMessage function exists
+      if (typeof sendMessage !== 'function') {
+        console.log('[v0] ERROR: sendMessage is not defined!');
+        return;
+      }
+      
       sendMessage({
         type: 'manualRoll',
         formula: formula,
         advMode: advMode
       });
+      console.log('[v0] sendMessage called successfully');
+      
       // Reset tray after sending
       resetDiceTray();
       updateDiceTrayDisplay();
+      
+      // Reset ADV/DIS button visual
+      const advBtn = document.querySelector('.dice-adv-btn');
+      if (advBtn) {
+        advBtn.classList.remove('adv-active', 'dis-active');
+        advBtn.textContent = 'ADV/DIS';
+      }
     });
   }
 
@@ -106,7 +127,7 @@ function initDiceTray() {
  * @returns {string} Formula string e.g. "2d20+1d6" or empty string
  */
 function buildDiceFormula() {
-  const { dice, modifier } = getDiceTrayState();
+  const { dice, modifier, advMode } = getDiceTrayState();
   const parts = [];
 
   for (const die of DICE_ORDER) {
@@ -120,7 +141,17 @@ function buildDiceFormula() {
     parts.push(modifier > 0 ? `+${modifier}` : `${modifier}`);
   }
 
-  return parts.join('+');
+  // Build base formula
+  let formula = parts.join('+');
+  
+  // Add advantage/disadvantage suffix if set
+  if (advMode === 'advantage' && formula) {
+    formula += ' adv';
+  } else if (advMode === 'disadvantage' && formula) {
+    formula += ' dis';
+  }
+
+  return formula;
 }
 
 /**

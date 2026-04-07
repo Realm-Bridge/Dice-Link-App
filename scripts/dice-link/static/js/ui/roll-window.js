@@ -242,23 +242,52 @@ function updateRWSubmitButton() {
  * Update Roll Window for request state
  */
 function renderRWRequest(rollData) {
-  debugLog('Rendering Roll Window request state');
+  debugLog('Rendering Roll Window request state', rollData);
+  console.log('[v0] renderRWRequest called with:', JSON.stringify(rollData, null, 2));
+  
+  // Make sure elements are cached
+  if (!rwElements.rwTitle) {
+    rwElements.rwTitle = document.getElementById('rw-title');
+  }
+  if (!rwElements.rwSubtitle) {
+    rwElements.rwSubtitle = document.getElementById('rw-subtitle');
+  }
+  if (!rwElements.rwConfigSection) {
+    rwElements.rwConfigSection = document.getElementById('rw-config-section');
+  }
+  if (!rwElements.rwButtons) {
+    rwElements.rwButtons = document.getElementById('rw-action-buttons');
+  }
   
   if (!rwElements.rwTitle || !rwElements.rwSubtitle) {
     debugError('Roll Window title/subtitle elements not found');
+    console.log('[v0] ERROR: rwTitle or rwSubtitle not found');
     return;
   }
   
-  rwElements.rwTitle.textContent = rollData.roll?.title || 'Roll Request';
-  rwElements.rwSubtitle.textContent = rollData.roll?.subtitle || rollData.roll?.formula || '';
+  // Set title and subtitle from roll data
+  const title = rollData.roll?.title || rollData.title || 'Roll Request';
+  const subtitle = rollData.roll?.subtitle || rollData.roll?.formula || rollData.subtitle || '';
+  
+  console.log('[v0] Setting title:', title, 'subtitle:', subtitle);
+  
+  rwElements.rwTitle.textContent = title;
+  rwElements.rwSubtitle.textContent = subtitle;
   
   // Render config fields - DLC sends config.fields array
   if (rollData.config && rollData.config.fields) {
+    console.log('[v0] Rendering config fields:', rollData.config.fields);
     renderRWConfigFields(rollData.config.fields);
   }
   
   // Render action buttons
   if (rollData.buttons) {
+    console.log('[v0] Rendering buttons:', rollData.buttons);
     renderRWActionButtons(rollData.buttons);
+  }
+  
+  // Show cancel button
+  if (rwElements.cancelBtn) {
+    rwElements.cancelBtn.classList.remove('hidden');
   }
 }

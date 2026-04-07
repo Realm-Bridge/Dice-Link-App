@@ -8,17 +8,7 @@
  */
 function initConnectionUI() {
   debugLog('Initializing connection UI');
-  
-  const elements = cacheElements();
-  
-  // Add event listener for settings button if it exists
-  if (elements.settingsBtn) {
-    elements.settingsBtn.addEventListener('click', () => {
-      if (elements.settingsPanel) {
-        elements.settingsPanel.classList.toggle('visible');
-      }
-    });
-  }
+  // Connection UI initialization - status updates are handled by websocket.js
 }
 
 /**
