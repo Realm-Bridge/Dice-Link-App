@@ -160,6 +160,27 @@ async def send_button_select(roll_id: str, button: str, config_changes: dict) ->
         return False
 
 
+async def send_dice_tray_roll(formula: str, flavor: str = "Manual Dice Roll") -> bool:
+    """Send a dice tray roll request to DLC for evaluation"""
+    if not app_state.dlc_websocket or not app_state.connection.connected:
+        print(f"[DLA] send_dice_tray_roll: No DLC websocket or not connected")
+        return False
+    
+    message = {
+        "type": "diceTrayRoll",
+        "formula": formula,
+        "flavor": flavor
+    }
+    
+    try:
+        print(f"[DLA] Sending diceTrayRoll to DLC: {message}")
+        await app_state.dlc_websocket.send_text(json.dumps(message))
+        return True
+    except Exception as e:
+        print(f"Error sending dice tray roll: {e}")
+        return False
+
+
 async def send_dice_result(original_roll_id: str, results: list) -> bool:
     """Send dice results to DLC (Phase B response)"""
     print(f"[DLA] send_dice_result called with originalRollId={original_roll_id}, results={results}")
