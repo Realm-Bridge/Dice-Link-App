@@ -329,7 +329,7 @@ function updateConnectionStatus(connected, playerName) {
  * Handle incoming roll request
  */
 function handleRollRequest(data) {
-    console.log("[v0] handleRollRequest called with:", data);
+    debugLog("handleRollRequest called with: " + JSON.stringify(data));
     
     state.currentRoll = data;
     state.selectedButton = null;
@@ -901,6 +901,15 @@ function sendMessage(message) {
 }
 
 /**
+ * Send debug message to Python backend (shows in command prompt)
+ */
+function debugLog(msg) {
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ type: 'debug', message: msg }));
+    }
+}
+
+/**
  * Send a test roll - directly triggers the roll dialog without needing Foundry VTT
  * Uses the full Longsword Attack example from the spec document
  */
@@ -1253,10 +1262,10 @@ function displayCameraDiceIcons(dice) {
  * Update Roll Window to show appropriate state
  */
 function updateRollWindow(newState) {
-    console.log("[v0] updateRollWindow called with state:", newState);
-    console.log("[v0] rwIdleState element:", elements.rwIdleState);
-    console.log("[v0] rwRequestState element:", elements.rwRequestState);
-    console.log("[v0] rwDiceEntryState element:", elements.rwDiceEntryState);
+    debugLog("updateRollWindow called with state: " + newState);
+    debugLog("rwIdleState exists: " + !!elements.rwIdleState);
+    debugLog("rwRequestState exists: " + !!elements.rwRequestState);
+    debugLog("rwDiceEntryState exists: " + !!elements.rwDiceEntryState);
     
     // Hide all states
     elements.rwIdleState.classList.remove('active');
@@ -1275,18 +1284,18 @@ function updateRollWindow(newState) {
             elements.rwDiceEntryState.classList.add('active');
             break;
     }
-    console.log("[v0] After update - rwRequestState classes:", elements.rwRequestState?.classList);
+    debugLog("After update - rwRequestState has 'active': " + elements.rwRequestState?.classList.contains('active'));
 }
 
 /**
  * Render action buttons in Roll Window request state
  */
 function renderRWActionButtons(buttons) {
-    console.log("[v0] renderRWActionButtons called with:", buttons);
-    console.log("[v0] rwButtons element:", elements.rwButtons);
+    debugLog("renderRWActionButtons called with: " + JSON.stringify(buttons));
+    debugLog("rwButtons element exists: " + !!elements.rwButtons);
     
     if (!elements.rwButtons) {
-        console.log("[v0] ERROR: rwButtons element is null!");
+        debugLog("ERROR: rwButtons element is null!");
         return;
     }
     

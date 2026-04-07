@@ -199,6 +199,11 @@ async def handle_ui_message(message: dict):
     """Handle messages from browser UI"""
     msg_type = message.get("type")
     
+    if msg_type == "debug":
+        # Debug messages from JavaScript - print to command prompt
+        print(f"[JS] {message.get('message', '')}")
+        return
+    
     if msg_type == "buttonSelect":
         # Phase A: User selected a button (Advantage/Normal/Disadvantage)
         roll_id = message.get("rollId")
