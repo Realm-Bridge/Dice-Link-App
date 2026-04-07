@@ -305,6 +305,14 @@ function updateConnectionStatus(connected, playerName) {
         elements.connectionStatus.classList.remove('disconnected');
         elements.connectionStatus.classList.add('connected');
         elements.statusText.textContent = playerName ? `Connected: ${playerName}` : 'Connected';
+        
+        // Hide the waiting panel when connected - Roll Window handles everything now
+        elements.waitingState.classList.add('hidden');
+        
+        // Make sure Roll Window is in idle state if no active roll
+        if (!state.currentRoll) {
+            updateRollWindow('idle');
+        }
     } else {
         elements.connectionStatus.classList.remove('connected');
         elements.connectionStatus.classList.add('disconnected');
@@ -326,7 +334,7 @@ function handleRollRequest(data) {
     state.configValues = {};
     state.diceResults = [];
     
-    // Populate roll header
+    // Populate roll header (for old panel - kept for compatibility)
     elements.rollTitle.textContent = data.roll.title || 'Roll';
     elements.rollSubtitle.textContent = data.roll.subtitle || '';
     
@@ -340,15 +348,20 @@ function handleRollRequest(data) {
     // Render action buttons
     renderActionButtons(data.buttons || []);
     
-    // Update Roll Window with same information
+    // Update Roll Window - this is now the PRIMARY UI for DLC rolls
     elements.rwRollTitle.textContent = data.roll.title || 'Roll';
     elements.rwRollSubtitle.textContent = data.roll.subtitle || '';
     renderRWConfigFields(data.config?.fields || []);
     renderRWActionButtons(data.buttons || []);
     updateRollWindow('request');
     
-    // Show roll panel and cancel button
-    showPanel('roll');
+    // Hide old panels when using Roll Window
+    elements.waitingState.classList.add('hidden');
+    elements.rollPanel.classList.add('hidden');
+    elements.diceEntryPanel.classList.add('hidden');
+    elements.completeState.classList.add('hidden');
+    
+    // Show cancel button
     elements.cancelRoll.classList.remove('hidden');
 }
 
@@ -541,14 +554,17 @@ function handleDiceRequest(message) {
     // Render dice inputs based on what DLC told us
     renderDiceInputsFromRequest(message.dice, message.formula);
     
-    // Update Roll Window with dice entry UI
+    // Update Roll Window with dice entry UI - this is the PRIMARY UI
     renderRWDiceInputs(message.dice, message.formula);
     updateRollWindow('dice-entry');
     
-    // Make sure we're on the dice entry panel
-    showPanel('dice-entry');
+    // Hide old panels - Roll Window is the primary UI now
+    elements.waitingState.classList.add('hidden');
+    elements.rollPanel.classList.add('hidden');
+    elements.diceEntryPanel.classList.add('hidden');
+    elements.completeState.classList.add('hidden');
     
-    // Start camera if available
+    // Start camera if available (optional enhancement)
     startCameraStream();
 }
 
@@ -856,22 +872,20 @@ function showPanel(panelName) {
  * Show completion state
  */
 function showCompleteState(type, title, message) {
-    state.currentRoll = null;
-    state.selectedButton = null;
-    
-    elements.completeIcon.className = `complete-icon ${type}`;
-    elements.completeTitle.textContent = title;
-    elements.completeMessage.textContent = message;
-    
-    showPanel('complete');
-    
-    // Return to waiting state after delay
-    setTimeout(() => {
-        if (!state.currentRoll) {
-            showPanel('waiting');
-        }
-    }, 3000);
-}
+  state.currentRoll = null;
+  state.selectedButton = null;
+  state.pendingDiceRequest = null;
+  
+  // Reset Roll Window to idle state - this is the primary UI
+  updateRollWindow('idle');
+  
+  // Hide all old panels
+  elements.waitingState.classList.add('hidden');
+  elements.rollPanel.classList.add('hidden');
+  elements.diceEntryPanel.classList.add('hidden');
+  elements.completeState.classList.add('hidden');
+  elements.cancelRoll.classList.add('hidden');
+  }
 
 /**
  * Send message to server
@@ -1386,15 +1400,16 @@ function updateRWSubmitButton() {
  * Initialize Roll Window
  */
 function initRollWindow() {
-    // Quick dice buttons
+    // Quick dice buttons - placeholder for future local dice rolling
     document.querySelectorAll('.quick-dice-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const dieType = e.target.dataset.die;
-            // Send a quick roll request (if connected)
-            if (state.connected) {
-                console.log(`[v0] Quick roll: ${dieType}`);
-                // Could send a message to DLC for quick rolls
-            }
+            // Future: Could implement local dice rolling or send to DLC
+            // For now, show a brief visual feedback
+            btn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                btn.style.transform = '';
+            }, 100);
         });
     });
     
