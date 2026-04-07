@@ -805,29 +805,47 @@ function submitResults() {
  * Cancel current roll
  */
 function cancelRoll() {
-    if (!state.currentRoll) return;
-    
-    // Check if this is a test roll (ID starts with "test-")
-    if (state.currentRoll.id && state.currentRoll.id.startsWith('test-')) {
-        // For test rolls, just go back to waiting state without sending a message
-        showCompleteState('cancelled', 'Test Roll Cancelled', 'Ready for next test roll...');
-        return;
-    }
-    
-    // Send to server (for real Foundry VTT rolls)
-    sendMessage({
-        type: 'cancelRoll',
-        rollId: state.currentRoll.id,
-        reason: 'User cancelled'
-    });
+  // Get the roll ID before clearing state
+  const rollId = state.currentRoll?.id || state.pendingDiceRequest?.originalRollId;
+  
+  if (!rollId) return;
+  
+  // Check if this is a test roll (ID starts with "test-")
+  const isTestRoll = rollId.startsWith('test-');
+  
+  // Clear ALL roll-related state FIRST to prevent any other messages being sent
+  state.currentRoll = null;
+  state.selectedButton = null;
+  state.pendingDiceRequest = null;
+  state.configValues = {};
+  state.diceResults = [];
+  
+  // Update Roll Window to idle state immediately
+  updateRollWindow('idle');
+  
+  // Hide cancel button
+  elements.cancelRoll.classList.add('hidden');
+  
+  // For test rolls, don't send a message to server
+  if (isTestRoll) {
+    return;
+  }
+  
+  // Send cancel message to server (for real Foundry VTT rolls)
+  sendMessage({
+    type: 'cancelRoll',
+    rollId: rollId,
+    reason: 'User cancelled'
+  });
 }
 
 /**
- * Go back to config panel
- */
-function backToConfig() {
-    showPanel('roll');
-}
+  * Go back to config/request panel
+  */
+  function backToConfig() {
+  // Update Roll Window to request state
+  updateRollWindow('request');
+  }
 
 /**
  * Show a specific panel
@@ -1334,9 +1352,12 @@ function renderRWConfigFields(fields) {
             input = document.createElement('select');
             field.options.forEach(opt => {
                 const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                if (opt === field.selected) option.selected = true;
+                // Handle both object {value, label} and string formats
+                const optValue = typeof opt === 'object' ? opt.value : opt;
+                const optLabel = typeof opt === 'object' ? opt.label : opt;
+                option.value = optValue;
+                option.textContent = optLabel;
+                if (optValue === field.selected) option.selected = true;
                 input.appendChild(option);
             });
         } else {
@@ -1404,6 +1425,9 @@ function renderRWDiceInputs(dice, formula) {
                 } else {
                     input.classList.remove('valid', 'invalid');
                 }
+                
+                // Update submit button state
+                updateRWSubmitButton();
             });
             group.appendChild(input);
             elements.rwDiceInputs.appendChild(group);

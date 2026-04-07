@@ -27,30 +27,10 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Waiting State -->
-            <div id="waiting-state" class="state-panel">
-                <div class="waiting-content">
-                    <div class="waiting-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                        </svg>
-                    </div>
-                    <h2>Waiting for Foundry VTT</h2>
-                    <p class="waiting-description">
-                        Make sure the Dice Link Companion module is installed and enabled in Foundry VTT.
-                        <br>
-                        DLC will connect to <code>ws://localhost:47293/ws/dlc</code>
-                    </p>
-                    <div class="test-section">
-                        <p class="test-description">Or test the app without Foundry VTT:</p>
-                        <button id="test-roll-btn" class="btn btn-primary">
-                            Send Test Roll
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <!-- Hidden placeholder for backwards compatibility -->
+            <div id="waiting-state" class="hidden"></div>
 
-            <!-- Roll Request Panel -->
+            <!-- Roll Request Panel (legacy - hidden, Roll Window is now primary UI) -->
             <div id="roll-panel" class="state-panel hidden">
                 <!-- Roll Header -->
                 <div class="roll-header">
