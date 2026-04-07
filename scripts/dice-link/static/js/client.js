@@ -507,11 +507,19 @@ function selectActionButton(buttonId, buttonLabel) {
         btn.classList.toggle('selected', btn.dataset.buttonId === buttonId);
     });
     
-    // Collect config changes
+    // Collect config changes from Roll Window config section
     const configChanges = {};
-    elements.configFields.querySelectorAll('select, input').forEach(input => {
+    elements.rwConfigSection.querySelectorAll('select, input').forEach(input => {
         const fieldName = input.dataset.field;
         if (fieldName) {
+            configChanges[fieldName] = input.value;
+        }
+    });
+    
+    // Also collect from old config fields as fallback
+    elements.configFields.querySelectorAll('select, input').forEach(input => {
+        const fieldName = input.dataset.field;
+        if (fieldName && !configChanges[fieldName]) {
             configChanges[fieldName] = input.value;
         }
     });
@@ -1332,20 +1340,20 @@ function renderRWActionButtons(buttons) {
     });
 }
 
-/**
- * Render config fields in Roll Window request state
- */
-function renderRWConfigFields(fields) {
-    elements.rwConfigSection.innerHTML = '';
-    
-    fields.forEach(field => {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'rw-config-field';
-        
-        const label = document.createElement('label');
-        label.htmlFor = `rw-${field.name}`;
-        label.textContent = field.label || field.name;
-        fieldDiv.appendChild(label);
+  /**
+  * Render config fields in Roll Window request state
+  */
+  function renderRWConfigFields(fields) {
+  elements.rwConfigSection.innerHTML = '';
+  
+  fields.forEach(field => {
+  const fieldDiv = document.createElement('div');
+  fieldDiv.className = 'rw-config-field';
+  
+  const label = document.createElement('label');
+  label.htmlFor = `rw-${field.name}`;
+  label.textContent = field.label || field.name;
+  fieldDiv.appendChild(label);
         
         let input;
         if (field.type === 'select' && field.options) {
