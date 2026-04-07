@@ -507,11 +507,19 @@ function selectActionButton(buttonId, buttonLabel) {
         btn.classList.toggle('selected', btn.dataset.buttonId === buttonId);
     });
     
-    // Collect config changes
+    // Collect config changes from Roll Window config section
     const configChanges = {};
-    elements.configFields.querySelectorAll('select, input').forEach(input => {
+    elements.rwConfigSection.querySelectorAll('select, input').forEach(input => {
         const fieldName = input.dataset.field;
         if (fieldName) {
+            configChanges[fieldName] = input.value;
+        }
+    });
+    
+    // Also collect from old config fields as fallback
+    elements.configFields.querySelectorAll('select, input').forEach(input => {
+        const fieldName = input.dataset.field;
+        if (fieldName && !configChanges[fieldName]) {
             configChanges[fieldName] = input.value;
         }
     });
@@ -1332,6 +1340,35 @@ function renderRWActionButtons(buttons) {
     });
 }
 
+// Friendly label mapping for known DnD5e field names
+const FIELD_LABEL_MAP = {
+    'roll.0.situational': 'Situational Bonus',
+    'roll.1.situational': 'Situational Bonus',
+    'situational': 'Situational Bonus',
+    'ability': 'Ability',
+    'rollMode': 'Roll Mode',
+    'rollmode': 'Roll Mode'
+};
+
+/**
+ * Get friendly label for a field name
+ */
+function getFriendlyLabel(fieldName, originalLabel) {
+    // Check if we have a mapping for this field name
+    if (FIELD_LABEL_MAP[fieldName]) {
+        return FIELD_LABEL_MAP[fieldName];
+    }
+    // Check if the original label looks like a field path (contains dots)
+    if (originalLabel && originalLabel.includes('.')) {
+        // Try to extract a meaningful part
+        const parts = originalLabel.split('.');
+        const lastPart = parts[parts.length - 1];
+        // Capitalize first letter
+        return lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
+    }
+    return originalLabel || fieldName;
+}
+
 /**
  * Render config fields in Roll Window request state
  */
@@ -1344,7 +1381,7 @@ function renderRWConfigFields(fields) {
         
         const label = document.createElement('label');
         label.htmlFor = `rw-${field.name}`;
-        label.textContent = field.label || field.name;
+        label.textContent = getFriendlyLabel(field.name, field.label);
         fieldDiv.appendChild(label);
         
         let input;
