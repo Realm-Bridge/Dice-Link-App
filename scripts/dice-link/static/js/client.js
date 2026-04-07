@@ -36,16 +36,13 @@ function init() {
  */
 function handleRollRequest(message) {
   debugLog('Received roll request from DLC', message);
-  console.log('[v0] handleRollRequest called with:', JSON.stringify(message, null, 2));
   
   setCurrentRoll(message);
   
   // Render Roll Window request state
-  console.log('[v0] About to call renderRWRequest');
   renderRWRequest(message);
   
   // Show Roll Window in request state
-  console.log('[v0] About to call updateRollWindow("request")');
   updateRollWindow('request');
 }
 

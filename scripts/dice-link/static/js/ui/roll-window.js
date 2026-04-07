@@ -243,7 +243,6 @@ function updateRWSubmitButton() {
  */
 function renderRWRequest(rollData) {
   debugLog('Rendering Roll Window request state', rollData);
-  console.log('[v0] renderRWRequest called with:', JSON.stringify(rollData, null, 2));
   
   // Make sure elements are cached
   if (!rwElements.rwTitle) {
@@ -261,7 +260,6 @@ function renderRWRequest(rollData) {
   
   if (!rwElements.rwTitle || !rwElements.rwSubtitle) {
     debugError('Roll Window title/subtitle elements not found');
-    console.log('[v0] ERROR: rwTitle or rwSubtitle not found');
     return;
   }
   
@@ -269,20 +267,16 @@ function renderRWRequest(rollData) {
   const title = rollData.roll?.title || rollData.title || 'Roll Request';
   const subtitle = rollData.roll?.subtitle || rollData.roll?.formula || rollData.subtitle || '';
   
-  console.log('[v0] Setting title:', title, 'subtitle:', subtitle);
-  
   rwElements.rwTitle.textContent = title;
   rwElements.rwSubtitle.textContent = subtitle;
   
   // Render config fields - DLC sends config.fields array
   if (rollData.config && rollData.config.fields) {
-    console.log('[v0] Rendering config fields:', rollData.config.fields);
     renderRWConfigFields(rollData.config.fields);
   }
   
   // Render action buttons
   if (rollData.buttons) {
-    console.log('[v0] Rendering buttons:', rollData.buttons);
     renderRWActionButtons(rollData.buttons);
   }
   
