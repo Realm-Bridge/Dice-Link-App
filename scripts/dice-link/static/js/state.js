@@ -63,6 +63,10 @@ function getCameraList() {
     return [..._state.cameraList];
 }
 
+function getWebSocket() {
+    return _state.ws;
+}
+
 function isConnected() {
     return _state.connected;
 }

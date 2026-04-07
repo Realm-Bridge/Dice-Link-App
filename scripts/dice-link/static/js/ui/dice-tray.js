@@ -13,18 +13,20 @@ function initDiceTray() {
   document.querySelectorAll('.dice-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const die = parseInt(btn.dataset.die);
-      updateDiceTrayDie(die, getDiceTrayState().dice[die] + 1);
-      updateDiceTrayDisplay();
+      updateDiceTrayDie(die, (getDiceTrayState().dice[die] || 0) + 1);
+      updateDiceTrayBadge(btn, die);
+      rebuildFormula();
     });
 
     // Dice button right-click: subtract one die
     btn.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const die = parseInt(btn.dataset.die);
-      const current = getDiceTrayState().dice[die];
+      const current = getDiceTrayState().dice[die] || 0;
       if (current > 0) {
         updateDiceTrayDie(die, current - 1);
-        updateDiceTrayDisplay();
+        updateDiceTrayBadge(btn, die);
+        rebuildFormula();
       }
     });
   });
@@ -33,9 +35,9 @@ function initDiceTray() {
   const minusBtn = document.getElementById('dice-modifier-minus');
   if (minusBtn) {
     minusBtn.addEventListener('click', () => {
-      const current = getDiceTrayState().modifier;
-      updateDiceTrayModifier(current - 1);
-      updateDiceTrayDisplay();
+      updateDiceTrayModifier(getDiceTrayState().modifier - 1);
+      updateModifierDisplay();
+      rebuildFormula();
     });
   }
 
@@ -43,13 +45,13 @@ function initDiceTray() {
   const plusBtn = document.getElementById('dice-modifier-plus');
   if (plusBtn) {
     plusBtn.addEventListener('click', () => {
-      const current = getDiceTrayState().modifier;
-      updateDiceTrayModifier(current + 1);
-      updateDiceTrayDisplay();
+      updateDiceTrayModifier(getDiceTrayState().modifier + 1);
+      updateModifierDisplay();
+      rebuildFormula();
     });
   }
 
-  // ADV/DIS toggle (cycles: normal -> advantage -> disadvantage -> normal)
+  // ADV/DIS toggle: normal -> advantage -> disadvantage -> normal
   const advBtn = document.querySelector('.dice-adv-btn');
   if (advBtn) {
     advBtn.addEventListener('click', () => {
@@ -71,6 +73,7 @@ function initDiceTray() {
         advBtn.textContent = 'ADV/DIS';
       }
       updateDiceTrayAdvMode(next);
+      rebuildFormula(); // Rebuilds formula with kh/kl on d20s
       debugLog(`ADV/DIS mode: ${next}`);
     });
   }
@@ -84,93 +87,134 @@ function initDiceTray() {
         debugLog('No dice selected, nothing to roll');
         return;
       }
-      const advMode = getDiceTrayState().advMode;
-      debugLog(`Rolling formula: ${formula}, advMode: ${advMode}`);
+      debugLog(`Sending diceTrayRoll: ${formula}`);
       
-      // Check if sendMessage function exists
       if (typeof sendMessage !== 'function') {
         debugError('sendMessage is not defined');
         return;
       }
       
       sendMessage({
-        type: 'manualRoll',
+        type: 'diceTrayRoll',
         formula: formula,
-        advMode: advMode
+        flavor: 'Manual Dice Roll'
       });
       
       // Reset tray after sending
-      resetDiceTray();
-      updateDiceTrayDisplay();
-      
-      // Reset ADV/DIS button visual
-      const advBtn = document.querySelector('.dice-adv-btn');
-      if (advBtn) {
-        advBtn.classList.remove('adv-active', 'dis-active');
-        advBtn.textContent = 'ADV/DIS';
-      }
+      resetDiceTrayUI();
     });
   }
 
   // Set initial display
-  updateDiceTrayDisplay();
+  rebuildFormula();
 }
 
 /**
- * Build dice formula string from current tray state
- * @returns {string} Formula string e.g. "2d20+1d6" or empty string
+ * Build clean formula string from current tray state (no /r prefix).
+ * Applies kh/kl to d20s for advantage/disadvantage per Foundry spec.
+ * @returns {string} e.g. "2d20kh+1d6+3" or "" if nothing selected
  */
 function buildDiceFormula() {
-  const { dice, modifier } = getDiceTrayState();
+  const { dice, modifier, advMode } = getDiceTrayState();
   const parts = [];
 
-  for (const die of DICE_ORDER) {
-    const count = dice[die];
+  // Die order per spec: d20 first, then descending, d100 last
+  const dieOrder = [20, 12, 10, 8, 6, 4, 100];
+
+  for (const die of dieOrder) {
+    const count = dice[die] || 0;
     if (count > 0) {
-      parts.push(`${count}d${die}`);
+      let notation = `${count}d${die}`;
+      // Apply advantage/disadvantage ONLY to d20s
+      if (die === 20) {
+        if (advMode === 'advantage') {
+          notation = `${count}d20kh`;
+        } else if (advMode === 'disadvantage') {
+          notation = `${count}d20kl`;
+        }
+      }
+      parts.push(notation);
     }
   }
 
-  if (modifier !== 0) {
-    parts.push(modifier > 0 ? `+${modifier}` : `${modifier}`);
+  let formula = parts.join('+');
+
+  if (modifier > 0) {
+    formula += `+${modifier}`;
+  } else if (modifier < 0) {
+    formula += `${modifier}`;
   }
 
-  return parts.join('+');
+  return formula;
 }
 
 /**
- * Update dice tray display with current state
+ * Rebuild the formula input field from current state.
+ * Called after every state change.
  */
-function updateDiceTrayDisplay() {
-  const { dice, modifier } = getDiceTrayState();
-
-  // Update formula input
+function rebuildFormula() {
   const formulaInput = document.getElementById('dice-formula-input');
-  if (formulaInput) {
-    const formula = buildDiceFormula();
-    formulaInput.value = formula ? `/r ${formula}` : '/r ';
-  }
+  if (!formulaInput) return;
+  const formula = buildDiceFormula();
+  formulaInput.value = formula ? `/r ${formula}` : '/r ';
+}
 
-  // Update die count badges
-  document.querySelectorAll('.dice-btn').forEach(btn => {
-    const die = parseInt(btn.dataset.die);
-    const count = dice[die] || 0;
-    const badge = btn.querySelector('.die-count');
-    if (badge) {
-      badge.textContent = count;
-      if (count > 0) {
-        badge.classList.add('show');
-        badge.style.display = 'flex';
-      } else {
-        badge.classList.remove('show');
-        badge.style.display = 'none';
-      }
+/**
+ * Update the count badge on a single dice button
+ * @param {HTMLElement} btn - The dice button element
+ * @param {number} die - Die type (4, 6, 8, etc.)
+ */
+function updateDiceTrayBadge(btn, die) {
+  const count = getDiceTrayState().dice[die] || 0;
+  const badge = btn.querySelector('.die-count');
+  if (badge) {
+    badge.textContent = count;
+    if (count > 0) {
+      badge.classList.add('visible');
+      badge.style.display = 'flex';
+    } else {
+      badge.classList.remove('visible');
+      badge.style.display = 'none';
     }
-  });
+  }
+}
 
-  // Update modifier display
+/**
+ * Update the modifier display element
+ */
+function updateModifierDisplay() {
+  const modifier = getDiceTrayState().modifier;
   const modDisplay = document.getElementById('dice-modifier-value');
   if (modDisplay) {
     modDisplay.textContent = modifier > 0 ? `+${modifier}` : `${modifier}`;
   }
+}
+
+/**
+ * Reset the dice tray state and refresh all UI elements.
+ * Calls resetDiceTray() from state.js to clear data, then updates the DOM.
+ */
+function resetDiceTrayUI() {
+  // Reset state data
+  resetDiceTray();
+
+  // Reset badge visuals
+  document.querySelectorAll('.dice-btn').forEach(btn => {
+    const die = parseInt(btn.dataset.die);
+    updateDiceTrayBadge(btn, die);
+  });
+
+  // Reset modifier display
+  updateModifierDisplay();
+
+  // Reset ADV/DIS button
+  const advBtn = document.querySelector('.dice-adv-btn');
+  if (advBtn) {
+    advBtn.classList.remove('adv-active', 'dis-active');
+    advBtn.textContent = 'ADV/DIS';
+  }
+
+  // Reset formula
+  rebuildFormula();
+  debugLog('Dice tray reset');
 }
