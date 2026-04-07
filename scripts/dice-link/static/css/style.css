@@ -828,6 +828,212 @@ body {
     font-size: 0.875rem;
 }
 
+/* Roll Window Dashboard Section */
+.roll-window {
+    margin-top: 32px;
+    padding: 20px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+}
+
+.roll-window-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roll-window-state {
+    display: none;
+}
+
+.roll-window-state.active {
+    display: block;
+}
+
+/* Dice Tray (Idle State) */
+.dice-tray {
+    text-align: center;
+}
+
+.dice-tray-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.dice-tray-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+    gap: 8px;
+}
+
+.quick-dice-btn {
+    padding: 8px 12px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.quick-dice-btn:hover {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.quick-dice-btn.placeholder {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.quick-dice-btn.placeholder:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.placeholder-badge {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Roll Request State */
+.roll-window-header {
+    margin-bottom: 16px;
+}
+
+#rw-roll-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.rw-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.rw-config-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.rw-config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rw-config-field label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.rw-config-field input,
+.rw-config-field select {
+    padding: 8px 12px;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.rw-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.rw-action-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 16px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.rw-action-btn:hover {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.rw-action-btn.selected {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+/* Dice Entry State */
+.rw-dice-entry-header {
+    margin-bottom: 12px;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.rw-dice-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.rw-dice-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rw-dice-input-group img {
+    width: 24px;
+    height: 24px;
+    opacity: 0.6;
+}
+
+.rw-dice-input-group input {
+    flex: 1;
+    padding: 8px 12px;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.rw-dice-input-group input.valid {
+    border-color: var(--success);
+}
+
+.rw-dice-input-group input.invalid {
+    border-color: var(--danger);
+}
+
+.rw-actions {
+    display: flex;
+    gap: 8px;
+}
+
 .camera-feed.active .camera-feed-placeholder {
     display: none;
 }

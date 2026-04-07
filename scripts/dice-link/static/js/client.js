@@ -10,7 +10,7 @@ const DICE_RANGES = {
     d4: { min: 1, max: 4 },
     d6: { min: 1, max: 6 },
     d8: { min: 1, max: 8 },
-    d10: { min: 0, max: 9 },
+    d10: { min: 1, max: 10 },
     d12: { min: 1, max: 12 },
     d20: { min: 1, max: 20 },
     d100: { min: 1, max: 100 }
@@ -108,7 +108,20 @@ const elements = {
     cameraDiceIcons: document.getElementById('camera-dice-icons'),
     settingsCamera: document.getElementById('settings-camera'),
     cameraPreview: document.getElementById('camera-preview'),
-    refreshCameraPreview: document.getElementById('refresh-camera-preview')
+    refreshCameraPreview: document.getElementById('refresh-camera-preview'),
+    // Roll Window elements
+    rollWindow: document.getElementById('roll-window'),
+    rwIdleState: document.getElementById('roll-window-idle'),
+    rwRequestState: document.getElementById('roll-window-request'),
+    rwDiceEntryState: document.getElementById('roll-window-dice-entry'),
+    rwRollTitle: document.getElementById('rw-roll-title'),
+    rwRollSubtitle: document.getElementById('rw-roll-subtitle'),
+    rwConfigSection: document.getElementById('rw-config-section'),
+    rwButtons: document.getElementById('rw-buttons'),
+    rwDiceFormula: document.getElementById('rw-dice-formula'),
+    rwDiceInputs: document.getElementById('rw-dice-inputs'),
+    rwSubmitBtn: document.getElementById('rw-submit-btn'),
+    rwBackBtn: document.getElementById('rw-back-btn')
 };
 
 /**
@@ -292,6 +305,14 @@ function updateConnectionStatus(connected, playerName) {
         elements.connectionStatus.classList.remove('disconnected');
         elements.connectionStatus.classList.add('connected');
         elements.statusText.textContent = playerName ? `Connected: ${playerName}` : 'Connected';
+        
+        // Hide the waiting panel when connected - Roll Window handles everything now
+        elements.waitingState.classList.add('hidden');
+        
+        // Make sure Roll Window is in idle state if no active roll
+        if (!state.currentRoll) {
+            updateRollWindow('idle');
+        }
     } else {
         elements.connectionStatus.classList.remove('connected');
         elements.connectionStatus.classList.add('disconnected');
@@ -308,12 +329,14 @@ function updateConnectionStatus(connected, playerName) {
  * Handle incoming roll request
  */
 function handleRollRequest(data) {
+    debugLog("handleRollRequest called with: " + JSON.stringify(data));
+    
     state.currentRoll = data;
     state.selectedButton = null;
     state.configValues = {};
     state.diceResults = [];
     
-    // Populate roll header
+    // Populate roll header (for old panel - kept for compatibility)
     elements.rollTitle.textContent = data.roll.title || 'Roll';
     elements.rollSubtitle.textContent = data.roll.subtitle || '';
     
@@ -327,8 +350,20 @@ function handleRollRequest(data) {
     // Render action buttons
     renderActionButtons(data.buttons || []);
     
-    // Show roll panel and cancel button
-    showPanel('roll');
+    // Update Roll Window - this is now the PRIMARY UI for DLC rolls
+    elements.rwRollTitle.textContent = data.roll.title || 'Roll';
+    elements.rwRollSubtitle.textContent = data.roll.subtitle || '';
+    renderRWConfigFields(data.config?.fields || []);
+    renderRWActionButtons(data.buttons || []);
+    updateRollWindow('request');
+    
+    // Hide old panels when using Roll Window
+    elements.waitingState.classList.add('hidden');
+    elements.rollPanel.classList.add('hidden');
+    elements.diceEntryPanel.classList.add('hidden');
+    elements.completeState.classList.add('hidden');
+    
+    // Show cancel button
     elements.cancelRoll.classList.remove('hidden');
 }
 
@@ -481,11 +516,15 @@ function selectActionButton(buttonId, buttonLabel) {
         }
     });
     
+    // Use button label (lowercase) as the button identifier for Foundry
+    // This ensures "Critical Hit" label sends "critical hit" button name
+    const buttonName = buttonLabel.toLowerCase();
+    
     // Phase A: Send buttonSelect to DLC - wait for diceRequest response
     sendMessage({
         type: 'buttonSelect',
         rollId: state.currentRoll?.id,
-        button: buttonId,
+        button: buttonName,
         configChanges: configChanges
     });
     
@@ -517,10 +556,17 @@ function handleDiceRequest(message) {
     // Render dice inputs based on what DLC told us
     renderDiceInputsFromRequest(message.dice, message.formula);
     
-    // Make sure we're on the dice entry panel
-    showPanel('dice-entry');
+    // Update Roll Window with dice entry UI - this is the PRIMARY UI
+    renderRWDiceInputs(message.dice, message.formula);
+    updateRollWindow('dice-entry');
     
-    // Start camera if available
+    // Hide old panels - Roll Window is the primary UI now
+    elements.waitingState.classList.add('hidden');
+    elements.rollPanel.classList.add('hidden');
+    elements.diceEntryPanel.classList.add('hidden');
+    elements.completeState.classList.add('hidden');
+    
+    // Start camera if available (optional enhancement)
     startCameraStream();
 }
 
@@ -691,13 +737,23 @@ function updateSubmitButton() {
  * Submit dice results
  */
 function submitResults() {
-    if (!state.currentRoll || !state.selectedButton) return;
+    console.log("[v0] submitResults called");
+    console.log("[v0] state.currentRoll:", state.currentRoll);
+    console.log("[v0] state.selectedButton:", state.selectedButton);
+    console.log("[v0] state.pendingDiceRequest:", state.pendingDiceRequest);
+    console.log("[v0] state.diceResults:", state.diceResults);
+    
+    if (!state.currentRoll || !state.selectedButton) {
+        console.log("[v0] submitResults early return - missing currentRoll or selectedButton");
+        return;
+    }
     
     // Build results array
     const results = state.diceResults.map(r => ({
         type: r.type,
         value: r.value
     }));
+    console.log("[v0] Built results array:", results);
     
     // Check if this is a test roll (ID starts with "test-")
     if (state.currentRoll.id && state.currentRoll.id.startsWith('test-')) {
@@ -711,6 +767,8 @@ function submitResults() {
     // Check if we have a pending dice request (two-phase flow)
     if (state.pendingDiceRequest) {
         // Phase B response: Send diceResult
+        console.log("[v0] Sending submitDiceResult (two-phase flow)");
+        console.log("[v0] originalRollId:", state.pendingDiceRequest.originalRollId);
         sendMessage({
             type: 'submitDiceResult',
             originalRollId: state.pendingDiceRequest.originalRollId,
@@ -718,6 +776,7 @@ function submitResults() {
         });
         state.pendingDiceRequest = null;
     } else {
+        console.log("[v0] Sending submitResult (legacy single-phase flow)");
         // Legacy single-phase flow (fallback)
         // Build config changes (compare with original values)
         const configChanges = {};
@@ -746,29 +805,47 @@ function submitResults() {
  * Cancel current roll
  */
 function cancelRoll() {
-    if (!state.currentRoll) return;
-    
-    // Check if this is a test roll (ID starts with "test-")
-    if (state.currentRoll.id && state.currentRoll.id.startsWith('test-')) {
-        // For test rolls, just go back to waiting state without sending a message
-        showCompleteState('cancelled', 'Test Roll Cancelled', 'Ready for next test roll...');
-        return;
-    }
-    
-    // Send to server (for real Foundry VTT rolls)
-    sendMessage({
-        type: 'cancelRoll',
-        rollId: state.currentRoll.id,
-        reason: 'User cancelled'
-    });
+  // Get the roll ID before clearing state
+  const rollId = state.currentRoll?.id || state.pendingDiceRequest?.originalRollId;
+  
+  if (!rollId) return;
+  
+  // Check if this is a test roll (ID starts with "test-")
+  const isTestRoll = rollId.startsWith('test-');
+  
+  // Clear ALL roll-related state FIRST to prevent any other messages being sent
+  state.currentRoll = null;
+  state.selectedButton = null;
+  state.pendingDiceRequest = null;
+  state.configValues = {};
+  state.diceResults = [];
+  
+  // Update Roll Window to idle state immediately
+  updateRollWindow('idle');
+  
+  // Hide cancel button
+  elements.cancelRoll.classList.add('hidden');
+  
+  // For test rolls, don't send a message to server
+  if (isTestRoll) {
+    return;
+  }
+  
+  // Send cancel message to server (for real Foundry VTT rolls)
+  sendMessage({
+    type: 'cancelRoll',
+    rollId: rollId,
+    reason: 'User cancelled'
+  });
 }
 
 /**
- * Go back to config panel
- */
-function backToConfig() {
-    showPanel('roll');
-}
+  * Go back to config/request panel
+  */
+  function backToConfig() {
+  // Update Roll Window to request state
+  updateRollWindow('request');
+  }
 
 /**
  * Show a specific panel
@@ -815,22 +892,20 @@ function showPanel(panelName) {
  * Show completion state
  */
 function showCompleteState(type, title, message) {
-    state.currentRoll = null;
-    state.selectedButton = null;
-    
-    elements.completeIcon.className = `complete-icon ${type}`;
-    elements.completeTitle.textContent = title;
-    elements.completeMessage.textContent = message;
-    
-    showPanel('complete');
-    
-    // Return to waiting state after delay
-    setTimeout(() => {
-        if (!state.currentRoll) {
-            showPanel('waiting');
-        }
-    }, 3000);
-}
+  state.currentRoll = null;
+  state.selectedButton = null;
+  state.pendingDiceRequest = null;
+  
+  // Reset Roll Window to idle state - this is the primary UI
+  updateRollWindow('idle');
+  
+  // Hide all old panels
+  elements.waitingState.classList.add('hidden');
+  elements.rollPanel.classList.add('hidden');
+  elements.diceEntryPanel.classList.add('hidden');
+  elements.completeState.classList.add('hidden');
+  elements.cancelRoll.classList.add('hidden');
+  }
 
 /**
  * Send message to server
@@ -840,6 +915,15 @@ function sendMessage(message) {
         state.ws.send(JSON.stringify(message));
     } else {
         console.error('WebSocket not connected');
+    }
+}
+
+/**
+ * Send debug message to Python backend (shows in command prompt)
+ */
+function debugLog(msg) {
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ type: 'debug', message: msg }));
     }
 }
 
@@ -1193,12 +1277,224 @@ function displayCameraDiceIcons(dice) {
 }
 
 /**
+ * Update Roll Window to show appropriate state
+ */
+function updateRollWindow(newState) {
+    debugLog("updateRollWindow called with state: " + newState);
+    debugLog("rwIdleState exists: " + !!elements.rwIdleState);
+    debugLog("rwRequestState exists: " + !!elements.rwRequestState);
+    debugLog("rwDiceEntryState exists: " + !!elements.rwDiceEntryState);
+    
+    // Hide all states
+    elements.rwIdleState.classList.remove('active');
+    elements.rwRequestState.classList.remove('active');
+    elements.rwDiceEntryState.classList.remove('active');
+    
+    // Show requested state
+    switch(newState) {
+        case 'idle':
+            elements.rwIdleState.classList.add('active');
+            break;
+        case 'request':
+            elements.rwRequestState.classList.add('active');
+            break;
+        case 'dice-entry':
+            elements.rwDiceEntryState.classList.add('active');
+            break;
+    }
+    debugLog("After update - rwRequestState has 'active': " + elements.rwRequestState?.classList.contains('active'));
+}
+
+/**
+ * Render action buttons in Roll Window request state
+ */
+function renderRWActionButtons(buttons) {
+    debugLog("renderRWActionButtons called with: " + JSON.stringify(buttons));
+    debugLog("rwButtons element exists: " + !!elements.rwButtons);
+    
+    if (!elements.rwButtons) {
+        debugLog("ERROR: rwButtons element is null!");
+        return;
+    }
+    
+    elements.rwButtons.innerHTML = '';
+    
+    buttons.forEach(button => {
+        const btn = document.createElement('button');
+        btn.className = 'rw-action-btn';
+        btn.dataset.buttonId = button.id;
+        btn.textContent = button.label;
+        btn.addEventListener('click', () => {
+            selectActionButton(button.id, button.label);
+            updateRollWindow('dice-entry');
+        });
+        elements.rwButtons.appendChild(btn);
+    });
+}
+
+/**
+ * Render config fields in Roll Window request state
+ */
+function renderRWConfigFields(fields) {
+    elements.rwConfigSection.innerHTML = '';
+    
+    fields.forEach(field => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'rw-config-field';
+        
+        const label = document.createElement('label');
+        label.htmlFor = `rw-${field.name}`;
+        label.textContent = field.label || field.name;
+        fieldDiv.appendChild(label);
+        
+        let input;
+        if (field.type === 'select' && field.options) {
+            input = document.createElement('select');
+            field.options.forEach(opt => {
+                const option = document.createElement('option');
+                // Handle both object {value, label} and string formats
+                const optValue = typeof opt === 'object' ? opt.value : opt;
+                const optLabel = typeof opt === 'object' ? opt.label : opt;
+                option.value = optValue;
+                option.textContent = optLabel;
+                if (optValue === field.selected) option.selected = true;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type = 'text';
+            input.value = field.value || '';
+        }
+        
+        input.id = `rw-${field.name}`;
+        input.dataset.field = field.name;
+        input.addEventListener('change', (e) => {
+            state.configValues[field.name] = e.target.value;
+        });
+        fieldDiv.appendChild(input);
+        elements.rwConfigSection.appendChild(fieldDiv);
+    });
+}
+
+/**
+ * Render dice inputs in Roll Window dice entry state
+ */
+function renderRWDiceInputs(dice, formula) {
+    elements.rwDiceInputs.innerHTML = '';
+    
+    if (formula) {
+        elements.rwDiceFormula.textContent = `Roll ${formula}`;
+    }
+    
+    state.diceResults = [];
+    dice.forEach(die => {
+        for (let i = 0; i < die.count; i++) {
+            const inputIndex = state.diceResults.length;
+            state.diceResults.push({ type: die.type, value: null });
+            
+            const range = DICE_RANGES[die.type] || { min: 1, max: 20 };
+            const iconPath = getDiceIconPath(die.type);
+            
+            const group = document.createElement('div');
+            group.className = 'rw-dice-input-group';
+            
+            const icon = document.createElement('img');
+            icon.src = iconPath;
+            icon.alt = die.type;
+            group.appendChild(icon);
+            
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = range.min;
+            input.max = range.max;
+            input.placeholder = `${range.min}-${range.max}`;
+            input.dataset.index = inputIndex;
+            input.dataset.type = die.type;
+            input.addEventListener('input', (e) => {
+                const idx = parseInt(e.target.dataset.index);
+                const val = e.target.value ? parseInt(e.target.value) : null;
+                state.diceResults[idx].value = val;
+                
+                // Validate
+                if (val !== null && (val < range.min || val > range.max)) {
+                    input.classList.add('invalid');
+                    input.classList.remove('valid');
+                } else if (val !== null) {
+                    input.classList.add('valid');
+                    input.classList.remove('invalid');
+                } else {
+                    input.classList.remove('valid', 'invalid');
+                }
+                
+                // Update submit button state
+                updateRWSubmitButton();
+            });
+            group.appendChild(input);
+            elements.rwDiceInputs.appendChild(group);
+        }
+    });
+    
+    updateRWSubmitButton();
+}
+
+/**
+ * Update Roll Window submit button state
+ */
+function updateRWSubmitButton() {
+    const allFilled = state.diceResults.every(r => r.value !== null);
+    elements.rwSubmitBtn.disabled = !allFilled;
+}
+
+/**
+ * Initialize Roll Window
+ */
+function initRollWindow() {
+    // Quick dice buttons - placeholder for future local dice rolling
+    document.querySelectorAll('.quick-dice-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const dieType = e.target.dataset.die;
+            // Future: Could implement local dice rolling or send to DLC
+            // For now, show a brief visual feedback
+            btn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                btn.style.transform = '';
+            }, 100);
+        });
+    });
+    
+    // Roll Window back button
+    elements.rwBackBtn.addEventListener('click', () => {
+        updateRollWindow('request');
+    });
+    
+    // Roll Window submit button
+    elements.rwSubmitBtn.addEventListener('click', () => {
+        if (state.diceResults.every(r => r.value !== null) && state.pendingDiceRequest) {
+            const results = state.diceResults.map(r => ({
+                type: r.type,
+                value: r.value
+            }));
+            
+            sendMessage({
+                type: 'submitDiceResult',
+                originalRollId: state.pendingDiceRequest.originalRollId,
+                results: results
+            });
+            
+            state.pendingDiceRequest = null;
+            updateRollWindow('idle');
+        }
+    });
+}
+
+/**
  * Initialize the application
  */
 function init() {
     loadSettings();
     initEventListeners();
     initWebSocket();
+    initRollWindow();
     // Load camera list in background (Phase 3)
     loadCameraList();
 }

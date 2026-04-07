@@ -162,7 +162,10 @@ async def send_button_select(roll_id: str, button: str, config_changes: dict) ->
 
 async def send_dice_result(original_roll_id: str, results: list) -> bool:
     """Send dice results to DLC (Phase B response)"""
+    print(f"[DLA] send_dice_result called with originalRollId={original_roll_id}, results={results}")
+    
     if not app_state.dlc_websocket or not app_state.connection.connected:
+        print(f"[DLA] send_dice_result: No DLC websocket or not connected")
         return False
     
     message = {
@@ -172,6 +175,7 @@ async def send_dice_result(original_roll_id: str, results: list) -> bool:
     }
     
     try:
+        print(f"[DLA] Sending diceResult to DLC: {message}")
         await app_state.dlc_websocket.send_text(json.dumps(message))
         await app_state.clear_roll_request()
         

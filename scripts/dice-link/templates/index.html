@@ -27,30 +27,10 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Waiting State -->
-            <div id="waiting-state" class="state-panel">
-                <div class="waiting-content">
-                    <div class="waiting-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                        </svg>
-                    </div>
-                    <h2>Waiting for Foundry VTT</h2>
-                    <p class="waiting-description">
-                        Make sure the Dice Link Companion module is installed and enabled in Foundry VTT.
-                        <br>
-                        DLC will connect to <code>ws://localhost:47293/ws/dlc</code>
-                    </p>
-                    <div class="test-section">
-                        <p class="test-description">Or test the app without Foundry VTT:</p>
-                        <button id="test-roll-btn" class="btn btn-primary">
-                            Send Test Roll
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <!-- Hidden placeholder for backwards compatibility -->
+            <div id="waiting-state" class="hidden"></div>
 
-            <!-- Roll Request Panel -->
+            <!-- Roll Request Panel (legacy - hidden, Roll Window is now primary UI) -->
             <div id="roll-panel" class="state-panel hidden">
                 <!-- Roll Header -->
                 <div class="roll-header">
@@ -131,6 +111,63 @@
                     <p id="complete-message">Waiting for next roll...</p>
                 </div>
             </div>
+
+            <!-- Roll Window Dashboard Section -->
+            <aside id="roll-window" class="roll-window">
+                <h3 class="roll-window-title">Roll Window</h3>
+                
+                <!-- Idle State: Dice Tray -->
+                <div id="roll-window-idle" class="roll-window-state active">
+                    <div class="dice-tray">
+                        <p class="dice-tray-label">Quick Dice <span class="placeholder-badge">(Coming Soon)</span></p>
+                        <div class="dice-tray-buttons">
+                            <button class="quick-dice-btn placeholder" data-die="d4" title="Feature coming soon">d4</button>
+                            <button class="quick-dice-btn placeholder" data-die="d6" title="Feature coming soon">d6</button>
+                            <button class="quick-dice-btn placeholder" data-die="d8" title="Feature coming soon">d8</button>
+                            <button class="quick-dice-btn placeholder" data-die="d10" title="Feature coming soon">d10</button>
+                            <button class="quick-dice-btn placeholder" data-die="d12" title="Feature coming soon">d12</button>
+                            <button class="quick-dice-btn placeholder" data-die="d20" title="Feature coming soon">d20</button>
+                            <button class="quick-dice-btn placeholder" data-die="d100" title="Feature coming soon">d100</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Roll Request State -->
+                <div id="roll-window-request" class="roll-window-state">
+                    <div class="roll-window-header">
+                        <h4 id="rw-roll-title">Attack Roll</h4>
+                        <p id="rw-roll-subtitle" class="rw-subtitle">Melee Weapon Attack</p>
+                    </div>
+                    
+                    <div id="rw-config-section" class="rw-config-section">
+                        <!-- Config fields rendered here -->
+                    </div>
+                    
+                    <div id="rw-buttons" class="rw-buttons">
+                        <!-- Action buttons rendered here -->
+                    </div>
+                </div>
+
+                <!-- Dice Entry State -->
+                <div id="roll-window-dice-entry" class="roll-window-state">
+                    <div class="rw-dice-entry-header">
+                        <p id="rw-dice-formula">Roll dice:</p>
+                    </div>
+                    
+                    <div id="rw-dice-inputs" class="rw-dice-inputs">
+                        <!-- Dice inputs rendered here -->
+                    </div>
+                    
+                    <div class="rw-actions">
+                        <button id="rw-submit-btn" class="btn btn-primary btn-small" disabled>
+                            Submit
+                        </button>
+                        <button id="rw-back-btn" class="btn btn-secondary btn-small">
+                            Back
+                        </button>
+                    </div>
+                </div>
+            </aside>
         </main>
 
         <!-- Footer -->

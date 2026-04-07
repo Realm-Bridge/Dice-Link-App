@@ -199,6 +199,11 @@ async def handle_ui_message(message: dict):
     """Handle messages from browser UI"""
     msg_type = message.get("type")
     
+    if msg_type == "debug":
+        # Debug messages from JavaScript - print to command prompt
+        print(f"[JS] {message.get('message', '')}")
+        return
+    
     if msg_type == "buttonSelect":
         # Phase A: User selected a button (Advantage/Normal/Disadvantage)
         roll_id = message.get("rollId")
@@ -215,10 +220,13 @@ async def handle_ui_message(message: dict):
     
     elif msg_type == "submitDiceResult":
         # Phase B: User submitted dice results after diceRequest
+        print(f"[DLA] Received submitDiceResult from UI: {message}")
         original_roll_id = message.get("originalRollId")
         results = message.get("results", [])
         
+        print(f"[DLA] Calling send_dice_result with originalRollId={original_roll_id}, results={results}")
         success = await send_dice_result(original_roll_id, results)
+        print(f"[DLA] send_dice_result returned: {success}")
         
         await broadcast_to_ui({
             "type": "submitResultAck",
