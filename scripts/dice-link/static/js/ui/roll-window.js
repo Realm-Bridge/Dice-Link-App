@@ -25,11 +25,20 @@ function initRollWindow() {
     rwConfigSection: document.getElementById('rw-config-section'),
     rwButtons: document.getElementById('rw-action-buttons'),
     rwDiceInputs: document.getElementById('rw-dice-inputs'),
-    cancelBtn: document.getElementById('rw-cancel-btn')
+    cancelBtn: document.getElementById('rw-cancel-btn'),
+    // Also cache footer cancel button as fallback
+    footerCancelBtn: document.getElementById('cancel-roll')
   };
   
-  // Cancel button
-  rwElements.cancelBtn?.addEventListener('click', cancelRoll);
+  // Cancel button in Roll Window
+  if (rwElements.cancelBtn) {
+    rwElements.cancelBtn.addEventListener('click', cancelRoll);
+  }
+  
+  // Footer cancel button (legacy)
+  if (rwElements.footerCancelBtn) {
+    rwElements.footerCancelBtn.addEventListener('click', cancelRoll);
+  }
 }
 
 /**

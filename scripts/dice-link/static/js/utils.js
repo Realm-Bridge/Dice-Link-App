@@ -53,6 +53,7 @@ function cacheElements() {
         rwButtons: document.getElementById('rw-action-buttons'),
         rwDiceInputs: document.getElementById('rw-dice-inputs'),
         cancelRoll: document.getElementById('rw-cancel-btn'),
+        footerCancelRoll: document.getElementById('cancel-roll'),
         
         // Settings
         settingsBtn: document.getElementById('settings-btn'),

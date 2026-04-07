@@ -59,13 +59,16 @@ function initDiceTray() {
         next = 'advantage';
         advBtn.classList.add('adv-active');
         advBtn.classList.remove('dis-active');
+        advBtn.textContent = 'ADV';
       } else if (current === 'advantage') {
         next = 'disadvantage';
         advBtn.classList.remove('adv-active');
         advBtn.classList.add('dis-active');
+        advBtn.textContent = 'DIS';
       } else {
         next = 'normal';
         advBtn.classList.remove('adv-active', 'dis-active');
+        advBtn.textContent = 'ADV/DIS';
       }
       updateDiceTrayAdvMode(next);
       debugLog(`ADV/DIS mode: ${next}`);

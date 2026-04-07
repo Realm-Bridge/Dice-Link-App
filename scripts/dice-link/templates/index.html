@@ -194,17 +194,21 @@
                 <!-- Roll Request State -->
                 <div id="roll-window-request" class="roll-window-state">
                     <div class="roll-window-header">
-                        <h4 id="rw-roll-title">Attack Roll</h4>
-                        <p id="rw-roll-subtitle" class="rw-subtitle">Melee Weapon Attack</p>
+                        <h4 id="rw-title">Roll Request</h4>
+                        <p id="rw-subtitle" class="rw-subtitle"></p>
                     </div>
                     
                     <div id="rw-config-section" class="rw-config-section">
                         <!-- Config fields rendered here -->
                     </div>
                     
-                    <div id="rw-buttons" class="rw-buttons">
+                    <div id="rw-action-buttons" class="rw-buttons">
                         <!-- Action buttons rendered here -->
                     </div>
+                    
+                    <button id="rw-cancel-btn" class="btn btn-danger btn-small rw-cancel-btn">
+                        Cancel Roll
+                    </button>
                 </div>
 
                 <!-- Dice Entry State -->
@@ -239,8 +243,8 @@
     </div>
 
     <!-- Settings Panel Overlay -->
-    <div id="settings-overlay" class="settings-overlay hidden">
-        <div class="settings-panel">
+    <div id="settings-overlay" class="settings-overlay">
+        <div id="settings-panel" class="settings-panel">
             <div class="settings-header">
                 <h2>Settings</h2>
                 <button id="settings-close" class="icon-btn" title="Close">

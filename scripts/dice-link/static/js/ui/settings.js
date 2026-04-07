@@ -68,14 +68,15 @@ function saveSettings() {
 function openSettings() {
   debugLog('Opening settings panel');
   
-  const elements = cacheElements();
-  if (elements.settingsPanel) {
-    elements.settingsPanel.classList.add('visible');
-  }
-  
   const overlay = document.getElementById('settings-overlay');
+  const panel = document.getElementById('settings-panel');
+  
   if (overlay) {
+    overlay.classList.remove('hidden');
     overlay.classList.add('visible');
+  }
+  if (panel) {
+    panel.classList.add('visible');
   }
 }
 
@@ -85,14 +86,15 @@ function openSettings() {
 function closeSettings() {
   debugLog('Closing settings panel');
   
-  const elements = cacheElements();
-  if (elements.settingsPanel) {
-    elements.settingsPanel.classList.remove('visible');
-  }
-  
   const overlay = document.getElementById('settings-overlay');
+  const panel = document.getElementById('settings-panel');
+  
   if (overlay) {
     overlay.classList.remove('visible');
+    overlay.classList.add('hidden');
+  }
+  if (panel) {
+    panel.classList.remove('visible');
   }
 }
 
