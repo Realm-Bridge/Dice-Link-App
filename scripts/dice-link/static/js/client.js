@@ -548,6 +548,8 @@ function selectActionButton(buttonId, buttonLabel) {
  * Handle diceRequest from DLC (Phase B)
  */
 function handleDiceRequest(message) {
+    debugLog("handleDiceRequest called with: " + JSON.stringify(message));
+    
     // Store the dice info from DLC
     state.pendingDiceRequest = {
         originalRollId: message.originalRollId,
@@ -564,8 +566,14 @@ function handleDiceRequest(message) {
     // Render dice inputs based on what DLC told us
     renderDiceInputsFromRequest(message.dice, message.formula);
     
-    // Update Roll Window with dice entry UI - this is the PRIMARY UI
-    renderRWDiceInputs(message.dice, message.formula);
+    // Update Roll Window with SVG dice entry UI - this is the PRIMARY UI
+    const diceEntryHTML = renderDiceEntry(message);
+    elements.rwDiceInputs.innerHTML = diceEntryHTML;
+    
+    // Initialize click handlers for the dice entry
+    initDiceEntry(message);
+    
+    // Update Roll Window to dice-entry state
     updateRollWindow('dice-entry');
     
     // Hide old panels - Roll Window is the primary UI now
@@ -1495,6 +1503,307 @@ function initRollWindow() {
     });
 }
 
+// ============================================================================
+// DICE TRAY STATE AND FUNCTIONS
+// ============================================================================
+
+/**
+ * State for dice tray
+ */
+const diceTrayState = {
+  dice: { 4: 0, 6: 0, 8: 0, 10: 0, 12: 0, 20: 0, 100: 0 },
+  modifier: 0,
+  advMode: 'normal' // 'normal' | 'advantage' | 'disadvantage'
+};
+
+/**
+ * Initialize dice tray event listeners
+ */
+function initDiceTray() {
+  // Dice button left-click - add one die to formula
+  document.querySelectorAll('.dice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const die = parseInt(btn.dataset.die);
+      diceTrayState.dice[die]++;
+      updateDiceTrayDisplay();
+    });
+    
+    // Dice button right-click - subtract one die from formula
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault(); // Prevent browser context menu
+      const die = parseInt(btn.dataset.die);
+      if (diceTrayState.dice[die] > 0) {
+        diceTrayState.dice[die]--;
+        updateDiceTrayDisplay();
+      }
+    });
+  });
+  
+  // Modifier buttons
+  document.getElementById('dice-modifier-minus')?.addEventListener('click', () => {
+    diceTrayState.modifier--;
+    updateDiceTrayDisplay();
+  });
+  
+  document.getElementById('dice-modifier-plus')?.addEventListener('click', () => {
+    diceTrayState.modifier++;
+    updateDiceTrayDisplay();
+  });
+  
+  // ADV/DIS toggle (cycles: normal -> advantage -> disadvantage -> normal)
+  document.querySelector('.dice-adv-btn')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    if (diceTrayState.advMode === 'normal') {
+      diceTrayState.advMode = 'advantage';
+      btn.classList.add('adv-active');
+      btn.classList.remove('dis-active');
+    } else if (diceTrayState.advMode === 'advantage') {
+      diceTrayState.advMode = 'disadvantage';
+      btn.classList.remove('adv-active');
+      btn.classList.add('dis-active');
+    } else {
+      diceTrayState.advMode = 'normal';
+      btn.classList.remove('adv-active', 'dis-active');
+    }
+  });
+  
+  // Roll button
+  document.getElementById('dice-roll-btn')?.addEventListener('click', () => {
+    const formula = buildDiceFormula();
+    if (formula) {
+      // Send roll command to DLC
+      sendMessage({
+        type: 'manualRoll',
+        formula: formula,
+        advMode: diceTrayState.advMode
+      });
+      // Reset tray
+      resetDiceTray();
+    }
+  });
+}
+
+/**
+ * Update dice tray display with current state
+ */
+function updateDiceTrayDisplay() {
+  // Update formula input
+  const formula = buildDiceFormula();
+  const input = document.getElementById('dice-formula-input');
+  if (input) {
+    input.value = formula ? `/r ${formula}` : '/r ';
+  }
+  
+  // Update die count badges
+  document.querySelectorAll('.dice-btn').forEach(btn => {
+    const die = parseInt(btn.dataset.die);
+    const count = diceTrayState.dice[die];
+    const badge = btn.querySelector('.die-count');
+    if (badge) {
+      badge.textContent = count;
+      if (count > 0) {
+        badge.classList.add('show');
+      } else {
+        badge.classList.remove('show');
+      }
+    }
+  });
+  
+  // Update modifier display
+  const modDisplay = document.getElementById('dice-modifier-value');
+  if (modDisplay) {
+    const mod = diceTrayState.modifier;
+    modDisplay.textContent = mod >= 0 ? `+${mod}` : mod.toString();
+  }
+}
+
+/**
+ * Build dice formula from current state
+ */
+function buildDiceFormula() {
+  const parts = [];
+  
+  // Add dice in order
+  const diceOrder = [4, 6, 8, 10, 12, 20, 100];
+  for (const die of diceOrder) {
+    const count = diceTrayState.dice[die];
+    if (count > 0) {
+      parts.push(`${count}d${die}`);
+    }
+  }
+  
+  // Add modifier
+  if (diceTrayState.modifier !== 0) {
+    if (diceTrayState.modifier > 0) {
+      parts.push(`+${diceTrayState.modifier}`);
+    } else {
+      parts.push(`${diceTrayState.modifier}`);
+    }
+  }
+  
+  return parts.join(' ');
+}
+
+/**
+ * Reset dice tray to default state
+ */
+function resetDiceTray() {
+  diceTrayState.dice = { 4: 0, 6: 0, 8: 0, 10: 0, 12: 0, 20: 0, 100: 0 };
+  diceTrayState.modifier = 0;
+  diceTrayState.advMode = 'normal';
+  
+  document.querySelector('.dice-adv-btn')?.classList.remove('adv-active', 'dis-active');
+  updateDiceTrayDisplay();
+}
+
+// ============================================================================
+// DICE ENTRY/RESOLUTION FUNCTIONS
+// ============================================================================
+
+/**
+ * Track selected values for each die row
+ */
+let diceEntryValues = [];
+
+/**
+ * Render dice entry HTML for the Dice Entry state
+ */
+function renderDiceEntry(diceRequest) {
+  const { dice, formula } = diceRequest;
+  
+  // Build dice rows - each die gets a row with all possible face values
+  const diceRows = [];
+  
+  for (let i = 0; i < dice.length; i++) {
+    const dieInfo = dice[i];
+    const dieType = dieInfo.type.toLowerCase(); // e.g., "d20"
+    const faces = parseInt(dieType.replace('d', '')); // e.g., 20
+    
+    // For d100, use text input (100 buttons is impractical)
+    if (faces === 100) {
+      diceRows.push(`
+        <div class="dice-row dice-row-manual" data-row="${i}" data-faces="${faces}">
+          <span class="dice-row-label">${dieType}</span>
+          <input type="number" 
+                 class="dice-manual-input" 
+                 data-row="${i}"
+                 data-faces="${faces}"
+                 min="1" max="100" 
+                 placeholder="1-100">
+        </div>
+      `);
+      continue;
+    }
+    
+    // For other dice, show clickable SVG buttons for each face value
+    const diceOptions = [];
+    for (let value = 1; value <= faces; value++) {
+      const svgPath = `/static/DLC Dice/${dieType.toUpperCase()}/${dieType} - Outline ${value}.svg`;
+      diceOptions.push(`
+        <button type="button" 
+                class="die-option" 
+                data-row="${i}" 
+                data-value="${value}" 
+                data-faces="${faces}"
+                title="${dieType}: ${value}">
+          <div class="die-face">
+            <img src="${svgPath}" alt="${dieType} ${value}" class="die-image">
+          </div>
+        </button>
+      `);
+    }
+    
+    diceRows.push(`
+      <div class="dice-row" data-row="${i}" data-faces="${faces}">
+        <span class="dice-row-label">${dieType}</span>
+        <div class="dice-options">
+          ${diceOptions.join('')}
+        </div>
+      </div>
+    `);
+  }
+  
+  return `
+    <div class="dice-entry">
+      <div class="dice-entry-header">
+        <h4 class="dice-entry-title">Enter Dice Results</h4>
+        <p class="dice-entry-formula">${dice.length} dice to enter</p>
+      </div>
+      <div class="dice-rows">
+        ${diceRows.join('')}
+      </div>
+      <div class="dice-entry-actions">
+        <button type="button" class="submit-dice-btn btn-success">SUBMIT</button>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Initialize dice entry click handlers for the current diceRequest
+ */
+function initDiceEntry(diceRequest) {
+  // Reset values array
+  diceEntryValues = new Array(diceRequest.dice.length).fill(null);
+  
+  // Click handlers for die options
+  document.querySelectorAll('.die-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = parseInt(btn.dataset.row);
+      const value = parseInt(btn.dataset.value);
+      
+      // Deselect previous selection in this row
+      document.querySelectorAll(`.die-option[data-row="${row}"]`).forEach(b => {
+        b.classList.remove('selected');
+      });
+      
+      // Select this one
+      btn.classList.add('selected');
+      diceEntryValues[row] = value;
+    });
+  });
+  
+  // Manual input handlers (for d100)
+  document.querySelectorAll('.dice-manual-input').forEach(input => {
+    input.addEventListener('change', () => {
+      const row = parseInt(input.dataset.row);
+      const value = parseInt(input.value);
+      if (value >= 1 && value <= 100) {
+        diceEntryValues[row] = value;
+      }
+    });
+  });
+  
+  // Submit button
+  document.querySelector('.submit-dice-btn')?.addEventListener('click', () => {
+    // Check all dice have values
+    const allFilled = diceEntryValues.every(v => v !== null && v !== undefined);
+    if (!allFilled) {
+      debugLog("ERROR: Not all dice values filled");
+      return;
+    }
+    
+    // Build results array
+    const results = diceEntryValues.map((value, index) => ({
+      type: diceRequest.dice[index].type,
+      value: value
+    }));
+    
+    // Send to DLC
+    sendMessage({
+      type: 'diceResult',
+      originalRollId: diceRequest.originalRollId,
+      results: results
+    });
+    
+    // Return to idle state
+    state.currentRoll = null;
+    state.pendingDiceRequest = null;
+    diceEntryValues = [];
+    updateRollWindow('idle');
+  });
+}
+
 /**
  * Initialize the application
  */
@@ -1503,6 +1812,7 @@ function init() {
     initEventListeners();
     initWebSocket();
     initRollWindow();
+    initDiceTray();
     // Load camera list in background (Phase 3)
     loadCameraList();
 }
