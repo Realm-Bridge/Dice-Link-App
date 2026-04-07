@@ -108,7 +108,20 @@ const elements = {
     cameraDiceIcons: document.getElementById('camera-dice-icons'),
     settingsCamera: document.getElementById('settings-camera'),
     cameraPreview: document.getElementById('camera-preview'),
-    refreshCameraPreview: document.getElementById('refresh-camera-preview')
+    refreshCameraPreview: document.getElementById('refresh-camera-preview'),
+    // Roll Window elements
+    rollWindow: document.getElementById('roll-window'),
+    rwIdleState: document.getElementById('roll-window-idle'),
+    rwRequestState: document.getElementById('roll-window-request'),
+    rwDiceEntryState: document.getElementById('roll-window-dice-entry'),
+    rwRollTitle: document.getElementById('rw-roll-title'),
+    rwRollSubtitle: document.getElementById('rw-roll-subtitle'),
+    rwConfigSection: document.getElementById('rw-config-section'),
+    rwButtons: document.querySelector('.rw-buttons'),
+    rwDiceFormula: document.getElementById('rw-dice-formula'),
+    rwDiceInputs: document.getElementById('rw-dice-inputs'),
+    rwSubmitBtn: document.getElementById('rw-submit-btn'),
+    rwBackBtn: document.getElementById('rw-back-btn')
 };
 
 /**
@@ -327,6 +340,13 @@ function handleRollRequest(data) {
     // Render action buttons
     renderActionButtons(data.buttons || []);
     
+    // Update Roll Window with same information
+    elements.rwRollTitle.textContent = data.roll.title || 'Roll';
+    elements.rwRollSubtitle.textContent = data.roll.subtitle || '';
+    renderRWConfigFields(data.config?.fields || []);
+    renderRWActionButtons(data.buttons || []);
+    updateRollWindow('request');
+    
     // Show roll panel and cancel button
     showPanel('roll');
     elements.cancelRoll.classList.remove('hidden');
@@ -520,6 +540,10 @@ function handleDiceRequest(message) {
     
     // Render dice inputs based on what DLC told us
     renderDiceInputsFromRequest(message.dice, message.formula);
+    
+    // Update Roll Window with dice entry UI
+    renderRWDiceInputs(message.dice, message.formula);
+    updateRollWindow('dice-entry');
     
     // Make sure we're on the dice entry panel
     showPanel('dice-entry');
@@ -1210,12 +1234,203 @@ function displayCameraDiceIcons(dice) {
 }
 
 /**
+ * Update Roll Window to show appropriate state
+ */
+function updateRollWindow(newState) {
+    // Hide all states
+    elements.rwIdleState.classList.remove('active');
+    elements.rwRequestState.classList.remove('active');
+    elements.rwDiceEntryState.classList.remove('active');
+    
+    // Show requested state
+    switch(newState) {
+        case 'idle':
+            elements.rwIdleState.classList.add('active');
+            break;
+        case 'request':
+            elements.rwRequestState.classList.add('active');
+            break;
+        case 'dice-entry':
+            elements.rwDiceEntryState.classList.add('active');
+            break;
+    }
+}
+
+/**
+ * Render action buttons in Roll Window request state
+ */
+function renderRWActionButtons(buttons) {
+    elements.rwButtons.innerHTML = '';
+    
+    buttons.forEach(button => {
+        const btn = document.createElement('button');
+        btn.className = 'rw-action-btn';
+        btn.dataset.buttonId = button.id;
+        btn.textContent = button.label;
+        btn.addEventListener('click', () => {
+            selectActionButton(button.id, button.label);
+            updateRollWindow('dice-entry');
+        });
+        elements.rwButtons.appendChild(btn);
+    });
+}
+
+/**
+ * Render config fields in Roll Window request state
+ */
+function renderRWConfigFields(fields) {
+    elements.rwConfigSection.innerHTML = '';
+    
+    fields.forEach(field => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'rw-config-field';
+        
+        const label = document.createElement('label');
+        label.htmlFor = `rw-${field.name}`;
+        label.textContent = field.label || field.name;
+        fieldDiv.appendChild(label);
+        
+        let input;
+        if (field.type === 'select' && field.options) {
+            input = document.createElement('select');
+            field.options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                if (opt === field.selected) option.selected = true;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type = 'text';
+            input.value = field.value || '';
+        }
+        
+        input.id = `rw-${field.name}`;
+        input.dataset.field = field.name;
+        input.addEventListener('change', (e) => {
+            state.configValues[field.name] = e.target.value;
+        });
+        fieldDiv.appendChild(input);
+        elements.rwConfigSection.appendChild(fieldDiv);
+    });
+}
+
+/**
+ * Render dice inputs in Roll Window dice entry state
+ */
+function renderRWDiceInputs(dice, formula) {
+    elements.rwDiceInputs.innerHTML = '';
+    
+    if (formula) {
+        elements.rwDiceFormula.textContent = `Roll ${formula}`;
+    }
+    
+    state.diceResults = [];
+    dice.forEach(die => {
+        for (let i = 0; i < die.count; i++) {
+            const inputIndex = state.diceResults.length;
+            state.diceResults.push({ type: die.type, value: null });
+            
+            const range = DICE_RANGES[die.type] || { min: 1, max: 20 };
+            const iconPath = getDiceIconPath(die.type);
+            
+            const group = document.createElement('div');
+            group.className = 'rw-dice-input-group';
+            
+            const icon = document.createElement('img');
+            icon.src = iconPath;
+            icon.alt = die.type;
+            group.appendChild(icon);
+            
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = range.min;
+            input.max = range.max;
+            input.placeholder = `${range.min}-${range.max}`;
+            input.dataset.index = inputIndex;
+            input.dataset.type = die.type;
+            input.addEventListener('input', (e) => {
+                const idx = parseInt(e.target.dataset.index);
+                const val = e.target.value ? parseInt(e.target.value) : null;
+                state.diceResults[idx].value = val;
+                
+                // Validate
+                if (val !== null && (val < range.min || val > range.max)) {
+                    input.classList.add('invalid');
+                    input.classList.remove('valid');
+                } else if (val !== null) {
+                    input.classList.add('valid');
+                    input.classList.remove('invalid');
+                } else {
+                    input.classList.remove('valid', 'invalid');
+                }
+            });
+            group.appendChild(input);
+            elements.rwDiceInputs.appendChild(group);
+        }
+    });
+    
+    updateRWSubmitButton();
+}
+
+/**
+ * Update Roll Window submit button state
+ */
+function updateRWSubmitButton() {
+    const allFilled = state.diceResults.every(r => r.value !== null);
+    elements.rwSubmitBtn.disabled = !allFilled;
+}
+
+/**
+ * Initialize Roll Window
+ */
+function initRollWindow() {
+    // Quick dice buttons
+    document.querySelectorAll('.quick-dice-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const dieType = e.target.dataset.die;
+            // Send a quick roll request (if connected)
+            if (state.connected) {
+                console.log(`[v0] Quick roll: ${dieType}`);
+                // Could send a message to DLC for quick rolls
+            }
+        });
+    });
+    
+    // Roll Window back button
+    elements.rwBackBtn.addEventListener('click', () => {
+        updateRollWindow('request');
+    });
+    
+    // Roll Window submit button
+    elements.rwSubmitBtn.addEventListener('click', () => {
+        if (state.diceResults.every(r => r.value !== null) && state.pendingDiceRequest) {
+            const results = state.diceResults.map(r => ({
+                type: r.type,
+                value: r.value
+            }));
+            
+            sendMessage({
+                type: 'submitDiceResult',
+                originalRollId: state.pendingDiceRequest.originalRollId,
+                results: results
+            });
+            
+            state.pendingDiceRequest = null;
+            updateRollWindow('idle');
+        }
+    });
+}
+
+/**
  * Initialize the application
  */
 function init() {
     loadSettings();
     initEventListeners();
     initWebSocket();
+    initRollWindow();
     // Load camera list in background (Phase 3)
     loadCameraList();
 }
