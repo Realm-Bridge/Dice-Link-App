@@ -139,21 +139,21 @@
                 <!-- Idle State: Dice Tray -->
                 <div id="roll-window-idle" class="roll-window-state active">
                     <div class="dice-tray">
-                        <p class="dice-tray-label">Quick Dice</p>
+                        <p class="dice-tray-label">Quick Dice <span class="placeholder-badge">(Coming Soon)</span></p>
                         <div class="dice-tray-buttons">
-                            <button class="quick-dice-btn" data-die="d4">d4</button>
-                            <button class="quick-dice-btn" data-die="d6">d6</button>
-                            <button class="quick-dice-btn" data-die="d8">d8</button>
-                            <button class="quick-dice-btn" data-die="d10">d10</button>
-                            <button class="quick-dice-btn" data-die="d12">d12</button>
-                            <button class="quick-dice-btn" data-die="d20">d20</button>
-                            <button class="quick-dice-btn" data-die="d100">d100</button>
+                            <button class="quick-dice-btn placeholder" data-die="d4" title="Feature coming soon">d4</button>
+                            <button class="quick-dice-btn placeholder" data-die="d6" title="Feature coming soon">d6</button>
+                            <button class="quick-dice-btn placeholder" data-die="d8" title="Feature coming soon">d8</button>
+                            <button class="quick-dice-btn placeholder" data-die="d10" title="Feature coming soon">d10</button>
+                            <button class="quick-dice-btn placeholder" data-die="d12" title="Feature coming soon">d12</button>
+                            <button class="quick-dice-btn placeholder" data-die="d20" title="Feature coming soon">d20</button>
+                            <button class="quick-dice-btn placeholder" data-die="d100" title="Feature coming soon">d100</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Roll Request State -->
-                <div id="roll-window-request" class="roll-window-state hidden">
+                <div id="roll-window-request" class="roll-window-state">
                     <div class="roll-window-header">
                         <h4 id="rw-roll-title">Attack Roll</h4>
                         <p id="rw-roll-subtitle" class="rw-subtitle">Melee Weapon Attack</p>
@@ -163,13 +163,13 @@
                         <!-- Config fields rendered here -->
                     </div>
                     
-                    <div class="rw-buttons">
+                    <div id="rw-buttons" class="rw-buttons">
                         <!-- Action buttons rendered here -->
                     </div>
                 </div>
 
                 <!-- Dice Entry State -->
-                <div id="roll-window-dice-entry" class="roll-window-state hidden">
+                <div id="roll-window-dice-entry" class="roll-window-state">
                     <div class="rw-dice-entry-header">
                         <p id="rw-dice-formula">Roll dice:</p>
                     </div>

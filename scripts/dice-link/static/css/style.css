@@ -889,6 +889,23 @@ body {
     color: white;
 }
 
+.quick-dice-btn.placeholder {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.quick-dice-btn.placeholder:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.placeholder-badge {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 /* Roll Request State */
 .roll-window-header {
     margin-bottom: 16px;

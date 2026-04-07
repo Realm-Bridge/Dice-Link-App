@@ -117,7 +117,7 @@ const elements = {
     rwRollTitle: document.getElementById('rw-roll-title'),
     rwRollSubtitle: document.getElementById('rw-roll-subtitle'),
     rwConfigSection: document.getElementById('rw-config-section'),
-    rwButtons: document.querySelector('.rw-buttons'),
+    rwButtons: document.getElementById('rw-buttons'),
     rwDiceFormula: document.getElementById('rw-dice-formula'),
     rwDiceInputs: document.getElementById('rw-dice-inputs'),
     rwSubmitBtn: document.getElementById('rw-submit-btn'),
@@ -329,6 +329,8 @@ function updateConnectionStatus(connected, playerName) {
  * Handle incoming roll request
  */
 function handleRollRequest(data) {
+    console.log("[v0] handleRollRequest called with:", data);
+    
     state.currentRoll = data;
     state.selectedButton = null;
     state.configValues = {};
@@ -1251,6 +1253,11 @@ function displayCameraDiceIcons(dice) {
  * Update Roll Window to show appropriate state
  */
 function updateRollWindow(newState) {
+    console.log("[v0] updateRollWindow called with state:", newState);
+    console.log("[v0] rwIdleState element:", elements.rwIdleState);
+    console.log("[v0] rwRequestState element:", elements.rwRequestState);
+    console.log("[v0] rwDiceEntryState element:", elements.rwDiceEntryState);
+    
     // Hide all states
     elements.rwIdleState.classList.remove('active');
     elements.rwRequestState.classList.remove('active');
@@ -1268,12 +1275,21 @@ function updateRollWindow(newState) {
             elements.rwDiceEntryState.classList.add('active');
             break;
     }
+    console.log("[v0] After update - rwRequestState classes:", elements.rwRequestState?.classList);
 }
 
 /**
  * Render action buttons in Roll Window request state
  */
 function renderRWActionButtons(buttons) {
+    console.log("[v0] renderRWActionButtons called with:", buttons);
+    console.log("[v0] rwButtons element:", elements.rwButtons);
+    
+    if (!elements.rwButtons) {
+        console.log("[v0] ERROR: rwButtons element is null!");
+        return;
+    }
+    
     elements.rwButtons.innerHTML = '';
     
     buttons.forEach(button => {
