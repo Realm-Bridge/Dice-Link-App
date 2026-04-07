@@ -108,6 +108,18 @@ body {
     margin-bottom: 24px;
 }
 
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-logo {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+}
+
 .app-title {
     font-size: 1.5rem;
     font-weight: 600;

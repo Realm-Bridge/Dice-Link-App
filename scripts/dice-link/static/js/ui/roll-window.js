@@ -243,9 +243,9 @@ function renderRWRequest(rollData) {
   rwElements.rwTitle.textContent = rollData.roll?.title || 'Roll Request';
   rwElements.rwSubtitle.textContent = rollData.roll?.subtitle || rollData.roll?.formula || '';
   
-  // Render config fields
-  if (rollData.config) {
-    renderRWConfigFields(rollData.config);
+  // Render config fields - DLC sends config.fields array
+  if (rollData.config && rollData.config.fields) {
+    renderRWConfigFields(rollData.config.fields);
   }
   
   // Render action buttons

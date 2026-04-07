@@ -10,7 +10,10 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <h1 class="app-title">{{ app_name }}</h1>
+            <div class="header-brand">
+                <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="header-logo" />
+                <h1 class="app-title">{{ app_name }}</h1>
+            </div>
             <div class="header-actions">
                 <button id="settings-btn" class="icon-btn" title="Settings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -20,7 +23,7 @@
                 </button>
                 <div id="connection-status" class="connection-status disconnected">
                     <span class="status-indicator"></span>
-                    <span class="status-text">Disconnected</span>
+                    <span id="connection-status-text" class="status-text">Disconnected</span>
                 </div>
             </div>
         </header>
