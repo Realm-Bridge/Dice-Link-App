@@ -220,6 +220,22 @@ async def handle_ui_message(message: dict):
         })
         return
     
+    if msg_type == "diceResult":
+        # User submitted dice results - forward to DLC
+        print(f"[DLA] Received diceResult from UI: {message}")
+        original_roll_id = message.get("originalRollId")
+        results = message.get("results", [])
+        
+        success = await send_dice_result(original_roll_id, results)
+        print(f"[DLA] Forwarded diceResult to DLC, success={success}")
+        
+        await broadcast_to_ui({
+            "type": "diceResultAck",
+            "success": success,
+            "rollId": original_roll_id
+        })
+        return
+    
     if msg_type == "buttonSelect":
         # Phase A: User selected a button (Advantage/Normal/Disadvantage)
         roll_id = message.get("rollId")
