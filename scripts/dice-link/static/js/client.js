@@ -1340,49 +1340,20 @@ function renderRWActionButtons(buttons) {
     });
 }
 
-// Friendly label mapping for known DnD5e field names
-const FIELD_LABEL_MAP = {
-    'roll.0.situational': 'Situational Bonus',
-    'roll.1.situational': 'Situational Bonus',
-    'situational': 'Situational Bonus',
-    'ability': 'Ability',
-    'rollMode': 'Roll Mode',
-    'rollmode': 'Roll Mode'
-};
-
-/**
- * Get friendly label for a field name
- */
-function getFriendlyLabel(fieldName, originalLabel) {
-    // Check if we have a mapping for this field name
-    if (FIELD_LABEL_MAP[fieldName]) {
-        return FIELD_LABEL_MAP[fieldName];
-    }
-    // Check if the original label looks like a field path (contains dots)
-    if (originalLabel && originalLabel.includes('.')) {
-        // Try to extract a meaningful part
-        const parts = originalLabel.split('.');
-        const lastPart = parts[parts.length - 1];
-        // Capitalize first letter
-        return lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
-    }
-    return originalLabel || fieldName;
-}
-
-/**
- * Render config fields in Roll Window request state
- */
-function renderRWConfigFields(fields) {
-    elements.rwConfigSection.innerHTML = '';
-    
-    fields.forEach(field => {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'rw-config-field';
-        
-        const label = document.createElement('label');
-        label.htmlFor = `rw-${field.name}`;
-        label.textContent = getFriendlyLabel(field.name, field.label);
-        fieldDiv.appendChild(label);
+  /**
+  * Render config fields in Roll Window request state
+  */
+  function renderRWConfigFields(fields) {
+  elements.rwConfigSection.innerHTML = '';
+  
+  fields.forEach(field => {
+  const fieldDiv = document.createElement('div');
+  fieldDiv.className = 'rw-config-field';
+  
+  const label = document.createElement('label');
+  label.htmlFor = `rw-${field.name}`;
+  label.textContent = field.label || field.name;
+  fieldDiv.appendChild(label);
         
         let input;
         if (field.type === 'select' && field.options) {
