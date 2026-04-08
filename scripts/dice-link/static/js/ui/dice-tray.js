@@ -9,6 +9,18 @@
 function initDiceTray() {
   debugLog('Initializing Dice Tray');
 
+  // Formula input - allow manual typing and submit on Enter
+  const formulaInput = document.getElementById('dice-formula-input');
+  if (formulaInput) {
+    // Submit formula on Enter key
+    formulaInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitManualFormula();
+      }
+    });
+  }
+
   // Dice button left-click: add one die
   document.querySelectorAll('.dice-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -107,6 +119,45 @@ function initDiceTray() {
 
   // Set initial display
   rebuildFormula();
+}
+
+/**
+ * Submit a manually typed formula from the input field.
+ * Strips /r prefix if present and sends to DLC.
+ */
+function submitManualFormula() {
+  const formulaInput = document.getElementById('dice-formula-input');
+  if (!formulaInput) return;
+  
+  let formula = formulaInput.value.trim();
+  
+  // Strip /r or /roll prefix if present
+  if (formula.startsWith('/r ')) {
+    formula = formula.substring(3).trim();
+  } else if (formula.startsWith('/roll ')) {
+    formula = formula.substring(6).trim();
+  }
+  
+  if (!formula) {
+    debugLog('No formula entered');
+    return;
+  }
+  
+  debugLog(`Sending manual formula: ${formula}`);
+  
+  if (typeof sendMessage !== 'function') {
+    debugError('sendMessage is not defined');
+    return;
+  }
+  
+  sendMessage({
+    type: 'diceTrayRoll',
+    formula: formula,
+    flavor: 'Manual Dice Roll'
+  });
+  
+  // Reset tray after sending
+  resetDiceTrayUI();
 }
 
 /**

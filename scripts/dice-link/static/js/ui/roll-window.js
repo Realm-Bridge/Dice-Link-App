@@ -131,7 +131,7 @@ function selectActionButton(actionId) {
   sendMessage({
     type: 'buttonSelect',
     rollId: currentRoll.id,
-    selectedAction: actionId,
+    button: actionId,
     configChanges: configChanges
   });
   
