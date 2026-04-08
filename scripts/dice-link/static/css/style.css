@@ -360,13 +360,13 @@ body {
 }
 
 .player-modes-panel {
-    min-height: 140px;
+    min-height: 100px;
     border-radius: 24px;
 }
 
 .session-stats-panel {
     flex: 1;
-    min-height: 180px;
+    min-height: 140px;
 }
 
 /* State Panels */
