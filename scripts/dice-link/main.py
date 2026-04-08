@@ -14,7 +14,7 @@ from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
 def run_server():
     """Run the FastAPI server in a background thread"""
     uvicorn.run(
-        "app.server:app",
+        "app:app",
         host=WEBSOCKET_HOST,
         port=WEBSOCKET_PORT,
         reload=False,

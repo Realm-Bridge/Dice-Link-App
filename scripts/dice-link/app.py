@@ -8,8 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
 
-from .state import app_state
-from .websocket_handler import (
+from state import app_state
+from core.websocket_handler import (
     handle_dlc_message,
     handle_dlc_disconnect,
     broadcast_to_ui,
@@ -19,7 +19,7 @@ from .websocket_handler import (
     send_dice_result,
     send_dice_tray_roll
 )
-from .camera import camera_manager
+from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
 
 # Get the base directory
