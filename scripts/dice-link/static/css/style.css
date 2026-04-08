@@ -105,7 +105,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
+    padding: 16px 20px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 24px;
 }
@@ -283,8 +283,9 @@ body {
     justify-content: center;
     text-align: center;
     gap: 8px;
-    flex: 1;
-    max-width: 300px;
+    flex: 0 0 200px;
+    width: 200px;
+    height: 150px;
 }
 
 .camera-view-placeholder h3 {
@@ -354,7 +355,6 @@ body {
     flex-direction: column;
     gap: 20px;
     flex: 1;
-    max-width: 300px;
 }
 
 .player-modes-panel {
@@ -799,7 +799,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
+    padding: 16px 20px;
     margin-top: 24px;
     border-top: 1px solid var(--border-color);
 }

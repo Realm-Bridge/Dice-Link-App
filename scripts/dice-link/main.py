@@ -55,11 +55,11 @@ def main():
     # Set window properties
     browser.setWindowTitle(APP_NAME)
     
-    # Set fixed "best fit" size - disable free resizing
-    best_fit_width = 700
-    best_fit_height = 750
+    # Set "best fit" size - minimum size prevents shrinking too small
+    # User can maximize but not freely resize smaller than best fit
+    best_fit_width = 1400
+    best_fit_height = 900
     browser.setMinimumSize(best_fit_width, best_fit_height)
-    browser.setMaximumSize(best_fit_width, best_fit_height)
     browser.resize(best_fit_width, best_fit_height)
     
     # Set zoom level (1.0 = 100% normal size)
