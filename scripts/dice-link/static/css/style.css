@@ -307,6 +307,7 @@ body {
     gap: 24px;
     flex: 1;
     margin-top: 24px;
+    justify-content: space-between;
 }
 
 .recent-rolls-panel,
