@@ -33,6 +33,45 @@ For product scope and user flows, refer to the Full Vision Specification.
 
 ---
 
+## Hybrid Data Flow
+
+The system uses a hybrid architecture where ML training happens on Realm Bridge servers (using PyTorch/YOLO v11), while inference runs locally on the user's machine (using ONNX Runtime). Training data flows up to the server; updated models flow down to users.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    REALM BRIDGE SERVERS                         │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+│  │  Receive    │───▶│   Train     │───▶│  Export to  │         │
+│  │  User Data  │    │   Model     │    │    ONNX     │         │
+│  └─────────────┘    └─────────────┘    └─────────────┘         │
+│         ▲                                     │                 │
+│         │                                     ▼                 │
+│         │                           ┌─────────────────┐        │
+│         │                           │  Model Server   │        │
+│         │                           │  (hosts .onnx)  │        │
+│         │                           └─────────────────┘        │
+└─────────│─────────────────────────────────────│────────────────┘
+          │                                     │
+          │ Upload training data                │ Download model updates
+          │ (on app close)                      │ (on app open)
+          │                                     │
+┌─────────│─────────────────────────────────────│────────────────┐
+│         │              USER PC (DLA)          ▼                │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
+│  │   Capture   │───▶│  ONNX       │───▶│   Send to   │        │
+│  │   Dice      │    │  Inference  │    │   Foundry   │        │
+│  └─────────────┘    └─────────────┘    └─────────────┘        │
+│         │                                                      │
+│         ▼                                                      │
+│  ┌─────────────┐                                               │
+│  │  Store for  │  (images + metadata stored locally)          │
+│  │  Training   │                                               │
+│  └─────────────┘                                               │
+└────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Project Structure
 
 ```
