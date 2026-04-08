@@ -16,7 +16,8 @@ from .websocket_handler import (
     send_roll_result,
     send_roll_cancelled,
     send_button_select,
-    send_dice_result
+    send_dice_result,
+    send_dice_tray_roll
 )
 from .camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
@@ -202,6 +203,37 @@ async def handle_ui_message(message: dict):
     if msg_type == "debug":
         # Debug messages from JavaScript - print to command prompt
         print(f"[JS] {message.get('message', '')}")
+        return
+    
+    if msg_type == "diceTrayRoll":
+        # Dice tray roll from UI - forward to DLC for evaluation
+        formula = message.get("formula", "")
+        flavor = message.get("flavor", "Manual Dice Roll")
+        print(f"[DLA] Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
+        
+        success = await send_dice_tray_roll(formula, flavor)
+        
+        await broadcast_to_ui({
+            "type": "diceTrayRollAck",
+            "success": success,
+            "formula": formula
+        })
+        return
+    
+    if msg_type == "diceResult":
+        # User submitted dice results - forward to DLC
+        print(f"[DLA] Received diceResult from UI: {message}")
+        original_roll_id = message.get("originalRollId")
+        results = message.get("results", [])
+        
+        success = await send_dice_result(original_roll_id, results)
+        print(f"[DLA] Forwarded diceResult to DLC, success={success}")
+        
+        await broadcast_to_ui({
+            "type": "diceResultAck",
+            "success": success,
+            "rollId": original_roll_id
+        })
         return
     
     if msg_type == "buttonSelect":
