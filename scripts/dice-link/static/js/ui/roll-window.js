@@ -102,6 +102,24 @@ function renderRWActionButtons(buttons) {
 }
 
 /**
+ * Map button IDs from DLC to Foundry-expected values
+ * DLC may send "critical" but Foundry expects "critical hit"
+ */
+function mapButtonId(buttonId) {
+  const buttonMap = {
+    'critical': 'critical hit',  // Damage rolls
+    'crit': 'critical hit',
+    'normal': 'normal',
+    'advantage': 'advantage',
+    'adv': 'advantage',
+    'disadvantage': 'disadvantage',
+    'dis': 'disadvantage'
+  };
+  
+  return buttonMap[buttonId] || buttonId;
+}
+
+/**
  * Handle action button selection
  */
 function selectActionButton(actionId) {
@@ -113,7 +131,11 @@ function selectActionButton(actionId) {
     return;
   }
   
-  setSelectedButton(actionId);
+  // Map button ID to Foundry-expected value
+  const mappedActionId = mapButtonId(actionId);
+  debugLog(`Mapped button ID: ${actionId} -> ${mappedActionId}`);
+  
+  setSelectedButton(mappedActionId);
   
   // Collect config values from Roll Window
   const configChanges = {};
@@ -127,11 +149,11 @@ function selectActionButton(actionId) {
     });
   }
   
-  // Send button selection to DLC
+  // Send button selection to DLC (use mapped ID)
   sendMessage({
     type: 'buttonSelect',
     rollId: currentRoll.id,
-    button: actionId,
+    button: mappedActionId,
     configChanges: configChanges
   });
   
