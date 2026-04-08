@@ -3,7 +3,7 @@
 import json
 import time
 from typing import Any
-from .state import app_state
+from state import app_state
 from config import APP_NAME, APP_VERSION
 
 
