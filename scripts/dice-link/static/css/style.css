@@ -257,6 +257,7 @@ body {
     gap: 12px;
     width: 320px;
     min-width: 320px;
+    margin: 24px;
 }
 
 .dice-link-branding {
@@ -287,6 +288,7 @@ body {
     min-width: 280px;
     height: 180px;
     flex-shrink: 0;
+    margin: 24px;
 }
 
 .camera-view-placeholder h3 {
@@ -308,7 +310,6 @@ body {
     flex: 1;
     margin-top: 24px;
     justify-content: space-between;
-    padding-bottom: 24px;
 }
 
 .recent-rolls-panel,
@@ -319,13 +320,13 @@ body {
     border: 2px solid var(--dlc-border);
     padding: 20px;
     box-shadow: var(--shadow);
+    margin: 24px;
 }
 
 .recent-rolls-panel {
     width: 320px;
     min-width: 320px;
     align-self: flex-end;
-    margin-bottom: 24px;
 }
 
 .recent-rolls-panel h3,
