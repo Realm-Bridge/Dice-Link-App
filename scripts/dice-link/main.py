@@ -4,9 +4,16 @@ import threading
 import time
 import uvicorn
 import sys
+import os
+from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl
+
+# Add the current directory to Python path so uvicorn can find app module
+DICE_LINK_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(DICE_LINK_DIR))
+os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
 
