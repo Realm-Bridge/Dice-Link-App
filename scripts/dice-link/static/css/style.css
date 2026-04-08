@@ -243,6 +243,8 @@ body {
 .top-section {
     display: flex;
     gap: 24px;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 .dice-tray-container {
@@ -284,6 +286,7 @@ body {
     width: 280px;
     min-width: 280px;
     height: 180px;
+    flex-shrink: 0;
 }
 
 .camera-view-placeholder h3 {
