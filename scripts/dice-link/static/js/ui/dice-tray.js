@@ -12,11 +12,14 @@ function initDiceTray() {
   // Formula input - allow manual typing and submit on Enter
   const formulaInput = document.getElementById('dice-formula-input');
   if (formulaInput) {
-    // Submit formula on Enter key
+    // Submit formula on Enter key by triggering the Roll button
     formulaInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        submitManualFormula();
+        const rollBtn = document.getElementById('dice-roll-btn');
+        if (rollBtn) {
+          rollBtn.click();
+        }
       }
     });
   }
