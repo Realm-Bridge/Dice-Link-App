@@ -325,7 +325,7 @@ body {
     width: 320px;
     min-width: 320px;
     align-self: flex-end;
-    margin-top: 24px;
+    margin-bottom: 24px;
 }
 
 .recent-rolls-panel h3,
