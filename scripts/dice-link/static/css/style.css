@@ -242,7 +242,7 @@ body {
 /* Top Section: Dice Tray + Camera */
 .top-section {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 280px 400px;
     gap: 20px;
     height: 200px;
 }
@@ -255,7 +255,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 320px;
+    width: 280px;
 }
 
 .dice-link-branding {
@@ -282,7 +282,7 @@ body {
     justify-content: center;
     text-align: center;
     gap: 8px;
-    max-width: 400px;
+    width: 400px;
     height: 100%;
 }
 
@@ -301,7 +301,7 @@ body {
 /* Dashboard Section: Panels */
 .dashboard-section {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 280px 400px;
     gap: 20px;
     flex: 1;
     margin-top: 20px;
@@ -318,7 +318,7 @@ body {
 }
 
 .recent-rolls-panel {
-    max-width: 280px;
+    width: 280px;
 }
 
 .recent-rolls-panel h3,
@@ -352,16 +352,17 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    width: 400px;
 }
 
 .player-modes-panel {
     flex: 0.8;
-    min-height: 120px;
+    min-height: 100px;
 }
 
 .session-stats-panel {
     flex: 1.2;
-    min-height: 180px;
+    min-height: 140px;
 }
 
 /* State Panels */
@@ -1121,8 +1122,8 @@ body {
 
 .dice-buttons-row {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 4px;
+  flex-wrap: nowrap;
   justify-content: center;
 }
 
@@ -1150,8 +1151,8 @@ body {
 }
 
 .die-icon {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   display: block;
 }
