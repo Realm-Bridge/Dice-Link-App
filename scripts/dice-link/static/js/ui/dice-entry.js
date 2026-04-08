@@ -8,67 +8,80 @@ let diceEntryValues = [];
 
 /**
  * Render dice entry HTML for the Dice Entry state
+ * Respects the `count` property to create multiple rows per die type
  */
 function renderDiceEntry(diceRequest) {
   const { dice } = diceRequest;
   
-  // Build dice rows - each die gets a row with all possible face values
+  // Build dice rows - create one row PER die, not per die type
+  // e.g., { type: "d20", count: 2 } creates 2 separate rows
   const diceRows = [];
+  let rowIndex = 0;
+  let totalDiceCount = 0;
   
-  for (let i = 0; i < dice.length; i++) {
-    const dieInfo = dice[i];
+  for (const dieInfo of dice) {
     const dieType = dieInfo.type.toLowerCase(); // e.g., "d20"
     const faces = parseInt(dieType.replace('d', '')); // e.g., 20
+    const count = dieInfo.count || 1; // Default to 1 if not specified
     
-    // For d100, use text input (100 buttons is impractical)
-    if (faces === 100) {
-      diceRows.push(`
-        <div class="dice-row dice-row-manual" data-row="${i}" data-faces="${faces}">
-          <span class="dice-row-label">${dieType}</span>
-          <input type="number" 
-                 class="dice-manual-input" 
-                 data-row="${i}"
-                 data-faces="${faces}"
-                 min="1" max="100" 
-                 placeholder="1-100">
-        </div>
-      `);
-      continue;
-    }
+    totalDiceCount += count;
     
-    // For other dice, show clickable SVG buttons for each face value
-    const diceOptions = [];
-    for (let value = 1; value <= faces; value++) {
-      const svgPath = `/static/DLC Dice/${dieType.toUpperCase()}/${dieType} - Outline ${value}.svg`;
-      diceOptions.push(`
-        <button type="button" 
-                class="die-option" 
-                data-row="${i}" 
-                data-value="${value}" 
-                data-faces="${faces}"
-                title="${dieType}: ${value}">
-          <div class="die-face">
-            <img src="${svgPath}" alt="${dieType} ${value}" class="die-image">
+    // Create one row for each die in the count
+    for (let c = 0; c < count; c++) {
+      // For d100, use text input (100 buttons is impractical)
+      if (faces === 100) {
+        diceRows.push(`
+          <div class="dice-row dice-row-manual" data-row="${rowIndex}" data-faces="${faces}" data-type="${dieType}">
+            <span class="dice-row-label">${dieType.toUpperCase()}</span>
+            <input type="number" 
+                   class="dice-manual-input" 
+                   data-row="${rowIndex}"
+                   data-faces="${faces}"
+                   data-type="${dieType}"
+                   min="1" max="100" 
+                   placeholder="1-100">
           </div>
-        </button>
-      `);
-    }
-    
-    diceRows.push(`
-      <div class="dice-row" data-row="${i}" data-faces="${faces}">
-        <span class="dice-row-label">${dieType}</span>
-        <div class="dice-options">
-          ${diceOptions.join('')}
+        `);
+        rowIndex++;
+        continue;
+      }
+      
+      // For other dice, show clickable SVG buttons for each face value
+      const diceOptions = [];
+      for (let value = 1; value <= faces; value++) {
+        const svgPath = `/static/DLC Dice/${dieType.toUpperCase()}/${dieType} - Outline ${value}.svg`;
+        diceOptions.push(`
+          <button type="button" 
+                  class="die-option" 
+                  data-row="${rowIndex}" 
+                  data-value="${value}" 
+                  data-faces="${faces}"
+                  data-type="${dieType}"
+                  title="${dieType}: ${value}">
+            <div class="die-face">
+              <img src="${svgPath}" alt="${dieType} ${value}" class="die-image">
+            </div>
+          </button>
+        `);
+      }
+      
+      diceRows.push(`
+        <div class="dice-row" data-row="${rowIndex}" data-faces="${faces}" data-type="${dieType}">
+          <span class="dice-row-label">${dieType.toUpperCase()}</span>
+          <div class="dice-options">
+            ${diceOptions.join('')}
+          </div>
         </div>
-      </div>
-    `);
+      `);
+      rowIndex++;
+    }
   }
   
   return `
     <div class="dice-entry">
       <div class="dice-entry-header">
         <h4 class="dice-entry-title">Enter Dice Results</h4>
-        <p class="dice-entry-formula">${dice.length} dice to enter</p>
+        <p class="dice-entry-formula">${totalDiceCount} dice to enter</p>
       </div>
       <div class="dice-rows">
         ${diceRows.join('')}
@@ -82,12 +95,25 @@ function renderDiceEntry(diceRequest) {
 
 /**
  * Initialize dice entry click handlers for the current diceRequest
+ * Stores metadata for each row to correctly build results
  */
 function initDiceEntry(diceRequest) {
   debugLog('Initializing dice entry');
   
-  // Reset values array
-  diceEntryValues = new Array(diceRequest.dice.length).fill(null);
+  // Calculate total rows needed (sum of all counts)
+  let totalRows = 0;
+  const rowMetadata = []; // Track die type for each row
+  
+  for (const die of diceRequest.dice) {
+    const count = die.count || 1;
+    for (let c = 0; c < count; c++) {
+      rowMetadata.push({ type: die.type });
+      totalRows++;
+    }
+  }
+  
+  // Reset values array with correct size
+  diceEntryValues = new Array(totalRows).fill(null);
   
   // Click handlers for die options (SVG dice faces)
   document.querySelectorAll('.die-option').forEach(btn => {
@@ -134,9 +160,9 @@ function initDiceEntry(diceRequest) {
     
     debugLog('Submitting dice results');
     
-    // Build results array
+    // Build results array using row metadata for correct types
     const results = diceEntryValues.map((value, index) => ({
-      type: diceRequest.dice[index].type,
+      type: rowMetadata[index].type,
       value: value
     }));
     

@@ -244,6 +244,10 @@ function updateRWSubmitButton() {
 function renderRWRequest(rollData) {
   debugLog('Rendering Roll Window request state', rollData);
   
+  // Unwrap nested data structure if present
+  // DLC sends { type: "rollRequest", data: { roll: {...}, config: {...}, buttons: [...] } }
+  const data = rollData.data || rollData;
+  
   // Make sure elements are cached
   if (!rwElements.rwTitle) {
     rwElements.rwTitle = document.getElementById('rw-title');
@@ -264,20 +268,20 @@ function renderRWRequest(rollData) {
   }
   
   // Set title and subtitle from roll data
-  const title = rollData.roll?.title || rollData.title || 'Roll Request';
-  const subtitle = rollData.roll?.subtitle || rollData.roll?.formula || rollData.subtitle || '';
+  const title = data.roll?.title || data.title || 'Roll Request';
+  const subtitle = data.roll?.subtitle || data.roll?.formula || data.subtitle || '';
   
   rwElements.rwTitle.textContent = title;
   rwElements.rwSubtitle.textContent = subtitle;
   
   // Render config fields - DLC sends config.fields array
-  if (rollData.config && rollData.config.fields) {
-    renderRWConfigFields(rollData.config.fields);
+  if (data.config && data.config.fields) {
+    renderRWConfigFields(data.config.fields);
   }
   
   // Render action buttons
-  if (rollData.buttons) {
-    renderRWActionButtons(rollData.buttons);
+  if (data.buttons) {
+    renderRWActionButtons(data.buttons);
   }
   
   // Show cancel button
