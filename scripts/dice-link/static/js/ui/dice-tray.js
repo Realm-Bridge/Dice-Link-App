@@ -127,19 +127,29 @@ function initDiceTray() {
  */
 function submitManualFormula() {
   const formulaInput = document.getElementById('dice-formula-input');
-  if (!formulaInput) return;
-  
-  let formula = formulaInput.value.trim();
-  
-  // Strip /r or /roll prefix if present
-  if (formula.startsWith('/r ')) {
-    formula = formula.substring(3).trim();
-  } else if (formula.startsWith('/roll ')) {
-    formula = formula.substring(6).trim();
+  if (!formulaInput) {
+    debugError('Formula input element not found');
+    return;
   }
   
+  let formula = formulaInput.value.trim();
+  debugLog(`Manual formula input raw value: "${formula}"`);
+  
+  // Strip /r or /roll prefix if present (handle with or without space)
+  if (formula.toLowerCase().startsWith('/r ')) {
+    formula = formula.substring(3).trim();
+  } else if (formula.toLowerCase().startsWith('/r')) {
+    formula = formula.substring(2).trim();
+  } else if (formula.toLowerCase().startsWith('/roll ')) {
+    formula = formula.substring(6).trim();
+  } else if (formula.toLowerCase().startsWith('/roll')) {
+    formula = formula.substring(5).trim();
+  }
+  
+  debugLog(`Manual formula after strip: "${formula}"`);
+  
   if (!formula) {
-    debugLog('No formula entered');
+    debugLog('No formula entered after stripping prefix');
     return;
   }
   
