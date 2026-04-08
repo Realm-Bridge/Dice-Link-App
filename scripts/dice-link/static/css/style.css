@@ -308,7 +308,6 @@ body {
     flex: 1;
     margin-top: 24px;
     justify-content: space-between;
-    align-items: flex-end;
     padding-bottom: 24px;
 }
 
@@ -325,7 +324,6 @@ body {
 .recent-rolls-panel {
     width: 320px;
     min-width: 320px;
-    max-height: 420px;
     align-self: flex-end;
 }
 
@@ -362,17 +360,18 @@ body {
     gap: 24px;
     width: 280px;
     min-width: 280px;
-    justify-content: flex-end;
 }
 
 .player-modes-panel {
     min-height: 100px;
     border-radius: 24px;
+    align-self: flex-start;
 }
 
 .session-stats-panel {
     flex: 0 0 auto;
     min-height: 85px;
+    align-self: flex-end;
 }
 
 /* State Panels */
