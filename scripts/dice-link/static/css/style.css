@@ -241,10 +241,9 @@ body {
 
 /* Top Section: Dice Tray + Camera */
 .top-section {
-    display: grid;
-    grid-template-columns: 280px 400px;
+    display: flex;
     gap: 20px;
-    height: 200px;
+    min-height: 180px;
 }
 
 .dice-tray-container {
@@ -255,7 +254,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 280px;
+    flex: 0 0 280px;
+    max-width: 280px;
+    overflow: hidden;
 }
 
 .dice-link-branding {
@@ -265,7 +266,7 @@ body {
 }
 
 .dice-link-logo {
-    font-size: 1.25rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--dlc-accent-pink);
     margin: 0;
@@ -282,8 +283,8 @@ body {
     justify-content: center;
     text-align: center;
     gap: 8px;
-    width: 400px;
-    height: 100%;
+    flex: 1;
+    max-width: 300px;
 }
 
 .camera-view-placeholder h3 {
@@ -300,8 +301,7 @@ body {
 
 /* Dashboard Section: Panels */
 .dashboard-section {
-    display: grid;
-    grid-template-columns: 280px 400px;
+    display: flex;
     gap: 20px;
     flex: 1;
     margin-top: 20px;
@@ -318,7 +318,8 @@ body {
 }
 
 .recent-rolls-panel {
-    width: 280px;
+    flex: 0 0 280px;
+    max-width: 280px;
 }
 
 .recent-rolls-panel h3,
@@ -352,16 +353,17 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    width: 400px;
+    flex: 1;
+    max-width: 300px;
 }
 
 .player-modes-panel {
-    flex: 0.8;
+    flex: 0 0 auto;
     min-height: 100px;
 }
 
 .session-stats-panel {
-    flex: 1.2;
+    flex: 1;
     min-height: 140px;
 }
 
@@ -1151,8 +1153,8 @@ body {
 }
 
 .die-icon {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   display: block;
 }

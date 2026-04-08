@@ -54,10 +54,10 @@ def main():
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
-    browser.resize(1200, 800)
+    browser.resize(700, 750)
     
-    # Set zoom level to make text much larger (2.0 = 200% of normal size)
-    browser.setZoomFactor(2.0)
+    # Set zoom level (1.0 = 100% normal size)
+    browser.setZoomFactor(1.0)
     
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
