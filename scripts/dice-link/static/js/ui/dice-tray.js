@@ -144,55 +144,6 @@ function initDiceTray() {
 }
 
 /**
- * Submit a manually typed formula from the input field.
- * Strips /r prefix if present and sends to DLC.
- */
-function submitManualFormula() {
-  const formulaInput = document.getElementById('dice-formula-input');
-  if (!formulaInput) {
-    debugError('Formula input element not found');
-    return;
-  }
-  
-  let formula = formulaInput.value.trim();
-  debugLog(`Manual formula input raw value: "${formula}"`);
-  
-  // Strip /r or /roll prefix if present (handle with or without space)
-  if (formula.toLowerCase().startsWith('/r ')) {
-    formula = formula.substring(3).trim();
-  } else if (formula.toLowerCase().startsWith('/r')) {
-    formula = formula.substring(2).trim();
-  } else if (formula.toLowerCase().startsWith('/roll ')) {
-    formula = formula.substring(6).trim();
-  } else if (formula.toLowerCase().startsWith('/roll')) {
-    formula = formula.substring(5).trim();
-  }
-  
-  debugLog(`Manual formula after strip: "${formula}"`);
-  
-  if (!formula) {
-    debugLog('No formula entered after stripping prefix');
-    return;
-  }
-  
-  debugLog(`Sending manual formula: ${formula}`);
-  
-  if (typeof sendMessage !== 'function') {
-    debugError('sendMessage is not defined');
-    return;
-  }
-  
-  sendMessage({
-    type: 'diceTrayRoll',
-    formula: formula,
-    flavor: 'Manual Dice Roll'
-  });
-  
-  // Reset tray after sending
-  resetDiceTrayUI();
-}
-
-/**
  * Build clean formula string from current tray state (no /r prefix).
  * Applies kh/kl to d20s for advantage/disadvantage per Foundry spec.
  * @returns {string} e.g. "2d20kh+1d6+3" or "" if nothing selected
