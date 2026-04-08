@@ -257,7 +257,7 @@ body {
     gap: 12px;
     width: 320px;
     min-width: 320px;
-    margin: 24px;
+    margin: 12px 24px 24px 24px;
 }
 
 .dice-link-branding {
@@ -288,7 +288,7 @@ body {
     min-width: 280px;
     height: 180px;
     flex-shrink: 0;
-    margin: 24px;
+    margin: 12px 24px 24px 24px;
 }
 
 .camera-view-placeholder h3 {
@@ -327,6 +327,7 @@ body {
     width: 320px;
     min-width: 320px;
     align-self: flex-end;
+    margin: 24px 24px 12px 24px;
 }
 
 .recent-rolls-panel h3,
@@ -374,6 +375,7 @@ body {
     flex: 0 0 auto;
     min-height: 85px;
     align-self: flex-end;
+    margin: 24px 24px 12px 24px;
 }
 
 /* State Panels */
