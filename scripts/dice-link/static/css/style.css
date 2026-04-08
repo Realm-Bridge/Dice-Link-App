@@ -323,6 +323,7 @@ body {
 .recent-rolls-panel {
     width: 320px;
     min-width: 320px;
+    max-height: 420px;
 }
 
 .recent-rolls-panel h3,
@@ -366,8 +367,8 @@ body {
 }
 
 .session-stats-panel {
-    flex: 1;
-    min-height: 140px;
+    flex: 0 0 auto;
+    min-height: 85px;
 }
 
 /* State Panels */
