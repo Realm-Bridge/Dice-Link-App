@@ -22,8 +22,8 @@ from core.websocket_handler import (
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
 
-# Get the base directory
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Get the base directory (now app.py is at the root of dice-link/)
+BASE_DIR = Path(__file__).resolve().parent
 
 # Create FastAPI app
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
