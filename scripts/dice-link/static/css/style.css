@@ -308,6 +308,8 @@ body {
     flex: 1;
     margin-top: 24px;
     justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 24px;
 }
 
 .recent-rolls-panel,
@@ -324,6 +326,7 @@ body {
     width: 320px;
     min-width: 320px;
     max-height: 420px;
+    align-self: flex-end;
 }
 
 .recent-rolls-panel h3,
@@ -359,6 +362,7 @@ body {
     gap: 24px;
     width: 280px;
     min-width: 280px;
+    justify-content: flex-end;
 }
 
 .player-modes-panel {
