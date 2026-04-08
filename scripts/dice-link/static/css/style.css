@@ -1003,21 +1003,25 @@ body {
   opacity: 0.8;
 }
 
-.die-svg-icon {
+.die-icon {
   width: 48px;
   height: 48px;
   object-fit: contain;
   display: block;
-  stroke: currentColor;
+  filter: brightness(0) saturate(100%) invert(81%) sepia(6%) saturate(273%) hue-rotate(177deg) brightness(91%) contrast(87%);
+}
+
+.dice-btn:hover .die-icon {
+  filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
 }
 
 /* Per-die size adjustments */
-.dice-btn[data-die="4"] .die-svg-icon {
+.dice-btn[data-die="4"] .die-icon {
   width: 40px;
   height: 40px;
 }
 
-.dice-btn[data-die="100"] .die-svg-icon {
+.dice-btn[data-die="100"] .die-icon {
   width: 52px;
   height: 52px;
 }
