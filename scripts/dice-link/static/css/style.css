@@ -105,7 +105,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: 24px 24px 0 24px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 24px;
 }
@@ -257,7 +257,7 @@ body {
     gap: 12px;
     width: 320px;
     min-width: 320px;
-    margin: 12px 24px 24px 24px;
+    margin: 24px;
 }
 
 .dice-link-branding {
@@ -288,7 +288,7 @@ body {
     min-width: 280px;
     height: 180px;
     flex-shrink: 0;
-    margin: 12px 24px 24px 24px;
+    margin: 24px;
 }
 
 .camera-view-placeholder h3 {
@@ -327,7 +327,7 @@ body {
     width: 320px;
     min-width: 320px;
     align-self: flex-end;
-    margin: 24px 24px 12px 24px;
+    margin: 24px;
 }
 
 .recent-rolls-panel h3,
@@ -375,7 +375,7 @@ body {
     flex: 0 0 auto;
     min-height: 85px;
     align-self: flex-end;
-    margin: 24px 24px 12px 24px;
+    margin: 24px;
 }
 
 /* State Panels */
