@@ -94,11 +94,32 @@ function initDiceTray() {
   const rollBtn = document.getElementById('dice-roll-btn');
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
-      const formula = buildDiceFormula();
+      let formula = buildDiceFormula();
+      
+      // If no dice selected via buttons, check for manually typed formula
       if (!formula) {
-        debugLog('No dice selected, nothing to roll');
+        const formulaInput = document.getElementById('dice-formula-input');
+        if (formulaInput) {
+          let manualFormula = formulaInput.value.trim();
+          // Strip /r or /roll prefix
+          if (manualFormula.toLowerCase().startsWith('/r ')) {
+            manualFormula = manualFormula.substring(3).trim();
+          } else if (manualFormula.toLowerCase().startsWith('/r')) {
+            manualFormula = manualFormula.substring(2).trim();
+          } else if (manualFormula.toLowerCase().startsWith('/roll ')) {
+            manualFormula = manualFormula.substring(6).trim();
+          } else if (manualFormula.toLowerCase().startsWith('/roll')) {
+            manualFormula = manualFormula.substring(5).trim();
+          }
+          formula = manualFormula;
+        }
+      }
+      
+      if (!formula) {
+        debugLog('No dice selected and no manual formula entered');
         return;
       }
+      
       debugLog(`Sending diceTrayRoll: ${formula}`);
       
       if (typeof sendMessage !== 'function') {
