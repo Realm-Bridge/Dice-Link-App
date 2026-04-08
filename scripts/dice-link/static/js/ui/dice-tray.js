@@ -90,33 +90,31 @@ function initDiceTray() {
     });
   }
 
-  // Roll button
+  // Roll button - always reads from the formula bar (single source of truth)
   const rollBtn = document.getElementById('dice-roll-btn');
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
-      let formula = buildDiceFormula();
+      const formulaInput = document.getElementById('dice-formula-input');
+      if (!formulaInput) {
+        debugError('Formula input not found');
+        return;
+      }
       
-      // If no dice selected via buttons, check for manually typed formula
-      if (!formula) {
-        const formulaInput = document.getElementById('dice-formula-input');
-        if (formulaInput) {
-          let manualFormula = formulaInput.value.trim();
-          // Strip /r or /roll prefix
-          if (manualFormula.toLowerCase().startsWith('/r ')) {
-            manualFormula = manualFormula.substring(3).trim();
-          } else if (manualFormula.toLowerCase().startsWith('/r')) {
-            manualFormula = manualFormula.substring(2).trim();
-          } else if (manualFormula.toLowerCase().startsWith('/roll ')) {
-            manualFormula = manualFormula.substring(6).trim();
-          } else if (manualFormula.toLowerCase().startsWith('/roll')) {
-            manualFormula = manualFormula.substring(5).trim();
-          }
-          formula = manualFormula;
-        }
+      let formula = formulaInput.value.trim();
+      
+      // Strip /r or /roll prefix
+      if (formula.toLowerCase().startsWith('/r ')) {
+        formula = formula.substring(3).trim();
+      } else if (formula.toLowerCase().startsWith('/r')) {
+        formula = formula.substring(2).trim();
+      } else if (formula.toLowerCase().startsWith('/roll ')) {
+        formula = formula.substring(6).trim();
+      } else if (formula.toLowerCase().startsWith('/roll')) {
+        formula = formula.substring(5).trim();
       }
       
       if (!formula) {
-        debugLog('No dice selected and no manual formula entered');
+        debugLog('No formula to roll');
         return;
       }
       
