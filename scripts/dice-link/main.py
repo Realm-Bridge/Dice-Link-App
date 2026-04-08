@@ -57,13 +57,13 @@ def main():
     
     # Set minimum size based on layout requirements
     # User can resize larger or maximize, but not smaller than minimum
-    min_width = 1200
-    min_height = 850
+    min_width = 1400
+    min_height = 950
     browser.setMinimumSize(min_width, min_height)
     browser.resize(min_width, min_height)
     
-    # Set zoom level (1.0 = 100% normal size)
-    browser.setZoomFactor(1.0)
+    # Set zoom level (1.5 = 150% scale for better visibility)
+    browser.setZoomFactor(1.5)
     
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
