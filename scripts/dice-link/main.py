@@ -57,8 +57,8 @@ def main():
     
     # Set minimum size based on layout requirements
     # User can resize larger or maximize, but not smaller than minimum
-    min_width = 720
-    min_height = 700
+    min_width = 1200
+    min_height = 850
     browser.setMinimumSize(min_width, min_height)
     browser.resize(min_width, min_height)
     
