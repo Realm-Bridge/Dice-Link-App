@@ -243,6 +243,7 @@ body {
 .top-section {
     display: flex;
     align-items: flex-start;
+    width: fit-content;
 }
 
 .dice-tray-container {
