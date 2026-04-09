@@ -55,10 +55,9 @@ def main():
     # Set window properties
     browser.setWindowTitle(APP_NAME)
     
-    # Lock window to fixed size - cannot be resized
-    fixed_width = 1400
-    fixed_height = 1500
-    browser.setFixedSize(fixed_width, fixed_height)
+    # Allow window to be resized for debugging
+    browser.setMinimumSize(1400, 1500)
+    browser.resize(1400, 1500)
     
     # Set zoom level (1.5 = 150% scale for better visibility)
     browser.setZoomFactor(1.5)
