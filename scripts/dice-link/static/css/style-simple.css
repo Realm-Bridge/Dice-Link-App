@@ -249,6 +249,43 @@ body {
     width: 45px;
     height: 45px;
     display: block;
+    object-fit: contain;
+}
+
+/* Individual die icon sizes - larger than button to allow overflow */
+.dice-btn[data-die="4"] .die-icon {
+    width: 45px;
+    height: 45px;
+}
+
+.dice-btn[data-die="6"] .die-icon {
+    width: 52px;
+    height: 52px;
+}
+
+.dice-btn[data-die="8"] .die-icon {
+    width: 52px;
+    height: 52px;
+}
+
+.dice-btn[data-die="10"] .die-icon {
+    width: 52px;
+    height: 52px;
+}
+
+.dice-btn[data-die="12"] .die-icon {
+    width: 52px;
+    height: 52px;
+}
+
+.dice-btn[data-die="20"] .die-icon {
+    width: 52px;
+    height: 52px;
+}
+
+.dice-btn[data-die="100"] .die-icon {
+    width: 52px;
+    height: 52px;
 }
 
 .die-count {
