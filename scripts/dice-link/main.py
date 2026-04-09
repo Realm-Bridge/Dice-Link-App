@@ -59,8 +59,8 @@ def main():
     browser.setMinimumSize(1400, 1500)
     browser.resize(1400, 1500)
     
-    # Set zoom level (1.5 = 150% scale for better visibility)
-    browser.setZoomFactor(1.5)
+    # No zoom - CSS dimensions match rendered sizes exactly
+    browser.setZoomFactor(1.0)
     
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
