@@ -89,7 +89,9 @@ body {
     align-items: center;
     padding: 0 24px;
     height: 60px;
+    width: 100%;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .header-brand {
@@ -395,9 +397,7 @@ body {
     align-items: center;
     padding: 0 24px;
     height: 40px;
-    width: 100%;
     border-top: 1px solid var(--border-color);
-    flex-shrink: 0;
 }
 
 .version {
