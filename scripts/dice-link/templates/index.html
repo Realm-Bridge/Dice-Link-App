@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=4">
 </head>
 <body>
     <div class="app-container">
@@ -12,7 +12,6 @@
         <header class="app-header">
             <div class="header-brand">
                 <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="header-logo" />
-                <h1 class="app-title">{{ app_name }}</h1>
             </div>
             <div class="header-actions">
                 <button id="settings-btn" class="icon-btn" title="Settings">
@@ -30,146 +29,64 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Hidden placeholder for backwards compatibility -->
-            <div id="waiting-state" class="hidden"></div>
-
-            <!-- Roll Request Panel (legacy - hidden, Roll Window is now primary UI) -->
-            <div id="roll-panel" class="state-panel hidden">
-                <!-- Roll Header -->
-                <div class="roll-header">
-                    <h2 id="roll-title" class="roll-title">Attack Roll</h2>
-                    <p id="roll-subtitle" class="roll-subtitle">Melee Weapon Attack</p>
+            <!-- Dice Tray -->
+            <div class="dice-tray-container">
+                <div class="dice-link-branding">
+                    <h2 class="dice-link-logo">Dice Link</h2>
                 </div>
-
-                <!-- Dice Display -->
-                <div class="dice-section">
-                    <h3 class="section-title">Dice Required</h3>
-                    <div id="dice-display" class="dice-display">
-                        <!-- Dice will be rendered here -->
-                    </div>
-                    <p id="roll-formula" class="roll-formula">1d20 + 5</p>
-                </div>
-
-                <!-- Configuration Fields -->
-                <div id="config-section" class="config-section">
-                    <h3 class="section-title">Configuration</h3>
-                    <div id="config-fields" class="config-fields">
-                        <!-- Config fields will be rendered here -->
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="action-section">
-                    <h3 class="section-title">Roll Type</h3>
-                    <div id="action-buttons" class="action-buttons">
-                        <!-- Action buttons will be rendered here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dice Entry Panel -->
-            <div id="dice-entry-panel" class="state-panel hidden">
-                <div class="dice-entry-header">
-                    <h2>Enter Dice Results</h2>
-                    <p id="selected-action" class="selected-action">Normal Roll</p>
-                </div>
-
-                <!-- Camera Feed Area -->
-                <div id="camera-feed-container" class="camera-feed-container">
-                    <div class="camera-feed-header">
-                        <span class="camera-feed-title">Roll these dice:</span>
-                        <span id="camera-dice-icons" class="camera-dice-icons">
-                            <!-- Dice icons will be added here -->
-                        </span>
-                    </div>
-                    <div id="camera-feed" class="camera-feed">
-                        <canvas id="camera-canvas" width="640" height="480"></canvas>
-                        <p class="camera-feed-placeholder">Camera starting...</p>
-                    </div>
-                </div>
-
-                <div id="dice-inputs" class="dice-inputs">
-                    <!-- Dice input fields will be rendered here -->
-                </div>
-
-                <div class="entry-actions">
-                    <button id="submit-results" class="btn btn-primary" disabled>
-                        Submit Results
-                    </button>
-                    <button id="back-to-config" class="btn btn-secondary">
-                        Back
-                    </button>
-                </div>
-            </div>
-
-            <!-- Roll Cancelled/Complete State -->
-            <div id="complete-state" class="state-panel hidden">
-                <div class="complete-content">
-                    <div id="complete-icon" class="complete-icon success">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 6L9 17l-5-5"/>
-                        </svg>
-                    </div>
-                    <h2 id="complete-title">Roll Submitted</h2>
-                    <p id="complete-message">Waiting for next roll...</p>
-                </div>
-            </div>
-
-            <!-- Roll Window Dashboard Section -->
-            <aside id="roll-window" class="roll-window">
-                <h3 class="roll-window-title">Roll Window</h3>
                 
-                <!-- Idle State: Dice Tray -->
-                <div id="roll-window-idle" class="roll-window-state active">
-                    <div class="dice-tray">
-                        <!-- Formula input -->
-                        <div class="dice-formula-row">
-                            <input type="text" id="dice-formula-input" class="dice-formula-input" value="/r " placeholder="/r 1d20" />
-                        </div>
-                        
-                        <!-- Dice buttons with counts -->
-                        <div class="dice-buttons-row">
-                            <button class="dice-btn" data-die="4" title="d4 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D4/d4-blank.svg" alt="d4" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="6" title="d6 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D6/d6-blank.svg" alt="d6" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="8" title="d8 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D8/d8-blank.svg" alt="d8" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="10" title="d10 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D10/d10-blank.svg" alt="d10" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="12" title="d12 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D12/d12-blank.svg" alt="d12" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="20" title="d20 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D20/d20-blank.svg" alt="d20" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="100" title="d100 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D100/d100-blank.svg" alt="d100" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                        </div>
-                        
-                        <!-- Controls -->
-                        <div class="dice-controls">
-                            <button type="button" class="dice-modifier-btn" id="dice-modifier-minus" title="Decrease modifier">−</button>
-                            <span id="dice-modifier-value" class="dice-modifier-value">0</span>
-                            <button type="button" class="dice-modifier-btn" id="dice-modifier-plus" title="Increase modifier">+</button>
-                            <button type="button" class="dice-adv-btn" data-mode="normal" title="Toggle Advantage/Disadvantage">ADV/DIS</button>
-                            <button type="button" class="dice-roll-btn btn-success" id="dice-roll-btn" title="Roll dice">Roll</button>
-                        </div>
+                <!-- Dice Tray (always visible) -->
+                <div class="dice-tray">
+                    <!-- Formula input -->
+                    <div class="dice-formula-row">
+                        <input type="text" id="dice-formula-input" class="dice-formula-input" value="/r " placeholder="/r 1d20" />
+                    </div>
+                    
+                    <!-- Dice buttons with counts -->
+                    <div class="dice-buttons-row">
+                        <button class="dice-btn" data-die="4" title="d4 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D4/d4-blank.svg" alt="d4" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="6" title="d6 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D6/d6-blank.svg" alt="d6" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="8" title="d8 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D8/d8-blank.svg" alt="d8" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="10" title="d10 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D10/d10-blank.svg" alt="d10" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="12" title="d12 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D12/d12-blank.svg" alt="d12" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="20" title="d20 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D20/d20-blank.svg" alt="d20" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="100" title="d100 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D100/d100-blank.svg" alt="d100" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Controls -->
+                    <div class="dice-controls">
+                        <button type="button" class="dice-modifier-btn" id="dice-modifier-minus" title="Decrease modifier">−</button>
+                        <span id="dice-modifier-value" class="dice-modifier-value">0</span>
+                        <button type="button" class="dice-modifier-btn" id="dice-modifier-plus" title="Increase modifier">+</button>
+                        <button type="button" class="dice-adv-btn" data-mode="normal" title="Toggle Advantage/Disadvantage">ADV/DIS</button>
+                        <button type="button" class="dice-roll-btn btn-success" id="dice-roll-btn" title="Roll dice">Roll</button>
                     </div>
                 </div>
+            </div>
 
+            <!-- Roll Window (expandable overlay) - Hidden by default -->
+            <div id="roll-window" class="roll-window hidden">
                 <!-- Roll Request State -->
                 <div id="roll-window-request" class="roll-window-state">
                     <div class="roll-window-header">
@@ -209,7 +126,7 @@
                         </button>
                     </div>
                 </div>
-            </aside>
+            </div>
         </main>
 
         <!-- Footer -->

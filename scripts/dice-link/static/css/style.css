@@ -93,9 +93,11 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 16px;
+    height: 100vh;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
 }
 
 /* Header */
@@ -103,9 +105,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
+    padding: 0 24px 0 24px;
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 24px;
+    margin-bottom: 0;
 }
 
 .header-brand {
@@ -232,6 +234,148 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+/* Top Section: Dice Tray + Camera */
+.top-section {
+    display: flex !important;
+    align-items: flex-start !important;
+    width: fit-content !important;
+    justify-content: flex-start !important;
+}
+
+.dice-tray-container {
+    background-color: var(--bg-card);
+    border-radius: var(--border-radius-lg);
+    padding: 25px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 19px;
+    width: 500px;
+    min-width: 500px;
+    margin: 24px 0 24px 24px;
+}
+
+.dice-link-branding {
+    text-align: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dice-link-logo {
+    font-size: 1.95rem;
+    font-weight: 700;
+    color: var(--dlc-accent-pink);
+    margin: 0;
+}
+
+.camera-view-placeholder {
+    background-color: var(--bg-card);
+    border-radius: var(--border-radius-lg);
+    border: 2px solid var(--dlc-border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    width: 360px;
+    min-width: 360px;
+    height: 180px;
+    flex-shrink: 0;
+    margin: 24px 24px 24px 24px !important;
+}
+
+.camera-view-placeholder h3 {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.camera-view-placeholder p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* Dashboard Section: Panels */
+.dashboard-section {
+    display: flex;
+    gap: 24px;
+    flex: 1;
+    margin-top: 24px;
+    justify-content: space-between;
+}
+
+.recent-rolls-panel,
+.player-modes-panel,
+.session-stats-panel {
+    background-color: var(--bg-card);
+    border-radius: var(--border-radius-lg);
+    border: 2px solid var(--dlc-border);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin: 24px;
+}
+
+.recent-rolls-panel {
+    width: 320px;
+    min-width: 320px;
+    align-self: flex-end;
+    margin: 24px;
+}
+
+.recent-rolls-panel h3,
+.player-modes-panel h3,
+.session-stats-panel h3 {
+    color: var(--dlc-accent-pink);
+    margin-bottom: 16px;
+    font-size: 1.25rem;
+}
+
+.stats-subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.panel-content {
+    color: var(--text-secondary);
+}
+
+.placeholder-text {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 24px 16px;
+    font-size: 1rem;
+}
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 280px;
+    min-width: 280px;
+}
+
+.player-modes-panel {
+    min-height: 100px;
+    border-radius: 24px;
+    align-self: flex-start;
+}
+
+.session-stats-panel {
+    flex: 0 0 auto;
+    min-height: 85px;
+    align-self: flex-end;
+    margin: 24px;
 }
 
 /* State Panels */
@@ -666,8 +810,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
-    margin-top: 24px;
+    padding: 0 24px 0 24px;
+    margin-top: 0;
     border-top: 1px solid var(--border-color);
 }
 
@@ -878,13 +1022,29 @@ body {
     font-size: 0.875rem;
 }
 
-/* Roll Window Dashboard Section */
+/* Roll Window - Expandable Overlay */
 .roll-window {
-    margin-top: 32px;
-    padding: 20px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    padding: 24px;
     background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
+    border: 2px solid var(--dlc-accent);
     border-radius: var(--border-radius-lg);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    min-width: 400px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.roll-window.hidden {
+    display: none;
+    opacity: 0;
+    transform: translate(-50%, -40%);
 }
 
 .roll-window-title {
@@ -958,13 +1118,13 @@ body {
 
 .dice-formula-input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 16px 19px;
   background: var(--dlc-bg-dark);
   border: 1px solid var(--dlc-border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--dlc-text-primary);
   font-family: monospace;
-  font-size: 14px;
+  font-size: 22px;
   box-sizing: border-box;
 }
 
@@ -976,7 +1136,7 @@ body {
 .dice-buttons-row {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
 }
 
@@ -1004,25 +1164,14 @@ body {
 }
 
 .die-icon {
-  width: 48px;
-  height: 48px;
+  width: 59px;
+  height: 59px;
   object-fit: contain;
   display: block;
 }
 
 .dice-btn:hover .die-icon {
   opacity: 0.8;
-}
-
-/* Per-die size adjustments */
-.dice-btn[data-die="4"] .die-icon {
-  width: 40px;
-  height: 40px;
-}
-
-.dice-btn[data-die="100"] .die-icon {
-  width: 52px;
-  height: 52px;
 }
 
 .die-count {
@@ -1048,20 +1197,20 @@ body {
 
 .dice-controls {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .dice-modifier-btn {
-  width: 32px;
-  height: 32px;
+  width: 50px;
+  height: 50px;
   background: var(--dlc-bg-section);
   border: 1px solid var(--dlc-border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--dlc-text-primary);
-  font-size: 16px;
+  font-size: 25px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1077,20 +1226,20 @@ body {
 }
 
 .dice-modifier-value {
-  min-width: 30px;
+  min-width: 47px;
   text-align: center;
-  font-size: 14px;
+  font-size: 22px;
   font-weight: 600;
   color: var(--dlc-text-primary);
 }
 
 .dice-adv-btn {
-  padding: 6px 12px;
+  padding: 9px 19px;
   background: var(--dlc-bg-section);
   border: 1px solid var(--dlc-border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--dlc-text-secondary);
-  font-size: 11px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1114,10 +1263,10 @@ body {
 }
 
 .dice-roll-btn {
-  padding: 8px 20px;
-  font-size: 13px;
+  padding: 12px 31px;
+  font-size: 20px;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
 }

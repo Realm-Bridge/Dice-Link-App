@@ -4,9 +4,16 @@ import threading
 import time
 import uvicorn
 import sys
+import os
+from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl
+
+# Add the current directory to Python path so uvicorn can find app module
+DICE_LINK_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(DICE_LINK_DIR))
+os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
 
@@ -14,7 +21,7 @@ from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
 def run_server():
     """Run the FastAPI server in a background thread"""
     uvicorn.run(
-        "app:app",
+        "server:app",
         host=WEBSOCKET_HOST,
         port=WEBSOCKET_PORT,
         reload=False,
@@ -47,10 +54,14 @@ def main():
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
-    browser.resize(1200, 800)
     
-    # Set zoom level to make text much larger (2.0 = 200% of normal size)
-    browser.setZoomFactor(2.0)
+    # Lock window to fixed size - cannot be resized
+    fixed_width = 1400
+    fixed_height = 1500
+    browser.setFixedSize(fixed_width, fixed_height)
+    
+    # Set zoom level (1.5 = 150% scale for better visibility)
+    browser.setZoomFactor(1.5)
     
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
