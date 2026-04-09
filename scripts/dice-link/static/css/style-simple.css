@@ -314,63 +314,6 @@ body {
     background: rgba(111, 46, 154, 0.1);
 }
 
-.die-icon {
-    width: 45px;
-    height: 45px;
-    display: block;
-    object-fit: contain;
-}
-
-/* Individual die icon sizes - larger than button to allow overflow */
-.dice-btn[data-die="4"] .die-icon {
-    width: 45px;
-    height: 45px;
-}
-
-.dice-btn[data-die="6"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="8"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="10"] .die-icon {
-    width: 56px;
-    height: 56px;
-}
-
-.dice-btn[data-die="12"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="20"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="100"] .die-icon {
-    width: 56px;
-    height: 56px;
-}
-
-.die-count {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: var(--dlc-accent);
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 20px;
-    text-align: center;
-}
-
 /* Dice Controls */
 .dice-controls {
     display: flex;
@@ -425,63 +368,6 @@ body {
     background: var(--dlc-success);
     color: white;
     margin: 0 12px;
-}
-
-.dice-modifier-btn {
-    width: 50px;
-    height: 50px;
-    background: var(--dlc-bg-section);
-    border: 1px solid var(--dlc-border);
-    border-radius: 6px;
-    color: var(--dlc-text-primary);
-    font-size: 25px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition);
-    margin: 0 8px;
-}
-
-.dice-modifier-btn:hover {
-    background: var(--dlc-accent);
-    border-color: var(--dlc-accent);
-}
-
-.dice-modifier-value {
-    min-width: 47px;
-    text-align: center;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--dlc-text-primary);
-}
-
-.dice-adv-btn {
-    padding: 9px 19px;
-    background: var(--dlc-bg-section);
-    border: 1px solid var(--dlc-border);
-    border-radius: 6px;
-    color: var(--dlc-text-secondary);
-    font-size: 17px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition);
-    margin: 0 8px;
-}
-
-.dice-adv-btn:hover {
-    background: var(--dlc-accent);
-    color: white;
-}
-
-.dice-adv-btn[data-mode="advantage"] {
-    background: var(--dlc-success);
-    color: white;
-    border-color: var(--dlc-success);
-}
-
-.dice-adv-btn[data-mode="disadvantage"] {
-    background: var(--dlc-danger);
-    color: white;
-    border-color: var(--dlc-danger);
 }
 
 .dice-roll-btn {
