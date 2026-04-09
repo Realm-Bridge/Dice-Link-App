@@ -169,9 +169,9 @@ body {
 
 /* Main Content */
 .main-content {
-    width: 1400px;
-    height: calc(1500px - 60px - 40px);
+    flex: 1;
     position: relative;
+    overflow: hidden;
 }
 
 /* Dice Tray */
