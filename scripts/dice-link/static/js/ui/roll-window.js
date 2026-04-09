@@ -61,12 +61,24 @@ function updateRollWindow(newState) {
   switch(newState) {
     case 'idle':
       rwElements.idleState.classList.add('active');
+      // Keep window hidden in idle state
+      if (rwElements.rollWindow) {
+        rwElements.rollWindow.classList.add('hidden');
+      }
       break;
     case 'request':
       rwElements.requestState.classList.add('active');
+      // Show window when requesting action
+      if (rwElements.rollWindow) {
+        rwElements.rollWindow.classList.remove('hidden');
+      }
       break;
     case 'dice-entry':
       rwElements.diceEntryState.classList.add('active');
+      // Keep window visible for dice entry
+      if (rwElements.rollWindow) {
+        rwElements.rollWindow.classList.remove('hidden');
+      }
       break;
     default:
       debugLog(`Unknown Roll Window state: ${newState}`);

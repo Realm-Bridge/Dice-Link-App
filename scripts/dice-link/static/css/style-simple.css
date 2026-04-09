@@ -79,8 +79,6 @@ body {
 .app-container {
     width: 1400px;
     height: 1500px;
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
 }
 
@@ -92,7 +90,6 @@ body {
     padding: 0 24px;
     height: 60px;
     border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
 }
 
 .header-brand {
@@ -102,7 +99,7 @@ body {
 }
 
 .header-logo {
-    height: 36px;
+    height: 45px;
     width: auto;
 }
 
@@ -120,15 +117,20 @@ body {
 
 /* Icon Button */
 .icon-btn {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
+    width: 45px;
+    height: 45px;
+    padding: 7.5px;
     background-color: transparent;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--transition);
+}
+
+.icon-btn svg {
+    width: 25px;
+    height: 25px;
 }
 
 .icon-btn:hover {
@@ -146,11 +148,18 @@ body {
 .connection-status {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: 10px;
+    padding: 10px 20px;
     border-radius: var(--border-radius);
-    font-size: 0.875rem;
+    font-size: 1.09rem;
     font-weight: 500;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: currentColor;
 }
 
 .connection-status.connected {
@@ -172,33 +181,33 @@ body {
 
 /* Main Content */
 .main-content {
-    flex: 1;
+    width: 1400px;
+    height: calc(1500px - 60px - 40px);
     position: relative;
-    overflow: hidden;
 }
 
 /* Dice Tray */
 .dice-tray-container {
     position: absolute;
-    top: 24px;
-    left: 24px;
+    top: 36px;
+    left: 36px;
     background-color: var(--bg-card);
     border-radius: var(--border-radius-lg);
-    border: 2px solid var(--dlc-border);
-    padding: 25px;
+    border: 3px solid var(--dlc-border);
+    padding: 37.5px;
     box-shadow: var(--shadow);
-    width: 500px;
+    width: 750px;
 }
 
 .dice-link-branding {
     text-align: center;
-    padding-bottom: 16px;
+    padding-bottom: 24px;
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 19px;
+    margin-bottom: 28.5px;
 }
 
 .dice-link-logo {
-    font-size: 1.95rem;
+    font-size: 2.925rem;
     font-weight: 700;
     color: var(--dlc-accent-pink);
 }
@@ -206,19 +215,19 @@ body {
 .dice-tray {
     display: flex;
     flex-direction: column;
-    gap: 19px;
+    gap: 28.5px;
 }
 
 /* Dice Formula Input */
 .dice-formula-input {
     width: 100%;
-    padding: 16px 19px;
+    padding: 24px 28.5px;
     background: var(--dlc-bg-dark);
     border: 1px solid var(--dlc-border);
     border-radius: 6px;
     color: var(--dlc-text-primary);
     font-family: monospace;
-    font-size: 22px;
+    font-size: 33px;
 }
 
 .dice-formula-input:focus {
@@ -229,18 +238,75 @@ body {
 /* Dice Buttons */
 .dice-buttons-row {
     display: flex;
-    gap: 3px;
+    gap: 4.5px;
     justify-content: center;
 }
 
 .dice-btn {
     background: transparent;
-    border: 2px solid transparent;
+    border: 3px solid transparent;
     border-radius: 6px;
-    padding: 6px;
+    padding: 9px;
     cursor: pointer;
     transition: all var(--transition);
     position: relative;
+}
+
+.die-icon {
+    width: 67.5px;
+    height: 67.5px;
+    display: block;
+    object-fit: contain;
+}
+
+/* Individual die icon sizes - larger than button to allow overflow */
+.dice-btn[data-die="4"] .die-icon {
+    width: 67.5px;
+    height: 67.5px;
+}
+
+.dice-btn[data-die="6"] .die-icon {
+    width: 78px;
+    height: 78px;
+}
+
+.dice-btn[data-die="8"] .die-icon {
+    width: 78px;
+    height: 78px;
+}
+
+.dice-btn[data-die="10"] .die-icon {
+    width: 84px;
+    height: 84px;
+}
+
+.dice-btn[data-die="12"] .die-icon {
+    width: 78px;
+    height: 78px;
+}
+
+.dice-btn[data-die="20"] .die-icon {
+    width: 78px;
+    height: 78px;
+}
+
+.dice-btn[data-die="100"] .die-icon {
+    width: 84px;
+    height: 84px;
+}
+
+.die-count {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background: var(--dlc-accent);
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 10px;
+    min-width: 30px;
+    text-align: center;
 }
 
 .dice-btn:hover {
@@ -248,126 +314,60 @@ body {
     background: rgba(111, 46, 154, 0.1);
 }
 
-.die-icon {
-    width: 45px;
-    height: 45px;
-    display: block;
-    object-fit: contain;
-}
-
-/* Individual die icon sizes - larger than button to allow overflow */
-.dice-btn[data-die="4"] .die-icon {
-    width: 45px;
-    height: 45px;
-}
-
-.dice-btn[data-die="6"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="8"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="10"] .die-icon {
-    width: 56px;
-    height: 56px;
-}
-
-.dice-btn[data-die="12"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="20"] .die-icon {
-    width: 52px;
-    height: 52px;
-}
-
-.dice-btn[data-die="100"] .die-icon {
-    width: 56px;
-    height: 56px;
-}
-
-.die-count {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: var(--dlc-accent);
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 20px;
-    text-align: center;
-}
-
 /* Dice Controls */
 .dice-controls {
     display: flex;
-    gap: 18px;
+    gap: 27px;
     align-items: center;
     justify-content: center;
 }
 
 .dice-modifier-btn {
-    width: 50px;
-    height: 50px;
+    width: 75px;
+    height: 75px;
     background: var(--dlc-bg-section);
     border: 1px solid var(--dlc-border);
     border-radius: 6px;
     color: var(--dlc-text-primary);
-    font-size: 25px;
+    font-size: 37.5px;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition);
-    margin: 0 8px;
-}
-
-.dice-modifier-btn:hover {
-    background: var(--dlc-accent);
-    border-color: var(--dlc-accent);
+    margin: 0 12px;
 }
 
 .dice-modifier-value {
-    min-width: 47px;
+    min-width: 70.5px;
     text-align: center;
-    font-size: 22px;
+    font-size: 33px;
     font-weight: 600;
     color: var(--dlc-text-primary);
 }
 
 .dice-adv-btn {
-    padding: 9px 19px;
+    padding: 13.5px 28.5px;
     background: var(--dlc-bg-section);
     border: 1px solid var(--dlc-border);
     border-radius: 6px;
     color: var(--dlc-text-secondary);
-    font-size: 17px;
+    font-size: 25.5px;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition);
-    margin: 0 8px;
+    margin: 0 12px;
 }
 
-.dice-adv-btn:hover {
-    background: var(--dlc-accent);
-    color: white;
-}
-
-.dice-adv-btn[data-mode="advantage"] {
+.dice-roll-btn {
+    padding: 18px 46.5px;
+    font-size: 30px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition);
+    border: none;
     background: var(--dlc-success);
     color: white;
-    border-color: var(--dlc-success);
-}
-
-.dice-adv-btn[data-mode="disadvantage"] {
-    background: var(--dlc-danger);
-    color: white;
-    border-color: var(--dlc-danger);
+    margin: 0 12px;
 }
 
 .dice-roll-btn {
@@ -399,11 +399,10 @@ body {
     padding: 0 24px;
     height: 40px;
     border-top: 1px solid var(--border-color);
-    flex-shrink: 0;
 }
 
 .version {
-    font-size: 0.75rem;
+    font-size: 0.94rem;
     color: var(--text-muted);
 }
 
@@ -515,6 +514,524 @@ body {
 .settings-field select:focus {
     outline: none;
     border-color: var(--dlc-accent);
+}
+
+/* Roll Window - Expandable Overlay (1.5x scaled) */
+.roll-window {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    padding: 36px;
+    background-color: var(--bg-card);
+    border: 3px solid var(--dlc-accent);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 30px 37.5px -7.5px rgba(0, 0, 0, 0.5);
+    min-width: 600px;
+    max-width: 900px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.roll-window.hidden {
+    display: none;
+    opacity: 0;
+    transform: translate(-50%, -40%);
+}
+
+.roll-window-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roll-window-state {
+    display: none;
+}
+
+.roll-window-state.active {
+    display: block;
+}
+
+.roll-window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roll-window-header h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--dlc-accent-pink);
+    margin: 0;
+}
+
+.roll-window-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    transition: color var(--transition);
+}
+
+.roll-window-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.roll-section {
+    margin-bottom: 27px;
+}
+
+.roll-section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+}
+
+.roll-dice-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.roll-dice-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    min-width: 105px;
+}
+
+.roll-dice-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 12px;
+}
+
+.roll-dice-type {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.roll-dice-count {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.roll-formula {
+    text-align: center;
+    font-family: monospace;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-input);
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    margin-bottom: 15px;
+}
+
+.roll-result-box {
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--dlc-accent);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.roll-result-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.roll-result-value {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--dlc-accent-pink);
+}
+
+.roll-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.roll-action-btn {
+    padding: 15px 36px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.roll-action-btn.confirm {
+    background-color: var(--dlc-success);
+    color: white;
+}
+
+.roll-action-btn.confirm:hover {
+    background-color: var(--dlc-success-hover);
+}
+
+.roll-action-btn.cancel {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.roll-action-btn.cancel:hover {
+    background-color: var(--bg-input);
+}
+
+/* Roll Request State (1.5x scaled) */
+.roll-window-header {
+    margin-bottom: 24px;
+}
+
+#rw-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.rw-subtitle {
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+}
+
+.rw-config-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.rw-config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.rw-config-field label {
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.rw-config-field input,
+.rw-config-field select {
+    padding: 12px 18px;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 1.3rem;
+}
+
+.rw-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.rw-action-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 15px 24px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.rw-action-btn:hover {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.rw-action-btn.selected {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+/* Dice Entry State (1.5x scaled) */
+.rw-dice-entry-header {
+    margin-bottom: 18px;
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+}
+
+.rw-dice-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.rw-dice-input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rw-dice-input-group img {
+    width: 36px;
+    height: 36px;
+    opacity: 0.6;
+}
+
+.rw-dice-input-group input {
+    flex: 1;
+    padding: 12px 18px;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 1.3rem;
+}
+
+.rw-dice-input-group input.valid {
+    border-color: var(--success);
+}
+
+.rw-dice-input-group input.invalid {
+    border-color: var(--danger);
+}
+
+.rw-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Dice Entry/Resolution Styles (1.5x scaled) */
+.dice-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 18px;
+    background: var(--dlc-bg-input);
+    border-radius: 6px;
+}
+
+.dice-entry-header {
+    text-align: center;
+}
+
+.dice-entry-title {
+    margin: 0 0 6px 0;
+    color: var(--dlc-text-primary);
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.dice-entry-formula {
+    margin: 0;
+    color: var(--dlc-text-secondary);
+    font-family: monospace;
+    font-size: 21px;
+}
+
+.dice-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.dice-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dice-row-label {
+    color: var(--dlc-text-secondary);
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.dice-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 270px;
+    overflow-y: auto;
+    padding: 6px;
+}
+
+.die-option {
+    position: relative;
+    width: 78px;
+    height: 78px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    flex-shrink: 0;
+}
+
+.die-option:hover {
+    transform: scale(1.12);
+    filter: brightness(1.3);
+}
+
+.die-option.selected {
+    filter: brightness(1.4) drop-shadow(0 0 9px var(--dlc-success));
+}
+
+.die-face {
+    position: relative;
+    width: 78px;
+    height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.die-image {
+    width: 78px;
+    height: 78px;
+    display: block;
+    pointer-events: none;
+}
+
+/* d100 manual text input (1.5x scaled) */
+.dice-row-manual {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+}
+
+.dice-manual-input {
+    width: 120px;
+    padding: 9px 15px;
+    background: var(--dlc-bg-input);
+    border: 1px solid var(--dlc-border);
+    border-radius: 4px;
+    color: var(--dlc-text-primary);
+    font-size: 21px;
+    text-align: center;
+}
+
+.dice-manual-input:focus {
+    outline: none;
+    border-color: var(--dlc-accent);
+}
+
+.dice-entry-actions {
+    margin-top: 12px;
+}
+
+.submit-dice-btn {
+    width: 100%;
+    padding: 15px 30px;
+    font-size: 21px;
+    font-weight: 600;
+}
+
+/* Button Utility Classes (1.5x scaled) */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 24px;
+    font-size: 1.3rem;
+    font-weight: 500;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition);
+    border: 1px solid transparent;
+}
+
+.btn-small {
+    padding: 12px 18px;
+    font-size: 1.1rem;
+}
+
+.btn-primary {
+    background-color: var(--dlc-accent);
+    border-color: var(--dlc-accent);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--dlc-accent-hover);
+    border-color: var(--dlc-accent-hover);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-input);
+    border-color: var(--dlc-accent);
+}
+
+.btn-danger {
+    background-color: var(--dlc-danger);
+    border-color: var(--dlc-danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
+.btn-success {
+    background-color: var(--dlc-success);
+    border-color: var(--dlc-success);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: var(--dlc-success-hover);
+    border-color: var(--dlc-success-hover);
+}
+
+.rw-cancel-btn {
+    width: 100%;
+    margin-top: 18px;
 }
 
 .settings-footer {

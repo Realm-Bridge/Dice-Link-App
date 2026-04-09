@@ -60,9 +60,6 @@ def main():
     fixed_height = 1500
     browser.setFixedSize(fixed_width, fixed_height)
     
-    # Set zoom level (1.5 = 150% scale for better visibility)
-    browser.setZoomFactor(1.5)
-    
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
     browser.load(QUrl(url))
