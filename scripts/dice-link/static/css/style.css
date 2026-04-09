@@ -242,7 +242,6 @@ body {
 /* Top Section: Dice Tray + Camera */
 .top-section {
     display: flex;
-    gap: 24px;
     justify-content: space-between;
     align-items: flex-start;
 }
