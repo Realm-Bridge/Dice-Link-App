@@ -89,16 +89,13 @@ body {
     align-items: center;
     padding: 0 24px;
     height: 60px;
-    width: 100%;
     border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
 }
 
 .header-brand {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-shrink: 0;
 }
 
 .header-logo {
@@ -116,8 +113,6 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-shrink: 0;
-    margin-left: auto;
 }
 
 /* Icon Button */
@@ -174,9 +169,9 @@ body {
 
 /* Main Content */
 .main-content {
-    flex: 1;
+    width: 1400px;
+    height: calc(1500px - 60px - 40px);
     position: relative;
-    overflow: hidden;
 }
 
 /* Dice Tray */
@@ -400,9 +395,7 @@ body {
     align-items: center;
     padding: 0 24px;
     height: 40px;
-    width: 100%;
     border-top: 1px solid var(--border-color);
-    flex-shrink: 0;
 }
 
 .version {
