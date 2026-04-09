@@ -113,6 +113,8 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 /* Icon Button */
@@ -169,9 +171,9 @@ body {
 
 /* Main Content */
 .main-content {
-    flex: 1;
+    width: 1400px;
+    height: calc(1500px - 60px - 40px);
     position: relative;
-    overflow: hidden;
 }
 
 /* Dice Tray */
