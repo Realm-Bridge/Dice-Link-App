@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style-simple.css">
 </head>
 <body>
     <div class="app-container">
@@ -30,98 +30,58 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Top Section: Dice Tray and Camera -->
-            <div class="top-section">
-                <!-- Left: Dice Link Branding + Dice Tray -->
-                <div class="dice-tray-container">
-                    <div class="dice-link-branding">
-                        <h2 class="dice-link-logo">Dice Link</h2>
-                    </div>
-                    
-                    <!-- Dice Tray (always visible) -->
-                    <div class="dice-tray">
-                        <!-- Formula input -->
-                        <div class="dice-formula-row">
-                            <input type="text" id="dice-formula-input" class="dice-formula-input" value="/r " placeholder="/r 1d20" />
-                        </div>
-                        
-                        <!-- Dice buttons with counts -->
-                        <div class="dice-buttons-row">
-                            <button class="dice-btn" data-die="4" title="d4 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D4/d4-blank.svg" alt="d4" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="6" title="d6 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D6/d6-blank.svg" alt="d6" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="8" title="d8 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D8/d8-blank.svg" alt="d8" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="10" title="d10 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D10/d10-blank.svg" alt="d10" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="12" title="d12 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D12/d12-blank.svg" alt="d12" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="20" title="d20 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D20/d20-blank.svg" alt="d20" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                            <button class="dice-btn" data-die="100" title="d100 (Left: add, Right: remove)">
-                                <img src="/static/DLC Dice/D100/d100-blank.svg" alt="d100" class="die-icon" />
-                                <span class="die-count" style="display: none;">0</span>
-                            </button>
-                        </div>
-                        
-                        <!-- Controls -->
-                        <div class="dice-controls">
-                            <button type="button" class="dice-modifier-btn" id="dice-modifier-minus" title="Decrease modifier">−</button>
-                            <span id="dice-modifier-value" class="dice-modifier-value">0</span>
-                            <button type="button" class="dice-modifier-btn" id="dice-modifier-plus" title="Increase modifier">+</button>
-                            <button type="button" class="dice-adv-btn" data-mode="normal" title="Toggle Advantage/Disadvantage">ADV/DIS</button>
-                            <button type="button" class="dice-roll-btn btn-success" id="dice-roll-btn" title="Roll dice">Roll</button>
-                        </div>
-                    </div>
+            <!-- Dice Tray -->
+            <div class="dice-tray-container">
+                <div class="dice-link-branding">
+                    <h2 class="dice-link-logo">Dice Link</h2>
                 </div>
                 
-                <!-- Right: Camera View Placeholder -->
-                <div class="camera-view-placeholder">
-                    <h3>Camera View Window</h3>
-                    <p>ML vision camera feed will appear here</p>
-                </div>
-            </div>
-
-            <!-- Bottom Section: Dashboard Panels -->
-            <div class="dashboard-section">
-                <!-- Left: Recent Rolls -->
-                <div class="recent-rolls-panel">
-                    <h3>Recent Rolls from Chat Log</h3>
-                    <div class="panel-content">
-                        <p class="placeholder-text">Roll history will appear here</p>
+                <!-- Dice Tray (always visible) -->
+                <div class="dice-tray">
+                    <!-- Formula input -->
+                    <div class="dice-formula-row">
+                        <input type="text" id="dice-formula-input" class="dice-formula-input" value="/r " placeholder="/r 1d20" />
                     </div>
-                </div>
-
-                <!-- Right Column -->
-                <div class="right-column">
-                    <!-- Player Modes -->
-                    <div class="player-modes-panel">
-                        <h3>Player Modes Window</h3>
-                        <div class="panel-content">
-                            <p class="placeholder-text">Player mode selection will appear here</p>
-                        </div>
+                    
+                    <!-- Dice buttons with counts -->
+                    <div class="dice-buttons-row">
+                        <button class="dice-btn" data-die="4" title="d4 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D4/d4-blank.svg" alt="d4" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="6" title="d6 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D6/d6-blank.svg" alt="d6" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="8" title="d8 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D8/d8-blank.svg" alt="d8" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="10" title="d10 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D10/d10-blank.svg" alt="d10" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="12" title="d12 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D12/d12-blank.svg" alt="d12" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="20" title="d20 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D20/d20-blank.svg" alt="d20" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
+                        <button class="dice-btn" data-die="100" title="d100 (Left: add, Right: remove)">
+                            <img src="/static/DLC Dice/D100/d100-blank.svg" alt="d100" class="die-icon" />
+                            <span class="die-count" style="display: none;">0</span>
+                        </button>
                     </div>
-
-                    <!-- Session Stats -->
-                    <div class="session-stats-panel">
-                        <h3>Session Roll Stats</h3>
-                        <p class="stats-subtitle">Clickable SVGs at top to flick between stats for different dice types</p>
-                        <div class="panel-content">
-                            <p class="placeholder-text">Statistics will appear here</p>
-                        </div>
+                    
+                    <!-- Controls -->
+                    <div class="dice-controls">
+                        <button type="button" class="dice-modifier-btn" id="dice-modifier-minus" title="Decrease modifier">−</button>
+                        <span id="dice-modifier-value" class="dice-modifier-value">0</span>
+                        <button type="button" class="dice-modifier-btn" id="dice-modifier-plus" title="Increase modifier">+</button>
+                        <button type="button" class="dice-adv-btn" data-mode="normal" title="Toggle Advantage/Disadvantage">ADV/DIS</button>
+                        <button type="button" class="dice-roll-btn btn-success" id="dice-roll-btn" title="Roll dice">Roll</button>
                     </div>
                 </div>
             </div>
