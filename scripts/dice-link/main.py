@@ -55,12 +55,10 @@ def main():
     # Set window properties
     browser.setWindowTitle(APP_NAME)
     
-    # Allow window to be resized for debugging
-    browser.setMinimumSize(1400, 1500)
-    browser.resize(1400, 1500)
-    
-    # No zoom - CSS dimensions match rendered sizes exactly
-    browser.setZoomFactor(1.0)
+    # Lock window to fixed size - cannot be resized
+    fixed_width = 1400
+    fixed_height = 1500
+    browser.setFixedSize(fixed_width, fixed_height)
     
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
