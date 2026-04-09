@@ -284,6 +284,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition);
+    margin: 0 8px;
 }
 
 .dice-modifier-btn:hover {
@@ -309,6 +310,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition);
+    margin: 0 8px;
 }
 
 .dice-adv-btn:hover {
@@ -338,6 +340,7 @@ body {
     border: none;
     background: var(--dlc-success);
     color: white;
+    margin: 0 8px;
 }
 
 .dice-roll-btn:hover {
