@@ -55,12 +55,10 @@ def main():
     # Set window properties
     browser.setWindowTitle(APP_NAME)
     
-    # Set minimum size based on layout requirements
-    # User can resize larger or maximize, but not smaller than minimum
-    min_width = 1400
-    min_height = 1500
-    browser.setMinimumSize(min_width, min_height)
-    browser.resize(min_width, min_height)
+    # Lock window to fixed size - cannot be resized
+    fixed_width = 1400
+    fixed_height = 1500
+    browser.setFixedSize(fixed_width, fixed_height)
     
     # Set zoom level (1.5 = 150% scale for better visibility)
     browser.setZoomFactor(1.5)
