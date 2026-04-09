@@ -92,6 +92,7 @@ body {
     padding: 0 24px;
     height: 60px;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .header-brand {
@@ -171,9 +172,9 @@ body {
 
 /* Main Content */
 .main-content {
-    width: 1400px;
-    height: calc(1500px - 60px - 40px);
+    flex: 1;
     position: relative;
+    overflow: hidden;
 }
 
 /* Dice Tray */
@@ -398,6 +399,7 @@ body {
     padding: 0 24px;
     height: 40px;
     border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .version {
