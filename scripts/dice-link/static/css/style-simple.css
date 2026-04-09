@@ -269,8 +269,8 @@ body {
 }
 
 .dice-btn[data-die="10"] .die-icon {
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
 }
 
 .dice-btn[data-die="12"] .die-icon {
@@ -284,8 +284,8 @@ body {
 }
 
 .dice-btn[data-die="100"] .die-icon {
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
 }
 
 .die-count {
