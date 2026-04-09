@@ -79,8 +79,6 @@ body {
 .app-container {
     width: 1400px;
     height: 1500px;
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
 }
 
