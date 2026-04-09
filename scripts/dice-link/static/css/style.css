@@ -257,7 +257,7 @@ body {
     gap: 19px;
     width: 500px;
     min-width: 500px;
-    margin: 24px;
+    margin: 24px 0 24px 24px;
 }
 
 .dice-link-branding {
@@ -284,11 +284,11 @@ body {
     justify-content: center;
     text-align: center;
     gap: 8px;
-    width: 280px;
-    min-width: 280px;
+    width: 360px;
+    min-width: 360px;
     height: 180px;
     flex-shrink: 0;
-    margin: 24px;
+    margin: 24px 24px 24px 24px;
 }
 
 .camera-view-placeholder h3 {
