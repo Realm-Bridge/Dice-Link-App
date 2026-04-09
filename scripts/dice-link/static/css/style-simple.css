@@ -516,6 +516,194 @@ body {
     border-color: var(--dlc-accent);
 }
 
+/* Roll Window - Expandable Overlay (1.5x scaled) */
+.roll-window {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    padding: 36px;
+    background-color: var(--bg-card);
+    border: 3px solid var(--dlc-accent);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 30px 37.5px -7.5px rgba(0, 0, 0, 0.5);
+    min-width: 600px;
+    max-width: 900px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.roll-window.hidden {
+    display: none;
+    opacity: 0;
+    transform: translate(-50%, -40%);
+}
+
+.roll-window-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roll-window-state {
+    display: none;
+}
+
+.roll-window-state.active {
+    display: block;
+}
+
+.roll-window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roll-window-header h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--dlc-accent-pink);
+    margin: 0;
+}
+
+.roll-window-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    transition: color var(--transition);
+}
+
+.roll-window-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.roll-section {
+    margin-bottom: 27px;
+}
+
+.roll-section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+}
+
+.roll-dice-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.roll-dice-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    min-width: 105px;
+}
+
+.roll-dice-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 12px;
+}
+
+.roll-dice-type {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.roll-dice-count {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.roll-formula {
+    text-align: center;
+    font-family: monospace;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-input);
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    margin-bottom: 15px;
+}
+
+.roll-result-box {
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--dlc-accent);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.roll-result-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.roll-result-value {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--dlc-accent-pink);
+}
+
+.roll-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.roll-action-btn {
+    padding: 15px 36px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.roll-action-btn.confirm {
+    background-color: var(--dlc-success);
+    color: white;
+}
+
+.roll-action-btn.confirm:hover {
+    background-color: var(--dlc-success-hover);
+}
+
+.roll-action-btn.cancel {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.roll-action-btn.cancel:hover {
+    background-color: var(--bg-input);
+}
+
+
 .settings-footer {
     padding: 16px 20px;
     border-top: 1px solid var(--border-color);
