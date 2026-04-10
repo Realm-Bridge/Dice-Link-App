@@ -522,7 +522,7 @@ body {
     top: 36px;
     left: 36px;
     z-index: 1000;
-    padding: 25px;
+    padding: 28px;
     background-color: var(--bg-card);
     border: 3px solid var(--dlc-accent);
     border-radius: var(--border-radius-lg);
