@@ -858,7 +858,7 @@ body {
 .dice-entry-instruction {
     margin: 0;
     color: var(--dlc-text-secondary);
-    font-size: 16px;
+    font-size: 24px;
     font-weight: 500;
 }
 
@@ -977,7 +977,7 @@ body {
 }
 
 .dice-entry-actions {
-    margin-top: 12px;
+    margin-top: 0;
     display: flex;
     gap: 12px;
 }
@@ -986,8 +986,8 @@ body {
 .submit-dice-btn {
     flex: 1;
     padding: 15px 30px;
-    font-size: 21px;
-    font-weight: 600;
+    font-size: 27px;
+    font-weight: 700;
 }
 
 /* Button Utility Classes (1.5x scaled) */
