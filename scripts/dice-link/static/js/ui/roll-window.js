@@ -71,13 +71,15 @@ function updateRollWindow(newState) {
       // Show window when requesting action
       if (rwElements.rollWindow) {
         rwElements.rollWindow.classList.remove('hidden');
+        rwElements.rollWindow.classList.remove('full-width');
       }
       break;
     case 'dice-entry':
       rwElements.diceEntryState.classList.add('active');
-      // Keep window visible for dice entry
+      // Keep window visible for dice entry, expand to full width
       if (rwElements.rollWindow) {
         rwElements.rollWindow.classList.remove('hidden');
+        rwElements.rollWindow.classList.add('full-width');
       }
       break;
     default:

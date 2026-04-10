@@ -539,7 +539,7 @@ body {
 }
 
 /* Roll Resolution Window - Full width minus margins */
-.roll-window:has(#roll-window-dice-entry.active) {
+.roll-window.full-width {
     width: calc(100% - 72px);
     max-width: none;
 }
