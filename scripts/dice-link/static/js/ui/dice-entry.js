@@ -178,6 +178,12 @@ function initDiceEntry(diceRequest) {
     diceEntryValues = [];
     updateRollWindow('idle');
   });
+  
+  // Cancel button
+  document.querySelector('#rw-cancel-btn')?.addEventListener('click', () => {
+    debugLog('Cancel button clicked in dice entry');
+    cancelRoll();
+  });
 }
 
 /**
