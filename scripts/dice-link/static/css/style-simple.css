@@ -941,7 +941,6 @@ body {
     height: 100%;
     display: block;
     pointer-events: none;
-    object-fit: contain;
 }
 
 
