@@ -899,7 +899,7 @@ body {
     display: flex;
     flex-wrap: nowrap;
     gap: 4px;
-    overflow-x: auto;
+    overflow: hidden;
     padding: 4px 0;
 }
 
@@ -916,7 +916,6 @@ body {
     justify-content: center;
     transition: transform 0.15s ease, filter 0.15s ease;
     flex-shrink: 0;
-    overflow: visible;
 }
 
 .die-option:hover {
@@ -930,18 +929,33 @@ body {
 
 .die-face {
     position: relative;
-    width: 82px;
-    height: 82px;
+    width: 78px;
+    height: 78px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .die-image {
-    width: 82px;
-    height: 82px;
+    width: 78px;
+    height: 78px;
     display: block;
     pointer-events: none;
+}
+
+/* Scale SVGs to fill buttons for different dice types */
+.dice-row[data-type="d20"] .die-image,
+.dice-row[data-type="d12"] .die-image,
+.dice-row[data-type="d10"] .die-image,
+.dice-row[data-type="d8"] .die-image,
+.dice-row[data-type="d6"] .die-image {
+    transform: scale(1.05);
+    transform-origin: center;
+}
+
+.dice-row[data-type="d4"] .die-image {
+    transform: scale(0.98);
+    transform-origin: center;
 }
 
 /* d100 manual text input (1.5x scaled) */
