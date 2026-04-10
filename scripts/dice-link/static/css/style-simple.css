@@ -846,7 +846,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 12px;
+    padding: 6px;
     background: var(--dlc-bg-input);
     border-radius: 6px;
 }
@@ -939,8 +939,8 @@ body {
 }
 
 .die-image {
-    width: 95px;
-    height: 95px;
+    width: 100px;
+    height: 100px;
     display: block;
     pointer-events: none;
 }
