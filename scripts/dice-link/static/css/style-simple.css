@@ -941,12 +941,6 @@ body {
     height: 78px;
     display: block;
     pointer-events: none;
-    transform: scale(1.15);
-}
-
-/* D4 dice fill their buttons already, no extra scaling needed */
-.dice-row[data-type="d4"] .die-image {
-    transform: scale(1.0);
 }
 
 
