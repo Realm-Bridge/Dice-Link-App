@@ -86,7 +86,7 @@ function renderDiceEntry(diceRequest) {
       </div>
       <div class="dice-entry-actions">
         <button type="button" class="cancel-dice-btn btn btn-danger">CANCEL</button>
-        <button type="button" class="submit-dice-btn btn-success">SUBMIT</button>
+        <button type="button" class="submit-dice-btn btn btn-success">SUBMIT</button>
       </div>
     </div>
   `;
