@@ -941,22 +941,11 @@ body {
     height: 78px;
     display: block;
     pointer-events: none;
+    object-fit: contain;
+    object-position: center;
 }
 
-/* Scale SVGs to fill buttons for different dice types */
-.dice-row[data-type="d20"] .die-image,
-.dice-row[data-type="d12"] .die-image,
-.dice-row[data-type="d10"] .die-image,
-.dice-row[data-type="d8"] .die-image,
-.dice-row[data-type="d6"] .die-image {
-    transform: scale(1.05);
-    transform-origin: center;
-}
 
-.dice-row[data-type="d4"] .die-image {
-    transform: scale(0.98);
-    transform-origin: center;
-}
 
 /* d100 manual text input (1.5x scaled) */
 .dice-row-manual {
