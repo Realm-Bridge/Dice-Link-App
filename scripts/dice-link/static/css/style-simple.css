@@ -845,14 +845,21 @@ body {
 .dice-entry {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 18px;
+    gap: 12px;
+    padding: 12px;
     background: var(--dlc-bg-input);
     border-radius: 6px;
 }
 
 .dice-entry-header {
     text-align: center;
+}
+
+.dice-entry-instruction {
+    margin: 0;
+    color: var(--dlc-text-secondary);
+    font-size: 16px;
+    font-weight: 500;
 }
 
 .dice-entry-title {
@@ -872,13 +879,13 @@ body {
 .dice-rows {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 8px;
 }
 
 .dice-row {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
 }
 
 .dice-row-label {
@@ -890,11 +897,10 @@ body {
 
 .dice-options {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    max-height: 270px;
-    overflow-y: auto;
-    padding: 6px;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 4px 0;
 }
 
 .die-option {
