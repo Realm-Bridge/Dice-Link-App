@@ -937,13 +937,16 @@ body {
 }
 
 .die-image {
-    width: 90px;
-    height: 90px;
+    width: 78px;
+    height: 78px;
     display: block;
     pointer-events: none;
-    object-fit: contain;
-    object-position: center;
-    margin: -6px;
+    transform: scale(1.15);
+}
+
+/* D4 dice fill their buttons already, no extra scaling needed */
+.dice-row[data-type="d4"] .die-image {
+    transform: scale(1.0);
 }
 
 
