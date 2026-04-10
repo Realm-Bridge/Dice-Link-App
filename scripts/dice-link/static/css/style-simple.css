@@ -522,7 +522,7 @@ body {
     top: 36px;
     left: 36px;
     z-index: 1000;
-    padding: 28px;
+    padding: 28px 28px 14px 28px;
     background-color: var(--bg-card);
     border: 3px solid var(--dlc-accent);
     border-radius: var(--border-radius-lg);
@@ -986,8 +986,8 @@ body {
 .submit-dice-btn {
     flex: 1;
     padding: 15px 30px;
-    font-size: 27px;
-    font-weight: 700;
+    font-size: 54px !important;
+    font-weight: 900 !important;
 }
 
 /* Button Utility Classes (1.5x scaled) */
