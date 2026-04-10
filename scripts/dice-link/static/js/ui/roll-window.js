@@ -71,13 +71,15 @@ function updateRollWindow(newState) {
       // Show window when requesting action
       if (rwElements.rollWindow) {
         rwElements.rollWindow.classList.remove('hidden');
+        rwElements.rollWindow.classList.remove('full-width');
       }
       break;
     case 'dice-entry':
       rwElements.diceEntryState.classList.add('active');
-      // Keep window visible for dice entry
+      // Keep window visible for dice entry, expand to full width
       if (rwElements.rollWindow) {
         rwElements.rollWindow.classList.remove('hidden');
+        rwElements.rollWindow.classList.add('full-width');
       }
       break;
     default:
@@ -235,7 +237,18 @@ function renderRWConfigFields(fields) {
 function cancelRoll() {
   debugLog('Cancel roll clicked');
   
-  const rollId = getCurrentRoll()?.id || getPendingDiceRequest()?.originalRollId;
+  const currentRoll = getCurrentRoll();
+  debugLog('currentRoll object', currentRoll);
+  
+  // Check multiple possible locations for the roll ID
+  // DLC sends { type: "rollRequest", data: { roll: { id: ... }, ... } }
+  const rollId = currentRoll?.id || 
+                 currentRoll?.data?.roll?.id || 
+                 currentRoll?.data?.id ||
+                 currentRoll?.rollId ||
+                 getPendingDiceRequest()?.originalRollId;
+  
+  debugLog('Resolved rollId', rollId);
   
   if (!rollId) {
     debugLog('No active roll to cancel');
@@ -255,10 +268,10 @@ function cancelRoll() {
   const isTestRoll = rollId.startsWith('test-');
   
   if (!isTestRoll) {
-    // Send cancel message to server
+    // Send cancel message to server (matches Python backend expectation)
     sendMessage({
-      type: 'rollCancelled',
-      id: rollId,
+      type: 'cancelRoll',
+      rollId: rollId,
       reason: 'User cancelled'
     });
   }

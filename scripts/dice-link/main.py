@@ -56,7 +56,7 @@ def main():
     browser.setWindowTitle(APP_NAME)
     
     # Lock window to fixed size - cannot be resized
-    fixed_width = 1400
+    fixed_width = 1788
     fixed_height = 1500
     browser.setFixedSize(fixed_width, fixed_height)
     

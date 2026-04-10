@@ -67,7 +67,6 @@ function renderDiceEntry(diceRequest) {
       
       diceRows.push(`
         <div class="dice-row" data-row="${rowIndex}" data-faces="${faces}" data-type="${dieType}">
-          <span class="dice-row-label">${dieType.toUpperCase()}</span>
           <div class="dice-options">
             ${diceOptions.join('')}
           </div>
@@ -80,14 +79,14 @@ function renderDiceEntry(diceRequest) {
   return `
     <div class="dice-entry">
       <div class="dice-entry-header">
-        <h4 class="dice-entry-title">Enter Dice Results</h4>
-        <p class="dice-entry-formula">${totalDiceCount} dice to enter</p>
+        <p class="dice-entry-instruction">${totalDiceCount === 1 ? 'Select one value' : 'Select one value from each row'}</p>
       </div>
       <div class="dice-rows">
         ${diceRows.join('')}
       </div>
       <div class="dice-entry-actions">
-        <button type="button" class="submit-dice-btn btn-success">SUBMIT</button>
+        <button type="button" class="cancel-dice-btn btn btn-danger">CANCEL</button>
+        <button type="button" class="submit-dice-btn btn btn-success">SUBMIT</button>
       </div>
     </div>
   `;
@@ -179,6 +178,12 @@ function initDiceEntry(diceRequest) {
     resetRollState();
     diceEntryValues = [];
     updateRollWindow('idle');
+  });
+  
+  // Cancel button
+  document.querySelector('.cancel-dice-btn')?.addEventListener('click', () => {
+    debugLog('Cancel button clicked in dice entry');
+    cancelRoll();
   });
 }
 
