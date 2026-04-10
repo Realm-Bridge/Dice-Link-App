@@ -516,6 +516,22 @@ body {
     border-color: var(--dlc-accent);
 }
 
+/* Roll Backdrop - blocks interaction when roll window is active */
+.roll-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.55);
+    z-index: 999;
+    transition: opacity 0.2s ease;
+}
+
+.roll-backdrop.hidden {
+    display: none;
+}
+
 /* Roll Window - Expandable Overlay (matches dice tray position) */
 .roll-window {
     position: absolute;

@@ -17,6 +17,7 @@ function initRollWindow() {
   // Cache elements
   rwElements = {
     rollWindow: document.getElementById('roll-window'),
+    backdrop: document.getElementById('roll-backdrop'),
     idleState: document.getElementById('roll-window-idle'),
     requestState: document.getElementById('roll-window-request'),
     diceEntryState: document.getElementById('roll-window-dice-entry'),
@@ -61,25 +62,34 @@ function updateRollWindow(newState) {
   switch(newState) {
     case 'idle':
       rwElements.idleState.classList.add('active');
-      // Keep window hidden in idle state
+      // Keep window and backdrop hidden in idle state
       if (rwElements.rollWindow) {
         rwElements.rollWindow.classList.add('hidden');
+      }
+      if (rwElements.backdrop) {
+        rwElements.backdrop.classList.add('hidden');
       }
       break;
     case 'request':
       rwElements.requestState.classList.add('active');
-      // Show window when requesting action
+      // Show window and backdrop when requesting action
       if (rwElements.rollWindow) {
         rwElements.rollWindow.classList.remove('hidden');
         rwElements.rollWindow.classList.remove('full-width');
       }
+      if (rwElements.backdrop) {
+        rwElements.backdrop.classList.remove('hidden');
+      }
       break;
     case 'dice-entry':
       rwElements.diceEntryState.classList.add('active');
-      // Keep window visible for dice entry, expand to full width
+      // Keep window and backdrop visible for dice entry, expand to full width
       if (rwElements.rollWindow) {
         rwElements.rollWindow.classList.remove('hidden');
         rwElements.rollWindow.classList.add('full-width');
+      }
+      if (rwElements.backdrop) {
+        rwElements.backdrop.classList.remove('hidden');
       }
       break;
     default:

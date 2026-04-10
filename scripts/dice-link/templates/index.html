@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=51">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=52">
 </head>
 <body>
     <div class="app-container">
@@ -84,6 +84,9 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Modal Backdrop - blocks interaction when roll window is active -->
+            <div id="roll-backdrop" class="roll-backdrop hidden"></div>
 
             <!-- Roll Window (expandable overlay) - Hidden by default -->
             <div id="roll-window" class="roll-window hidden">
