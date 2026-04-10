@@ -181,7 +181,7 @@ body {
 
 /* Main Content */
 .main-content {
-    width: 1400px;
+    width: 1788px;
     height: calc(1500px - 60px - 40px);
     position: relative;
 }
@@ -540,8 +540,8 @@ body {
 
 /* Roll Resolution Window - Full width minus margins */
 .roll-window.full-width {
-    width: calc(100% - 72px) !important;
-    max-width: none !important;
+    width: calc(100% - 72px);
+    max-width: none;
 }
 
 .roll-window-title {
