@@ -905,8 +905,8 @@ body {
 
 .die-option {
     position: relative;
-    width: 85px;
-    height: 85px;
+    width: 82px;
+    height: 82px;
     padding: 0;
     border: none;
     background: transparent;
@@ -916,6 +916,7 @@ body {
     justify-content: center;
     transition: transform 0.15s ease, filter 0.15s ease;
     flex-shrink: 0;
+    overflow: visible;
 }
 
 .die-option:hover {
@@ -929,18 +930,25 @@ body {
 
 .die-face {
     position: relative;
-    width: 85px;
-    height: 85px;
+    width: 82px;
+    height: 82px;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: visible;
 }
 
 .die-image {
-    width: 85px;
-    height: 85px;
+    width: 95px;
+    height: 95px;
     display: block;
     pointer-events: none;
+}
+
+/* D4 dice fill their buttons already, keep them at 82px */
+.dice-row[data-type="d4"] .die-image {
+    width: 82px;
+    height: 82px;
 }
 
 
