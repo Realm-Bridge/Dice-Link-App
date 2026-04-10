@@ -85,6 +85,7 @@ function renderDiceEntry(diceRequest) {
         ${diceRows.join('')}
       </div>
       <div class="dice-entry-actions">
+        <button type="button" class="cancel-dice-btn btn btn-danger">CANCEL</button>
         <button type="button" class="submit-dice-btn btn-success">SUBMIT</button>
       </div>
     </div>
@@ -180,7 +181,7 @@ function initDiceEntry(diceRequest) {
   });
   
   // Cancel button
-  document.querySelector('#rw-cancel-btn')?.addEventListener('click', () => {
+  document.querySelector('.cancel-dice-btn')?.addEventListener('click', () => {
     debugLog('Cancel button clicked in dice entry');
     cancelRoll();
   });

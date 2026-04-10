@@ -978,10 +978,13 @@ body {
 
 .dice-entry-actions {
     margin-top: 12px;
+    display: flex;
+    gap: 12px;
 }
 
+.cancel-dice-btn,
 .submit-dice-btn {
-    width: 100%;
+    flex: 1;
     padding: 15px 30px;
     font-size: 21px;
     font-weight: 600;
