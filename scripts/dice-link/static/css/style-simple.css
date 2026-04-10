@@ -905,8 +905,8 @@ body {
 
 .die-option {
     position: relative;
-    width: 82px;
-    height: 82px;
+    width: 78px;
+    height: 78px;
     padding: 0;
     border: none;
     background: transparent;
@@ -916,6 +916,7 @@ body {
     justify-content: center;
     transition: transform 0.15s ease, filter 0.15s ease;
     flex-shrink: 0;
+    overflow: visible;
 }
 
 .die-option:hover {
