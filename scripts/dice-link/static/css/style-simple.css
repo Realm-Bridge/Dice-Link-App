@@ -538,10 +538,10 @@ body {
     opacity: 0;
 }
 
-/* Roll Resolution Window - Fixed width 1200px */
+/* Roll Resolution Window - Full width minus margins */
 .roll-window.full-width {
-    width: 1200px;
-    max-width: 1200px;
+    width: calc(100% - 72px);
+    max-width: none;
 }
 
 .roll-window-title {
