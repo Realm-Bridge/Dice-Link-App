@@ -538,6 +538,12 @@ body {
     opacity: 0;
 }
 
+/* Roll Resolution Window - Full width minus margins */
+.roll-window:has(#roll-window-dice-entry.active) {
+    width: calc(100% - 72px);
+    max-width: none;
+}
+
 .roll-window-title {
     font-size: 1.5rem;
     font-weight: 600;
