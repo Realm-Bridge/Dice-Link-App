@@ -233,10 +233,10 @@ function renderRWConfigFields(fields) {
  * Cancel the current roll
  */
 function cancelRoll() {
-  debugLog('Cancel roll clicked');
+  debugLog('Cancel roll clicked - v2');
   
   const currentRoll = getCurrentRoll();
-  debugLog('[v0] currentRoll object:', currentRoll);
+  console.log('[DEBUG] currentRoll:', currentRoll);
   
   // Check multiple possible locations for the roll ID
   // DLC sends { type: "rollRequest", data: { roll: { id: ... }, ... } }
@@ -246,7 +246,7 @@ function cancelRoll() {
                  currentRoll?.rollId ||
                  getPendingDiceRequest()?.originalRollId;
   
-  debugLog('[v0] Resolved rollId:', rollId);
+  console.log('[DEBUG] rollId resolved to:', rollId);
   
   if (!rollId) {
     debugLog('No active roll to cancel');
