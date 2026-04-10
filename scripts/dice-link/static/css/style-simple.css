@@ -905,8 +905,8 @@ body {
 
 .die-option {
     position: relative;
-    width: 80px;
-    height: 80px;
+    width: 85px;
+    height: 85px;
     padding: 0;
     border: none;
     background: transparent;
@@ -929,16 +929,16 @@ body {
 
 .die-face {
     position: relative;
-    width: 80px;
-    height: 80px;
+    width: 85px;
+    height: 85px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .die-image {
-    width: 80px;
-    height: 80px;
+    width: 85px;
+    height: 85px;
     display: block;
     pointer-events: none;
 }
