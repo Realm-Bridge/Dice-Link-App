@@ -266,10 +266,10 @@ function cancelRoll() {
   const isTestRoll = rollId.startsWith('test-');
   
   if (!isTestRoll) {
-    // Send cancel message to server
+    // Send cancel message to server (matches Python backend expectation)
     sendMessage({
-      type: 'rollCancelled',
-      id: rollId,
+      type: 'cancelRoll',
+      rollId: rollId,
       reason: 'User cancelled'
     });
   }
