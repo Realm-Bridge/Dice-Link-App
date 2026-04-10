@@ -706,14 +706,14 @@ body {
 }
 
 #rw-title {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 6px;
 }
 
 .rw-subtitle {
-    font-size: 1.3rem;
+    font-size: 1.56rem;
     color: var(--text-secondary);
 }
 
@@ -731,7 +731,7 @@ body {
 }
 
 .rw-config-field label {
-    font-size: 1.3rem;
+    font-size: 1.56rem;
     color: var(--text-secondary);
     font-weight: 500;
 }
@@ -743,7 +743,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     color: var(--text-primary);
-    font-size: 1.3rem;
+    font-size: 1.56rem;
 }
 
 .rw-buttons {
@@ -761,7 +761,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     color: var(--text-primary);
-    font-size: 1.3rem;
+    font-size: 1.56rem;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition);
@@ -782,7 +782,7 @@ body {
 /* Dice Entry State (1.5x scaled) */
 .rw-dice-entry-header {
     margin-bottom: 18px;
-    font-size: 1.3rem;
+    font-size: 1.56rem;
     color: var(--text-secondary);
 }
 
@@ -812,7 +812,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     color: var(--text-primary);
-    font-size: 1.3rem;
+    font-size: 1.56rem;
 }
 
 .rw-dice-input-group input.valid {
@@ -845,7 +845,7 @@ body {
 .dice-entry-title {
     margin: 0 0 6px 0;
     color: var(--dlc-text-primary);
-    font-size: 24px;
+    font-size: 29px;
     font-weight: 600;
 }
 
@@ -853,7 +853,7 @@ body {
     margin: 0;
     color: var(--dlc-text-secondary);
     font-family: monospace;
-    font-size: 21px;
+    font-size: 25px;
 }
 
 .dice-rows {
@@ -870,7 +870,7 @@ body {
 
 .dice-row-label {
     color: var(--dlc-text-secondary);
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 600;
     text-transform: uppercase;
 }
