@@ -749,8 +749,8 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23aaaaaa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
-    background-size: 24px 24px;
-    padding-right: 48px;
+    background-size: 26px 26px;
+    padding-right: 50px;
 }
 
 .rw-buttons {
@@ -1074,10 +1074,7 @@ body {
     padding: 20px;
 }
 
-.btn-small {
-    padding: 8px 16px;
-    font-size: 0.75rem;
-}
+
 
 /* Roll Window State Management */
 .roll-window-state {
