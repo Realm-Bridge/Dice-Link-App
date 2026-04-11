@@ -165,6 +165,10 @@ function handleMessage(message) {
             }
             break;
             
+        case 'playerModesUpdate':
+            updatePlayerModes(message.data);
+            break;
+            
         // Camera messages (Phase 3)
         case 'cameraFrame':
             // handleCameraFrame(message.frame);
