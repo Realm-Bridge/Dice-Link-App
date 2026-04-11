@@ -40,6 +40,9 @@ async def handle_dlc_message(websocket: Any, data: dict) -> dict | None:
     elif msg_type == "diceRequest":
         # Phase B: DLC sends actual dice needed after button selection
         return await handle_dice_request(data)
+    elif msg_type == "playerModesUpdate":
+        # Forward player modes update to UI
+        return await handle_player_modes_update(data)
     elif msg_type == "requestVideoFeed":
         # Phase 3 - Video feed request from DLC
         enabled = data.get("enabled", False)
@@ -121,6 +124,19 @@ async def handle_dice_request(data: dict) -> None:
         "rollType": roll_type,
         "formula": formula,
         "dice": dice
+    })
+    
+    # No direct response to DLC
+    return None
+
+
+async def handle_player_modes_update(data: dict) -> None:
+    """Handle player modes update from DLC"""
+    # Forward player modes data to browser UI
+    await broadcast_to_ui({
+        "type": "playerModesUpdate",
+        "globalOverride": data.get("globalOverride"),
+        "players": data.get("players", [])
     })
     
     # No direct response to DLC

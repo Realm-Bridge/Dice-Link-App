@@ -212,9 +212,10 @@ body {
 }
 
 .dice-link-logo {
-    font-size: 2.925rem;
-    font-weight: 700;
-    color: var(--dlc-accent-pink);
+    height: 80px;
+    width: auto;
+    object-fit: contain;
+    display: block;
 }
 
 .dice-tray {
