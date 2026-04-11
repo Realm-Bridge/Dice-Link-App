@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=54">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=51">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -193,18 +193,6 @@
                 <button id="settings-save" class="btn btn-primary">Save Settings</button>
                     </div>
                 </div>
-                
-                <!-- Player Modes Section (sibling to dice-tray) -->
-                <div id="player-modes-section" class="player-modes-section">
-                    <div class="player-modes-header">
-                        <h3 class="player-modes-title">
-                            <i class="fas fa-users"></i> Player Modes
-                        </h3>
-                    </div>
-                    <div id="player-modes-container" class="player-modes-container">
-                        <!-- Players list rendered here by JavaScript -->
-                    </div>
-                </div>
             </div>
 
     <!-- Core Modules (no dependencies) -->
@@ -226,7 +214,6 @@
     <script src="/static/js/ui/roll-window.js?v=2"></script>
     <script src="/static/js/ui/dice-tray.js?v=1"></script>
     <script src="/static/js/ui/dice-entry.js?v=2"></script>
-    <script src="/static/js/ui/player-modes.js?v=1"></script>
     
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>

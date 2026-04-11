@@ -21,7 +21,6 @@ function init() {
     initSettingsUI();
     initRollWindow();
     initDiceTray();
-    initPlayerModes();
     
     // 3. Connect to WebSocket
     initWebSocket();

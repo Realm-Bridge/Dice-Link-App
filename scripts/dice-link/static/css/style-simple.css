@@ -202,10 +202,6 @@ body {
     padding: 37.5px;
     box-shadow: var(--shadow);
     width: 750px;
-    display: flex;
-    flex-direction: row;
-    gap: 24px;
-    max-height: 80vh;
 }
 
 .dice-link-branding {
@@ -225,7 +221,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 28.5px;
-    flex-shrink: 0;
 }
 
 /* Dice Formula Input */
@@ -1119,124 +1114,4 @@ body {
 
 .roll-window-state.active {
     display: block;
-}
-
-/* Player Modes Section */
-.player-modes-section {
-    padding: 16px;
-    background-color: var(--dlc-bg-section);
-    border: 1px solid var(--dlc-border);
-    border-radius: var(--border-radius-lg);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.player-modes-header {
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--dlc-border);
-}
-
-.player-modes-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--dlc-text-primary);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.player-modes-container {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.player-modes-empty {
-    color: var(--dlc-text-muted);
-    text-align: center;
-    padding: 20px 8px;
-    font-size: 0.875rem;
-    margin: 0;
-}
-
-.player-mode-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    background-color: var(--dlc-bg-dark);
-    border: 1px solid var(--dlc-border);
-    border-radius: var(--border-radius);
-    gap: 12px;
-}
-
-.player-mode-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-    min-width: 0;
-}
-
-.player-mode-avatar {
-    color: var(--dlc-text-secondary);
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
-.player-mode-details {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-    flex: 1;
-}
-
-.player-name {
-    color: var(--dlc-text-primary);
-    font-weight: 500;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.player-mode-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
-}
-
-.player-mode-status i {
-    font-size: 0.75rem;
-}
-
-.mode-label {
-    color: var(--dlc-text-muted);
-    font-size: 0.75rem;
-}
-
-.player-mode-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.btn-sm {
-    padding: 6px 10px;
-    font-size: 0.75rem;
-    border-radius: 4px;
-}
-
-.btn-sm i {
-    font-size: 0.7rem;
 }
