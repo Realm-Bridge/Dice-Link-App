@@ -406,16 +406,6 @@ body {
     color: var(--text-muted);
 }
 
-.credits {
-    font-size: 0.94rem;
-    color: var(--dlc-text-primary);
-}
-
-.credits a {
-    color: var(--dlc-text-primary);
-    text-decoration: underline;
-}
-
 /* Utility */
 .hidden {
     display: none !important;
