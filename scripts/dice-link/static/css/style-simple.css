@@ -206,9 +206,9 @@ body {
 
 .dice-link-branding {
     text-align: center;
-    padding-bottom: 8px;
+    padding-bottom: 6px;
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 12px;
+    margin-bottom: 6px;
 }
 
 .dice-link-logo {
