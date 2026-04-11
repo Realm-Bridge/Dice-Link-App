@@ -24,7 +24,11 @@ const _state = {
     // Dice tray state
     diceTrayDice: { 4: 0, 6: 0, 8: 0, 10: 0, 12: 0, 20: 0, 100: 0 },
     diceTrayModifier: 0,
-    diceTrayAdvMode: 'normal'
+    diceTrayAdvMode: 'normal',
+    // Player modes state
+    isGM: false,
+    players: [],
+    globalOverride: 'individual'
 };
 
 // ============================================================================
@@ -73,6 +77,18 @@ function isConnected() {
 
 function isReconnecting() {
     return _state.reconnecting;
+}
+
+function getIsGM() {
+    return _state.isGM;
+}
+
+function getPlayers() {
+    return [..._state.players];
+}
+
+function getGlobalOverride() {
+    return _state.globalOverride;
 }
 
 // ============================================================================
@@ -172,4 +188,16 @@ function resetRollState() {
     _state.configValues = {};
     _state.diceResults = [];
     _state.pendingDiceRequest = null;
+}
+
+function setIsGM(isGM) {
+    _state.isGM = isGM;
+}
+
+function setPlayers(players) {
+    _state.players = [...players];
+}
+
+function setGlobalOverride(override) {
+    _state.globalOverride = override;
 }

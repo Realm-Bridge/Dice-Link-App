@@ -45,6 +45,11 @@
     --dlc-danger: #ef4444;
     --dlc-danger-hover: #f87171;
     
+    /* Player mode colors */
+    --dlc-digital: #6366f1;
+    --dlc-manual: #10b981;
+    --dlc-pending: #D5D5D6;
+    
     --border-color: #30363d;
     --border-radius: 8px;
     --border-radius-lg: 12px;
@@ -197,19 +202,6 @@ body {
     padding: 37.5px;
     box-shadow: var(--shadow);
     width: 750px;
-}
-
-.dice-link-branding {
-    text-align: center;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 28.5px;
-}
-
-.dice-link-logo {
-    font-size: 2.925rem;
-    font-weight: 700;
-    color: var(--dlc-accent-pink);
 }
 
 .dice-tray {
@@ -1062,6 +1054,10 @@ body {
 .rw-cancel-btn {
     width: 100%;
     margin-top: 18px;
+    background-color: var(--dlc-danger) !important;
+    color: white !important;
+    font-size: 1.71rem !important;
+    font-weight: 700 !important;
 }
 
 .settings-footer {
@@ -1110,3 +1106,251 @@ body {
 .roll-window-state.active {
     display: block;
 }
+
+/* ============================================================================
+   PLAYER MODES SECTION
+   ============================================================================ */
+
+.player-modes-section {
+  position: absolute;
+  top: 36px;
+  left: 822px;
+  right: 36px;
+  background: var(--dlc-bg-section);
+  border: 1px solid var(--dlc-border);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.player-modes-section .section-header {
+  margin-bottom: 24px;
+}
+
+.player-modes-section .section-header h3 {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--dlc-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+}
+
+.player-modes-section .section-header h3 i {
+  color: var(--dlc-accent);
+}
+
+.section-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ============================================================================
+   MODE LEGEND
+   ============================================================================ */
+
+.mode-legend {
+  display: flex;
+  gap: 96px;
+  margin-bottom: 24px;
+  padding: 12px 20px;
+  background: var(--dlc-bg-input);
+  border-radius: 8px;
+  font-size: 20px;
+  color: var(--dlc-text-muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 48px;
+}
+
+/* Color dots for mode indication */
+.mode-dot {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 24px;
+}
+
+.mode-dot.digital {
+  background: var(--dlc-digital);
+  box-shadow: 0 0 4px var(--dlc-digital);
+}
+
+.mode-dot.manual {
+  background: var(--dlc-success);
+  box-shadow: 0 0 4px var(--dlc-success);
+}
+
+.mode-dot.pending {
+  background: var(--dlc-warning);
+  box-shadow: 0 0 4px var(--dlc-warning);
+}
+
+/* Legend uses smaller dots */
+.legend-item .mode-dot {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================================================
+   PENDING REQUESTS (GM ONLY)
+   ============================================================================ */
+
+.pending-requests {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--dlc-warning);
+  border-radius: 12px;
+}
+
+.pending-requests h4 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--dlc-warning);
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pending-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--dlc-bg-input);
+  border: 1px solid var(--dlc-warning);
+  border-radius: 12px;
+}
+
+.pending-name {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--dlc-text-primary);
+}
+
+.pending-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* ============================================================================
+   PLAYERS GRID
+   ============================================================================ */
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  grid-auto-rows: 104px;
+}
+
+.player-card {
+  background-color: var(--dlc-bg-section, #2a3547);
+  border: 1px solid var(--dlc-border, #6f2e9a);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.player-card:hover {
+  border-color: var(--dlc-accent);
+}
+
+.player-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 32px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  }
+
+.player-name {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--dlc-text-primary);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  min-width: 0;
+}
+
+.player-status {
+  color: var(--dlc-text-secondary, #a0a0b0);
+  font-size: 22px;
+}
+
+/* No players message */
+.no-players {
+  text-align: center;
+  padding: 40px;
+  color: var(--dlc-text-muted);
+  font-style: italic;
+  font-size: 24px;
+  margin: 0;
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 20px;
+}
+
+.btn-success {
+  background: var(--dlc-success);
+  color: white;
+}
+
+.btn-success:hover {
+  background: var(--dlc-success-hover, #0ea572);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.btn-danger {
+  background: var(--dlc-danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: var(--dlc-danger-hover);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+

@@ -165,6 +165,25 @@ function handleMessage(message) {
             }
             break;
             
+        case 'connect':
+            // Store isGM from connect message
+            if (message.user && message.user.isGM !== undefined) {
+                setIsGM(message.user.isGM);
+                debugLog(`User isGM: ${message.user.isGM}`);
+            }
+            break;
+            
+        case 'playerModesUpdate':
+            // Update player modes state and UI
+            if (message.globalOverride !== undefined) {
+                setGlobalOverride(message.globalOverride);
+            }
+            if (message.players !== undefined) {
+                setPlayers(message.players);
+            }
+            updatePlayerModes();
+            break;
+            
         // Camera messages (Phase 3)
         case 'cameraFrame':
             // handleCameraFrame(message.frame);

@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=51">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=57">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="app-container">
@@ -31,10 +32,6 @@
         <main class="main-content">
             <!-- Dice Tray -->
             <div class="dice-tray-container">
-                <div class="dice-link-branding">
-                    <h2 class="dice-link-logo">Dice Link</h2>
-                </div>
-                
                 <!-- Dice Tray (always visible) -->
                 <div class="dice-tray">
                     <!-- Formula input -->
@@ -107,7 +104,7 @@
                         <!-- Action buttons rendered here -->
                     </div>
                     
-                    <button id="rw-cancel-btn" class="btn btn-danger btn-small rw-cancel-btn">
+                    <button id="rw-cancel-btn" class="roll-action-btn cancel rw-cancel-btn">
                         Cancel Roll
                     </button>
                 </div>
@@ -123,6 +120,38 @@
                     </div>
                     
 
+                </div>
+            </div>
+
+            <!-- Player Modes Section -->
+            <div class="player-modes-section" id="player-modes-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-users"></i> Player Modes</h3>
+                </div>
+                
+                <div class="section-content">
+                    <!-- Legend -->
+                    <div class="mode-legend">
+                        <span class="legend-item"><span class="mode-dot digital"></span>Digital</span>
+                        <span class="legend-item"><span class="mode-dot manual"></span>Manual</span>
+                        <span class="legend-item"><span class="mode-dot pending"></span>Pending</span>
+                    </div>
+                    
+                    <!-- Pending Requests (GM only) -->
+                    <div class="pending-requests" id="pending-requests" style="display: none;">
+                        <h4><i class="fas fa-clock"></i> Pending Requests (<span id="pending-count">0</span>)</h4>
+                        <div class="pending-list" id="pending-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Player Grid -->
+                    <div class="players-grid" id="players-grid">
+                        <!-- Populated dynamically -->
+                    </div>
+                    
+                    <!-- No Players Message -->
+                    <p class="no-players" id="no-players" style="display: none;">No players connected.</p>
                 </div>
             </div>
         </main>
@@ -190,9 +219,9 @@
             </div>
             <div class="settings-footer">
                 <button id="settings-save" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
     <!-- Core Modules (no dependencies) -->
     <script src="/static/js/debug.js?v=1"></script>
@@ -213,6 +242,7 @@
     <script src="/static/js/ui/roll-window.js?v=2"></script>
     <script src="/static/js/ui/dice-tray.js?v=1"></script>
     <script src="/static/js/ui/dice-entry.js?v=2"></script>
+    <script src="/static/js/ui/player-modes.js?v=1"></script>
     
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>
