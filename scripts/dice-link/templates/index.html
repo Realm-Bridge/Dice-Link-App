@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=55">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=56">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -128,15 +128,34 @@
             </div>
 
             <!-- Player Modes Section -->
-            <div id="player-modes-section" class="player-modes-section">
-                <div class="player-modes-header">
-                    <h3 class="player-modes-title">
-                        <i class="fas fa-users"></i> Player Modes
-                    </h3>
+            <div class="player-modes-section" id="player-modes-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-users"></i> Player Modes</h3>
                 </div>
-                <div id="player-modes-container" class="player-modes-container">
-                    <!-- Players list rendered here by JavaScript -->
-                    <p class="player-modes-empty">Waiting for player data...</p>
+                
+                <div class="section-content">
+                    <!-- Legend -->
+                    <div class="mode-legend">
+                        <span class="legend-item"><span class="mode-dot digital"></span>Digital</span>
+                        <span class="legend-item"><span class="mode-dot manual"></span>Manual</span>
+                        <span class="legend-item"><span class="mode-dot pending"></span>Pending</span>
+                    </div>
+                    
+                    <!-- Pending Requests (GM only) -->
+                    <div class="pending-requests" id="pending-requests" style="display: none;">
+                        <h4><i class="fas fa-clock"></i> Pending Requests (<span id="pending-count">0</span>)</h4>
+                        <div class="pending-list" id="pending-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Player Grid -->
+                    <div class="players-grid" id="players-grid">
+                        <!-- Populated dynamically -->
+                    </div>
+                    
+                    <!-- No Players Message -->
+                    <p class="no-players" id="no-players" style="display: none;">No players connected.</p>
                 </div>
             </div>
         </main>

@@ -212,10 +212,11 @@ body {
 }
 
 .dice-link-logo {
-    height: 80px;
+    height: 200px;
     width: auto;
     object-fit: contain;
     display: block;
+    margin: 0 auto;
 }
 
 .dice-tray {
@@ -1117,154 +1118,248 @@ body {
     display: block;
 }
 
-/* Player Modes Section */
+/* ============================================================================
+   PLAYER MODES SECTION
+   ============================================================================ */
+
 .player-modes-section {
-    position: absolute;
-    top: 36px;
-    left: 822px;
-    right: 36px;
-    padding: 24px;
-    background-color: var(--bg-card);
-    border-radius: var(--border-radius-lg);
-    border: 3px solid var(--dlc-border);
-    box-shadow: var(--shadow);
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 120px);
-    overflow: hidden;
+  position: absolute;
+  top: 36px;
+  left: 822px;
+  right: 36px;
+  background: var(--dlc-bg-section);
+  border: 1px solid var(--dlc-border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 120px);
+  overflow: hidden;
 }
 
-.player-modes-header {
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--dlc-border);
+.player-modes-section .section-header {
+  margin-bottom: 12px;
 }
 
-.player-modes-title {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--dlc-text-primary);
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.player-modes-section .section-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dlc-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
 }
 
-.player-modes-container {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.player-modes-section .section-header h3 i {
+  color: var(--dlc-accent);
 }
 
-.player-modes-empty {
-    color: var(--dlc-text-muted);
-    text-align: center;
-    padding: 20px 8px;
-    font-size: 0.875rem;
-    margin: 0;
+.section-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.player-mode-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
-    background-color: var(--dlc-bg-section);
-    border: 1px solid var(--dlc-border);
-    border-radius: var(--border-radius);
-    gap: 12px;
+/* ============================================================================
+   MODE LEGEND
+   ============================================================================ */
+
+.mode-legend {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  background: var(--dlc-bg-input);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--dlc-text-muted);
 }
 
-.player-mode-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.player-mode-avatar {
-    color: var(--dlc-text-secondary);
-    font-size: 1.25rem;
-    flex-shrink: 0;
+/* Color dots for mode indication */
+.mode-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.player-mode-details {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-    flex: 1;
+.mode-dot.digital {
+  background: var(--dlc-digital);
+  box-shadow: 0 0 4px var(--dlc-digital);
+}
+
+.mode-dot.manual {
+  background: var(--dlc-success);
+  box-shadow: 0 0 4px var(--dlc-success);
+}
+
+.mode-dot.pending {
+  background: var(--dlc-warning);
+  box-shadow: 0 0 4px var(--dlc-warning);
+}
+
+/* Legend uses smaller dots */
+.legend-item .mode-dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* ============================================================================
+   PENDING REQUESTS (GM ONLY)
+   ============================================================================ */
+
+.pending-requests {
+  margin-bottom: 12px;
+  padding: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--dlc-warning);
+  border-radius: 6px;
+}
+
+.pending-requests h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dlc-warning);
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pending-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--dlc-bg-input);
+  border: 1px solid var(--dlc-warning);
+  border-radius: 6px;
+}
+
+.pending-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dlc-text-primary);
+}
+
+.pending-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ============================================================================
+   PLAYERS GRID
+   ============================================================================ */
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+  grid-auto-rows: 52px;
+}
+
+.player-card {
+  background-color: var(--dlc-bg-section, #2a3547);
+  border: 1px solid var(--dlc-border, #6f2e9a);
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.player-card:hover {
+  border-color: var(--dlc-accent);
+}
+
+.player-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .player-name {
-    color: var(--dlc-text-primary);
-    font-weight: 500;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dlc-text-primary);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  min-width: 0;
 }
 
-.player-mode-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
+.player-status {
+  color: var(--dlc-text-secondary, #a0a0b0);
+  font-size: 11px;
 }
 
-.player-mode-status i {
-    font-size: 0.75rem;
+/* No players message */
+.no-players {
+  text-align: center;
+  padding: 20px;
+  color: var(--dlc-text-muted);
+  font-style: italic;
+  font-size: 12px;
+  margin: 0;
 }
 
-.player-mode-status.digital {
-    color: var(--dlc-digital);
-}
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
 
-.player-mode-status.manual {
-    color: var(--dlc-manual);
-}
-
-.player-mode-status.pending {
-    color: var(--dlc-pending);
-}
-
-.player-mode-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
+.btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .btn-sm {
-    padding: 6px 10px;
-    font-size: 0.75rem;
-    border-radius: 4px;
-    cursor: pointer;
-    border: none;
-    font-weight: 500;
+  padding: 4px 8px;
+  font-size: 10px;
 }
 
-.btn-sm i {
-    font-size: 0.7rem;
+.btn-success {
+  background: var(--dlc-success);
+  color: white;
 }
 
-.btn-sm.btn-success {
-    background-color: var(--dlc-success);
-    color: white;
+.btn-success:hover {
+  background: var(--dlc-success-hover, #0ea572);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
-.btn-sm.btn-success:hover {
-    background-color: var(--dlc-success-hover, #0ea572);
+.btn-danger {
+  background: var(--dlc-danger);
+  color: white;
 }
 
-.btn-sm.btn-danger {
-    background-color: var(--dlc-danger);
-    color: white;
+.btn-danger:hover {
+  background: var(--dlc-danger-hover);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
 }
 
-.btn-sm.btn-danger:hover {
-    background-color: var(--dlc-danger-hover);
-}

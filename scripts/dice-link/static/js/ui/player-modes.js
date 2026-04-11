@@ -1,208 +1,139 @@
-/**
- * Player Modes UI Module
- * Displays player list with their dice rolling modes
- * GM-only controls for approve/deny/revoke actions
- */
+// Player Modes UI Module
+// Handles rendering and interaction for the Player Modes section
 
-// Cache DOM elements
-let pmElements = null;
-
-/**
- * Escape HTML to prevent XSS
- */
+// Utility function to escape HTML
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-/**
- * Initialize Player Modes UI
- */
+// Initialize Player Modes UI
 function initPlayerModes() {
-    pmElements = {
-        section: document.getElementById('player-modes-section'),
-        container: document.getElementById('player-modes-container')
-    };
+    debugLog('[Player Modes] Initializing player modes UI');
     
-    debugLog('Player Modes UI initialized');
+    // Initial render with empty state
+    renderPlayerModes();
+    
+    // Set up any needed listeners
+    attachPlayerModeListeners();
 }
 
-/**
- * Update Player Modes UI
- * Called when playerModesUpdate message is received
- */
+// Update player modes from DLC message
 function updatePlayerModes() {
-    if (!pmElements || !pmElements.container) {
-        debugError('Player modes container not found');
+    debugLog('[Player Modes] Updating player modes');
+    renderPlayerModes();
+}
+
+// Main render function
+function renderPlayerModes() {
+    const playersGrid = document.getElementById('players-grid');
+    const pendingSection = document.getElementById('pending-requests');
+    const pendingList = document.getElementById('pending-list');
+    const pendingCount = document.getElementById('pending-count');
+    const noPlayers = document.getElementById('no-players');
+    
+    if (!playersGrid || !pendingSection) {
+        debugError('[Player Modes] Required elements not found');
         return;
     }
     
     const players = getPlayers();
-    const globalOverride = getGlobalOverride();
     const isGM = getIsGM();
+    const pendingRequests = players.filter(p => p.isPending);
     
-    debugLog('Updating player modes UI', { 
-        playerCount: players.length, 
-        globalOverride, 
-        isGM 
-    });
-    
-    renderPlayers(players, globalOverride, isGM);
-}
-
-/**
- * Render the players list
- */
-function renderPlayers(players, globalOverride, isGM) {
-    const container = pmElements.container;
-    
-    if (!players || players.length === 0) {
-        container.innerHTML = '<p class="player-modes-empty">No players connected</p>';
-        return;
-    }
-    
-    let html = '';
-    
-    for (const player of players) {
-        // Determine effective mode based on global override
-        let effectiveMode = player.mode;
-        if (globalOverride === 'forceAllManual') {
-            effectiveMode = 'manual';
-        } else if (globalOverride === 'forceAllDigital') {
-            effectiveMode = 'digital';
-        }
-        
-        // Get mode display info
-        const modeInfo = getModeDisplayInfo(effectiveMode);
-        
-        // Build player card HTML
-        html += `
-            <div class="player-mode-item" data-player-id="${escapeHtml(player.odooId || player.odoo_id || '')}">
-                <div class="player-mode-info">
-                    <span class="player-mode-avatar">
-                        <i class="fas fa-user"></i>
-                    </span>
-                    <div class="player-mode-details">
-                        <span class="player-name">${escapeHtml(player.displayName || player.name || 'Unknown')}</span>
-                        <span class="player-mode-status ${modeInfo.className}">
-                            <i class="${modeInfo.icon}"></i>
-                            ${modeInfo.label}
-                        </span>
-                    </div>
+    // Render pending requests (GM only)
+    if (isGM && pendingRequests.length > 0) {
+        pendingSection.style.display = 'block';
+        pendingCount.textContent = pendingRequests.length;
+        pendingList.innerHTML = pendingRequests.map(player => `
+            <div class="pending-item">
+                <span class="pending-name">${escapeHtml(player.name)}</span>
+                <div class="pending-actions">
+                    <button class="btn btn-sm btn-success approve-btn" data-player-id="${escapeHtml(player.id)}">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-sm btn-danger deny-btn" data-player-id="${escapeHtml(player.id)}">
+                        <i class="fas fa-times"></i> Deny
+                    </button>
                 </div>
-                ${renderActionButtons(player, isGM)}
             </div>
-        `;
+        `).join('');
+        debugLog(`[Player Modes] Rendered ${pendingRequests.length} pending requests`);
+    } else {
+        pendingSection.style.display = 'none';
     }
     
-    container.innerHTML = html;
+    // Render players grid
+    if (players.length === 0) {
+        playersGrid.style.display = 'none';
+        noPlayers.style.display = 'block';
+        debugLog('[Player Modes] No players to display');
+    } else {
+        playersGrid.style.display = 'grid';
+        noPlayers.style.display = 'none';
+        
+        playersGrid.innerHTML = players.map(player => {
+            // Determine mode class: pending takes priority
+            const modeClass = player.isPending ? 'pending' : player.mode;
+            
+            // Status text
+            const statusText = player.isPending ? 'Pending Approval' : 
+                               (player.mode === 'digital' ? 'Digital' : 'Manual');
+            
+            return `
+                <div class="player-card">
+                    <div class="player-info">
+                        <span class="mode-dot ${modeClass}"></span>
+                        <span class="player-name">${escapeHtml(player.name)}</span>
+                    </div>
+                    <div class="player-status">${statusText}</div>
+                </div>
+            `;
+        }).join('');
+        
+        debugLog(`[Player Modes] Rendered ${players.length} players`);
+    }
     
-    // Attach event listeners to action buttons
-    attachActionListeners();
+    // Attach event listeners
+    attachPlayerModeListeners();
 }
 
-/**
- * Get display info for a mode
- */
-function getModeDisplayInfo(mode) {
-    switch (mode) {
-        case 'digital':
-            return {
-                className: 'digital',
-                icon: 'fas fa-dice',
-                label: 'Digital'
-            };
-        case 'manual':
-            return {
-                className: 'manual',
-                icon: 'fas fa-hand-paper',
-                label: 'Manual'
-            };
-        case 'pending':
-            return {
-                className: 'pending',
-                icon: 'fas fa-clock',
-                label: 'Pending'
-            };
-        default:
-            return {
-                className: 'digital',
-                icon: 'fas fa-dice',
-                label: 'Digital'
-            };
-    }
-}
-
-/**
- * Render action buttons for a player (GM only)
- */
-function renderActionButtons(player, isGM) {
-    if (!isGM) {
-        return '';
-    }
+// Attach event listeners for action buttons
+function attachPlayerModeListeners() {
+    // Approve buttons
+    document.querySelectorAll('.approve-btn').forEach(btn => {
+        btn.removeEventListener('click', handleApproveClick);
+        btn.addEventListener('click', handleApproveClick);
+    });
     
-    const mode = player.mode;
-    
-    // Pending mode: show approve/deny buttons
-    if (mode === 'pending') {
-        return `
-            <div class="player-mode-actions">
-                <button class="btn-sm btn-success pm-action-btn" data-action="approve" data-player-id="${escapeHtml(player.odooId || player.odoo_id || '')}" title="Approve manual mode">
-                    <i class="fas fa-check"></i>
-                </button>
-                <button class="btn-sm btn-danger pm-action-btn" data-action="deny" data-player-id="${escapeHtml(player.odooId || player.odoo_id || '')}" title="Deny manual mode">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-    }
-    
-    // Manual mode: show revoke button
-    if (mode === 'manual') {
-        return `
-            <div class="player-mode-actions">
-                <button class="btn-sm btn-danger pm-action-btn" data-action="revoke" data-player-id="${escapeHtml(player.odooId || player.odoo_id || '')}" title="Revoke manual mode">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-    }
-    
-    // Digital mode: no actions needed
-    return '';
-}
-
-/**
- * Attach event listeners to action buttons
- */
-function attachActionListeners() {
-    const buttons = document.querySelectorAll('.pm-action-btn');
-    
-    buttons.forEach(btn => {
-        btn.addEventListener('click', handleActionClick);
+    // Deny buttons
+    document.querySelectorAll('.deny-btn').forEach(btn => {
+        btn.removeEventListener('click', handleDenyClick);
+        btn.addEventListener('click', handleDenyClick);
     });
 }
 
-/**
- * Handle action button click
- */
-function handleActionClick(event) {
-    const button = event.currentTarget;
-    const action = button.dataset.action;
-    const odooId = button.dataset.playerId;
+// Handle approve button click
+function handleApproveClick(event) {
+    const playerId = event.currentTarget.dataset.playerId;
+    debugLog(`[Player Modes] Approving player: ${playerId}`);
     
-    if (!action || !odooId) {
-        debugError('Missing action or player ID', { action, odooId });
-        return;
-    }
-    
-    debugLog('Player mode action', { action, odooId });
-    
-    // Send playerModeAction message to DLC
     sendMessage({
         type: 'playerModeAction',
-        action: action,
-        odooId: odooId
+        action: 'approve',
+        playerId: playerId
+    });
+}
+
+// Handle deny button click
+function handleDenyClick(event) {
+    const playerId = event.currentTarget.dataset.playerId;
+    debugLog(`[Player Modes] Denying player: ${playerId}`);
+    
+    sendMessage({
+        type: 'playerModeAction',
+        action: 'deny',
+        playerId: playerId
     });
 }
