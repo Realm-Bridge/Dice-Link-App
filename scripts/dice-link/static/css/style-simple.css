@@ -1171,6 +1171,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-right: 48px;
 }
 
 /* Color dots for mode indication */
@@ -1180,6 +1181,7 @@ body {
   height: 20px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-right: 24px;
 }
 
 .mode-dot.digital {
