@@ -1056,7 +1056,8 @@ body {
     margin-top: 18px;
     background-color: var(--dlc-danger) !important;
     color: white !important;
-    font-size: 2.275rem !important;
+    font-size: 1.71rem !important;
+    font-weight: 700 !important;
 }
 
 .settings-footer {
