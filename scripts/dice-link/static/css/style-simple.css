@@ -204,22 +204,6 @@ body {
     width: 750px;
 }
 
-.dice-link-branding {
-    text-align: center;
-    height: 130px;
-    overflow: visible;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.dice-link-logo {
-    height: 200px;
-    width: auto;
-    display: block;
-}
-
 .dice-tray {
     display: flex;
     flex-direction: column;
