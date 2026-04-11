@@ -206,11 +206,11 @@ body {
 
 .dice-link-branding {
     text-align: center;
-    height: 120px;
+    height: 140px;
     overflow: visible;
     margin-bottom: 6px;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
 }
 
