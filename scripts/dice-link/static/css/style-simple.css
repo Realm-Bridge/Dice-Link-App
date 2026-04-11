@@ -206,16 +206,18 @@ body {
 
 .dice-link-branding {
     text-align: center;
-    padding-top: 6px;
-    padding-bottom: 6px;
+    height: 120px;
+    overflow: visible;
     margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dice-link-logo {
     height: 200px;
     width: auto;
     display: block;
-    margin: 0 auto;
 }
 
 .dice-tray {
