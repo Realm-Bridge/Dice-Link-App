@@ -1119,7 +1119,7 @@ body {
   background: var(--dlc-bg-section);
   border: 1px solid var(--dlc-border);
   border-radius: 8px;
-  padding: 12px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 120px);
@@ -1127,16 +1127,16 @@ body {
 }
 
 .player-modes-section .section-header {
-  margin-bottom: 12px;
+  margin-bottom: 24px;
 }
 
 .player-modes-section .section-header h3 {
-  font-size: 14px;
+  font-size: 28px;
   font-weight: 600;
   color: var(--dlc-text-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   margin: 0;
 }
 
@@ -1149,7 +1149,7 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
 }
 
 /* ============================================================================
@@ -1158,26 +1158,26 @@ body {
 
 .mode-legend {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 6px 10px;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 12px 20px;
   background: var(--dlc-bg-input);
-  border-radius: 4px;
-  font-size: 10px;
+  border-radius: 8px;
+  font-size: 20px;
   color: var(--dlc-text-muted);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 /* Color dots for mode indication */
 .mode-dot {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -1199,8 +1199,8 @@ body {
 
 /* Legend uses smaller dots */
 .legend-item .mode-dot {
-  width: 8px;
-  height: 8px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ============================================================================
@@ -1208,48 +1208,48 @@ body {
    ============================================================================ */
 
 .pending-requests {
-  margin-bottom: 12px;
-  padding: 10px;
+  margin-bottom: 24px;
+  padding: 20px;
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid var(--dlc-warning);
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .pending-requests h4 {
-  font-size: 12px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--dlc-warning);
-  margin: 0 0 8px 0;
+  margin: 0 0 16px 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
 }
 
 .pending-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
 
 .pending-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 10px;
+  padding: 16px 20px;
   background: var(--dlc-bg-input);
   border: 1px solid var(--dlc-warning);
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .pending-name {
-  font-size: 12px;
+  font-size: 24px;
   font-weight: 500;
   color: var(--dlc-text-primary);
 }
 
 .pending-actions {
   display: flex;
-  gap: 6px;
+  gap: 12px;
 }
 
 /* ============================================================================
@@ -1258,17 +1258,17 @@ body {
 
 .players-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
   align-items: stretch;
-  grid-auto-rows: 52px;
+  grid-auto-rows: 104px;
 }
 
 .player-card {
   background-color: var(--dlc-bg-section, #2a3547);
   border: 1px solid var(--dlc-border, #6f2e9a);
-  border-radius: 4px;
-  padding: 12px;
+  border-radius: 8px;
+  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1282,14 +1282,14 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
 }
 
 .player-name {
-  font-size: 12px;
+  font-size: 24px;
   font-weight: 500;
   color: var(--dlc-text-primary);
   word-break: break-word;
@@ -1300,16 +1300,16 @@ body {
 
 .player-status {
   color: var(--dlc-text-secondary, #a0a0b0);
-  font-size: 11px;
+  font-size: 22px;
 }
 
 /* No players message */
 .no-players {
   text-align: center;
-  padding: 20px;
+  padding: 40px;
   color: var(--dlc-text-muted);
   font-style: italic;
-  font-size: 12px;
+  font-size: 24px;
   margin: 0;
 }
 
@@ -1318,18 +1318,18 @@ body {
    ============================================================================ */
 
 .btn {
-  padding: 6px 12px;
+  padding: 12px 24px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 22px;
   font-weight: 600;
   transition: all 0.2s ease;
 }
 
 .btn-sm {
-  padding: 4px 8px;
-  font-size: 10px;
+  padding: 8px 16px;
+  font-size: 20px;
 }
 
 .btn-success {
