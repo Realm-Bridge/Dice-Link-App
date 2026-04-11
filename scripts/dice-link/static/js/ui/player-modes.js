@@ -77,17 +77,12 @@ function renderPlayerModes() {
             // Determine mode class: pending takes priority
             const modeClass = player.isPending ? 'pending' : player.mode;
             
-            // Status text
-            const statusText = player.isPending ? 'Pending Approval' : 
-                               (player.mode === 'digital' ? 'Digital' : 'Manual');
-            
             return `
                 <div class="player-card">
                     <div class="player-info">
                         <span class="mode-dot ${modeClass}"></span>
                         <span class="player-name">${escapeHtml(player.name)}</span>
                     </div>
-                    <div class="player-status">${statusText}</div>
                 </div>
             `;
         }).join('');
