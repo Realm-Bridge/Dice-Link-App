@@ -1054,6 +1054,9 @@ body {
 .rw-cancel-btn {
     width: 100%;
     margin-top: 18px;
+    background-color: var(--dlc-danger) !important;
+    color: white !important;
+    font-size: 1.3rem !important;
 }
 
 .settings-footer {
