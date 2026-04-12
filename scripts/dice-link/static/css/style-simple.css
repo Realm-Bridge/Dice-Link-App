@@ -423,6 +423,23 @@ body {
     color: var(--text-muted);
 }
 
+.footer-realm-bridge-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.footer-realm-bridge-link:hover {
+    opacity: 0.8;
+}
+
+.footer-realm-bridge-icon {
+    height: 24px;
+    width: auto;
+}
+
 /* Utility */
 .hidden {
     display: none !important;
