@@ -26,6 +26,7 @@ class WindowController(QObject):
     def __init__(self, browser):
         super().__init__()
         self.browser = browser
+        self.drag_start_pos = QPoint()
     
     @pyqtSlot()
     def minimize(self):
@@ -33,17 +34,23 @@ class WindowController(QObject):
         self.browser.showMinimized()
     
     @pyqtSlot()
-    def maximize(self):
-        """Maximize the window (toggle for frameless)"""
-        if self.browser.isMaximized():
-            self.browser.showNormal()
-        else:
-            self.browser.showMaximized()
-    
-    @pyqtSlot()
     def close(self):
         """Close the application"""
         self.browser.close()
+    
+    @pyqtSlot(int, int)
+    def startDrag(self, x, y):
+        """Start window drag - store initial mouse position relative to window"""
+        self.drag_start_pos = QPoint(x, y)
+    
+    @pyqtSlot(int, int)
+    def doDrag(self, x, y):
+        """Perform window drag - move window based on new mouse position"""
+        if self.drag_start_pos.isNull():
+            return
+        delta = QPoint(x, y) - self.drag_start_pos
+        new_pos = self.browser.pos() + delta
+        self.browser.move(new_pos)
 
 
 class DraggableWebEngineView(QWebEngineView):
