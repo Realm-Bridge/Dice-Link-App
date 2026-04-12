@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot
+from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
 from PyQt5.QtWebChannel import QWebChannel
 
 # Add the current directory to Python path so uvicorn can find app module
@@ -46,6 +46,38 @@ class WindowController(QObject):
         self.browser.close()
 
 
+class DraggableWebEngineView(QWebEngineView):
+    """Custom QWebEngineView with frameless window dragging support"""
+    
+    def __init__(self):
+        super().__init__()
+        self.drag_position = QPoint()
+        self.is_dragging = False
+    
+    def mousePressEvent(self, event):
+        """Handle mouse press for window dragging"""
+        # Check if click is in title bar area (top 80px)
+        if event.y() < 80:
+            self.is_dragging = True
+            self.drag_position = event.globalPos() - self.pos()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """Handle mouse move for window dragging"""
+        if self.is_dragging:
+            self.move(event.globalPos() - self.drag_position)
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release"""
+        self.is_dragging = False
+        super().mouseReleaseEvent(event)
+
+
 def run_server():
     """Run the FastAPI server in a background thread"""
     uvicorn.run(
@@ -77,8 +109,11 @@ def main():
     # Create and display the PyQt5 window
     app = QApplication(sys.argv)
     
-    # Create a web view widget
-    browser = QWebEngineView()
+    # Create a draggable web view widget
+    browser = DraggableWebEngineView()
+    
+    # Enable transparent background for rounded corners
+    browser.setAttribute(Qt.WA_TranslucentBackground, True)
     
     # Set up window controller for frameless window control
     window_controller = WindowController(browser)
