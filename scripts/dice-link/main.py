@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtGui import QPainterPath, QRegion
+from PyQt5.QtGui import QPainterPath, QRegion, QDesktopServices
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -52,6 +52,11 @@ class WindowController(QObject):
         delta = QPoint(x, y) - self.drag_start_pos
         new_pos = self.browser.pos() + delta
         self.browser.move(new_pos)
+    
+    @pyqtSlot(str)
+    def openUrl(self, url):
+        """Open URL in system default browser"""
+        QDesktopServices.openUrl(QUrl(url))
 
 
 class DraggableWebEngineView(QWebEngineView):
