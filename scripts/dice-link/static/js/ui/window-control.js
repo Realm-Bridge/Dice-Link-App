@@ -30,6 +30,9 @@ function initWindowControls() {
             return;
         }
         
+        // Expose pyqtBridge globally so other elements can use it
+        window.pyqtBridge = pyqtBridge;
+        
         // Minimize button
         minimizeBtn.addEventListener('click', () => {
             console.log('[WindowControl] Minimize button clicked');
