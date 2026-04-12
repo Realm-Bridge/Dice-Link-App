@@ -32,6 +32,7 @@ function renderPlayerModes() {
     const pendingList = document.getElementById('pending-list');
     const pendingCount = document.getElementById('pending-count');
     const noPlayers = document.getElementById('no-players');
+    const modeLegend = document.getElementById('mode-legend');
     
     if (!playersGrid || !pendingSection) {
         debugError('[Player Modes] Required elements not found');
@@ -41,6 +42,38 @@ function renderPlayerModes() {
     const players = getPlayers();
     const isGM = getIsGM();
     const pendingRequests = players.filter(p => p.isPending);
+    
+    // Check if any player is a GM
+    const hasGMPlayers = players.some(p => p.isGM);
+    
+    // Render mode legend with GM indicator if needed
+    if (modeLegend) {
+        let legendHTML = `
+            <span class="legend-item">
+                <span class="mode-dot digital"></span>
+                <span>Digital</span>
+            </span>
+            <span class="legend-item">
+                <span class="mode-dot manual"></span>
+                <span>Manual</span>
+            </span>
+            <span class="legend-item">
+                <span class="mode-dot pending"></span>
+                <span>Pending</span>
+            </span>
+        `;
+        
+        if (hasGMPlayers) {
+            legendHTML += `
+                <span class="legend-item gm-indicator">
+                    <span class="mode-dot"></span>
+                    <span>GM</span>
+                </span>
+            `;
+        }
+        
+        modeLegend.innerHTML = legendHTML;
+    }
     
     // Render pending requests (GM only)
     if (isGM && pendingRequests.length > 0) {
@@ -76,9 +109,10 @@ function renderPlayerModes() {
         playersGrid.innerHTML = players.map(player => {
             // Determine mode class: pending takes priority
             const modeClass = player.isPending ? 'pending' : player.mode;
+            const gmClass = player.isGM ? 'is-gm' : '';
             
             return `
-                <div class="player-card">
+                <div class="player-card ${gmClass}">
                     <div class="player-info">
                         <span class="mode-dot ${modeClass}"></span>
                         <span class="player-name">${escapeHtml(player.name)}</span>

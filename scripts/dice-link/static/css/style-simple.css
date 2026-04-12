@@ -221,7 +221,7 @@ body {
     position: absolute;
     top: 57px;
     left: 36px;
-    background-color: var(--bg-card);
+    background-color: var(--dlc-bg-section);
     border-radius: var(--border-radius-lg);
     border: 3px solid var(--dlc-border);
     padding: 37.5px;
@@ -239,7 +239,7 @@ body {
 .dice-formula-input {
     width: 100%;
     padding: 24px 28.5px;
-    background: var(--dlc-bg-dark);
+    background: var(--bg-card);
     border: 1px solid var(--dlc-border);
     border-radius: 6px;
     color: var(--dlc-text-primary);
@@ -1250,6 +1250,13 @@ body {
   height: 16px;
 }
 
+.legend-item.gm-indicator .mode-dot {
+  width: 16px;
+  height: 16px;
+  background-color: #1e3a5f;
+  border-radius: 2px;
+}
+
 /* ============================================================================
    PENDING REQUESTS (GM ONLY)
    ============================================================================ */
@@ -1312,7 +1319,7 @@ body {
 }
 
 .player-card {
-  background-color: var(--dlc-bg-section, #2a3547);
+  background-color: var(--bg-card, #242b33);
   border: 1px solid var(--dlc-border, #6f2e9a);
   border-radius: 8px;
   padding: 24px;
@@ -1323,6 +1330,10 @@ body {
 
 .player-card:hover {
   border-color: var(--dlc-accent);
+}
+
+.player-card.is-gm {
+  border: 2px solid #1e3a5f;
 }
 
 .player-info {
