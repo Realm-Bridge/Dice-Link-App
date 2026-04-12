@@ -32,7 +32,7 @@ function renderPlayerModes() {
     const pendingList = document.getElementById('pending-list');
     const pendingCount = document.getElementById('pending-count');
     const noPlayers = document.getElementById('no-players');
-    const modeLegend = document.getElementById('mode-legend');
+    const modeLegend = document.querySelector('.mode-legend');
     
     if (!playersGrid || !pendingSection) {
         debugError('[Player Modes] Required elements not found');
@@ -50,26 +50,22 @@ function renderPlayerModes() {
     if (modeLegend) {
         let legendHTML = `
             <span class="legend-item">
-                <span class="mode-dot digital"></span>
-                <span>Digital</span>
+                <span class="mode-dot digital"></span>Digital
             </span>
             <span class="legend-item">
-                <span class="mode-dot manual"></span>
-                <span>Manual</span>
+                <span class="mode-dot manual"></span>Manual
             </span>
             <span class="legend-item">
-                <span class="mode-dot pending"></span>
-                <span>Pending</span>
+                <span class="mode-dot pending"></span>Pending
             </span>
         `;
         
         if (hasGMPlayers) {
             legendHTML += `
-                <span class="legend-item gm-indicator">
-                    <span class="mode-dot"></span>
-                    <span>GM</span>
-                </span>
-            `;
+            <span class="legend-item gm-indicator">
+                <span class="mode-dot"></span>GM
+            </span>
+        `;
         }
         
         modeLegend.innerHTML = legendHTML;
