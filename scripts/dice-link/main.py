@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
 from PyQt5.QtWebChannel import QWebChannel
+from PyQt5.QtGui import QPainterPath, QRegion
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -138,6 +139,13 @@ def main():
     fixed_width = 1788
     fixed_height = 1500
     browser.setFixedSize(fixed_width, fixed_height)
+    
+    # Set rounded corners on frameless window
+    corner_radius = 12
+    path = QPainterPath()
+    path.addRoundedRect(0, 0, fixed_width, fixed_height, corner_radius, corner_radius)
+    mask = QRegion(path.toFillPolygon().toPolygon())
+    browser.setMask(mask)
     
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
