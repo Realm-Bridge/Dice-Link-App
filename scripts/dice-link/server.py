@@ -38,6 +38,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# Middleware to add Private Network Access headers (required for Chrome 94+ to allow
+# remote websites to connect to localhost WebSocket)
+@app.middleware("http")
+async def add_private_network_access_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Allow private network access from any origin
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
+
 # Mount static files
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
