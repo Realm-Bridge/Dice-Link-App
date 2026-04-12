@@ -39,10 +39,23 @@ app.add_middleware(
 )
 
 
-# Middleware to add Private Network Access headers (required for Chrome 94+ to allow
+# Middleware to handle Private Network Access preflight (required for Chrome 94+ to allow
 # remote websites to connect to localhost WebSocket)
+# Chrome sends an OPTIONS preflight request BEFORE attempting the WebSocket upgrade
 @app.middleware("http")
 async def add_private_network_access_headers(request: Request, call_next):
+    from starlette.responses import Response
+    
+    # Handle OPTIONS preflight requests for Private Network Access
+    if request.method == "OPTIONS":
+        response = Response(status_code=204)
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+    
     response = await call_next(request)
     # Allow private network access from any origin
     response.headers["Access-Control-Allow-Private-Network"] = "true"
