@@ -5,10 +5,13 @@ import time
 import uvicorn
 import sys
 import os
+import json
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
+from PyQt5.QtWebChannel import QWebChannel
+from PyQt5.QtGui import QPainterPath, QRegion, QDesktopServices
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -16,6 +19,76 @@ sys.path.insert(0, str(DICE_LINK_DIR))
 os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
+
+
+class WindowController(QObject):
+    """Handles window control commands from JavaScript"""
+    
+    def __init__(self, browser):
+        super().__init__()
+        self.browser = browser
+        self.drag_start_pos = QPoint()
+    
+    @pyqtSlot()
+    def minimize(self):
+        """Minimize the window"""
+        self.browser.showMinimized()
+    
+    @pyqtSlot()
+    def close(self):
+        """Close the application"""
+        self.browser.close()
+    
+    @pyqtSlot(int, int)
+    def startDrag(self, x, y):
+        """Start window drag - store initial mouse position relative to window"""
+        self.drag_start_pos = QPoint(x, y)
+    
+    @pyqtSlot(int, int)
+    def doDrag(self, x, y):
+        """Perform window drag - move window based on new mouse position"""
+        if self.drag_start_pos.isNull():
+            return
+        delta = QPoint(x, y) - self.drag_start_pos
+        new_pos = self.browser.pos() + delta
+        self.browser.move(new_pos)
+    
+    @pyqtSlot(str)
+    def openUrl(self, url):
+        """Open URL in system default browser"""
+        QDesktopServices.openUrl(QUrl(url))
+
+
+class DraggableWebEngineView(QWebEngineView):
+    """Custom QWebEngineView with frameless window dragging support"""
+    
+    def __init__(self):
+        super().__init__()
+        self.drag_position = QPoint()
+        self.is_dragging = False
+    
+    def mousePressEvent(self, event):
+        """Handle mouse press for window dragging"""
+        # Check if click is in title bar area (top 80px)
+        if event.y() < 80:
+            self.is_dragging = True
+            self.drag_position = event.globalPos() - self.pos()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """Handle mouse move for window dragging"""
+        if self.is_dragging:
+            self.move(event.globalPos() - self.drag_position)
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release"""
+        self.is_dragging = False
+        super().mouseReleaseEvent(event)
 
 
 def run_server():
@@ -49,16 +122,35 @@ def main():
     # Create and display the PyQt5 window
     app = QApplication(sys.argv)
     
-    # Create a web view widget
-    browser = QWebEngineView()
+    # Create a draggable web view widget
+    browser = DraggableWebEngineView()
+    
+    # Enable transparent background for rounded corners
+    browser.setAttribute(Qt.WA_TranslucentBackground, True)
+    
+    # Set up window controller for frameless window control
+    window_controller = WindowController(browser)
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
+    browser.setWindowFlags(Qt.FramelessWindowHint)
+    
+    # Set up web channel for JavaScript-to-Python communication
+    channel = QWebChannel()
+    channel.registerObject("pyqtBridge", window_controller)
+    browser.page().setWebChannel(channel)
     
     # Lock window to fixed size - cannot be resized
     fixed_width = 1788
     fixed_height = 1500
     browser.setFixedSize(fixed_width, fixed_height)
+    
+    # Set rounded corners on frameless window
+    corner_radius = 24
+    path = QPainterPath()
+    path.addRoundedRect(0, 0, fixed_width, fixed_height, corner_radius, corner_radius)
+    mask = QRegion(path.toFillPolygon().toPolygon())
+    browser.setMask(mask)
     
     # Load the local server URL
     url = f"http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}"
