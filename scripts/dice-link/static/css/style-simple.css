@@ -126,7 +126,7 @@ body {
 
 .title-bar-logo {
     position: absolute;
-    top: -5px;
+    top: -15px;
     left: 50%;
     transform: translateX(-50%);
     height: 168px;
