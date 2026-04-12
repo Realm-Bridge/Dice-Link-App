@@ -1162,7 +1162,7 @@ body {
   left: 822px;
   right: 36px;
   background: var(--dlc-bg-section);
-  border: 1px solid var(--dlc-border);
+  border: 3px solid var(--dlc-border);
   border-radius: 8px;
   padding: 24px;
   display: flex;
