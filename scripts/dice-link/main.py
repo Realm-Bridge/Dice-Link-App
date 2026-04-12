@@ -141,7 +141,7 @@ def main():
     browser.setFixedSize(fixed_width, fixed_height)
     
     # Set rounded corners on frameless window
-    corner_radius = 12
+    corner_radius = 24
     path = QPainterPath()
     path.addRoundedRect(0, 0, fixed_width, fixed_height, corner_radius, corner_radius)
     mask = QRegion(path.toFillPolygon().toPolygon())
