@@ -419,8 +419,9 @@ body {
 }
 
 .version {
-    font-size: 1.88rem;
+    font-size: 1.41rem;
     color: var(--text-muted);
+    margin-bottom: 8px;
 }
 
 .footer-realm-bridge-link {
