@@ -9,7 +9,8 @@ import json
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QWebChannel
+from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot
+from PyQt5.QtWebChannel import QWebChannel
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
