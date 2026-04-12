@@ -1167,8 +1167,7 @@ body {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  min-height: 400px;
-  max-height: calc(100vh - 120px);
+  height: 396px;
   overflow: hidden;
 }
 
@@ -1318,6 +1317,8 @@ body {
   gap: 16px;
   align-items: stretch;
   grid-auto-rows: 104px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .player-card {
