@@ -6,25 +6,35 @@
     <title>{{ app_name }}</title>
     <link rel="stylesheet" href="/static/css/style-simple.css?v=57">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body>
     <div class="app-container">
         <!-- Header -->
-        <header class="app-header">
-            <div class="header-brand">
-                <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="header-logo" />
-            </div>
-            <div class="header-actions">
-                <button id="settings-btn" class="icon-btn" title="Settings">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                    </svg>
+        <!-- Custom Frameless Title Bar -->
+        <header class="custom-title-bar" id="title-bar">
+            <div class="title-bar-left">
+                <button id="settings-btn" class="title-bar-icon-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
                 </button>
                 <div id="connection-status" class="connection-status disconnected">
                     <span class="status-indicator"></span>
                     <span id="connection-status-text" class="status-text">Disconnected</span>
                 </div>
+            </div>
+            <div class="title-bar-centre">
+                <img src="/static/Logos/New_logo.png" alt="Dice Link" class="title-bar-logo" />
+            </div>
+            <div class="title-bar-right">
+                <button class="title-bar-btn minimize-btn" id="minimize-btn" title="Minimize">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="title-bar-btn maximize-btn" id="maximize-btn" title="Maximize">
+                    <i class="fas fa-square"></i>
+                </button>
+                <button class="title-bar-btn close-btn" id="close-btn" title="Close">
+                    <i class="fas fa-xmark"></i>
+                </button>
             </div>
         </header>
 
@@ -243,6 +253,7 @@
     <script src="/static/js/ui/dice-tray.js?v=1"></script>
     <script src="/static/js/ui/dice-entry.js?v=2"></script>
     <script src="/static/js/ui/player-modes.js?v=1"></script>
+    <script src="/static/js/ui/window-control.js?v=1"></script>
     
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>

@@ -5,10 +5,11 @@ import time
 import uvicorn
 import sys
 import os
+import json
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QWebChannel
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -16,6 +17,32 @@ sys.path.insert(0, str(DICE_LINK_DIR))
 os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
+
+
+class WindowController(QObject):
+    """Handles window control commands from JavaScript"""
+    
+    def __init__(self, browser):
+        super().__init__()
+        self.browser = browser
+    
+    @pyqtSlot()
+    def minimize(self):
+        """Minimize the window"""
+        self.browser.showMinimized()
+    
+    @pyqtSlot()
+    def maximize(self):
+        """Maximize the window (toggle for frameless)"""
+        if self.browser.isMaximized():
+            self.browser.showNormal()
+        else:
+            self.browser.showMaximized()
+    
+    @pyqtSlot()
+    def close(self):
+        """Close the application"""
+        self.browser.close()
 
 
 def run_server():
@@ -52,8 +79,17 @@ def main():
     # Create a web view widget
     browser = QWebEngineView()
     
+    # Set up window controller for frameless window control
+    window_controller = WindowController(browser)
+    
     # Set window properties
     browser.setWindowTitle(APP_NAME)
+    browser.setWindowFlags(Qt.FramelessWindowHint)
+    
+    # Set up web channel for JavaScript-to-Python communication
+    channel = QWebChannel()
+    channel.registerObject("pyqtBridge", window_controller)
+    browser.page().setWebChannel(channel)
     
     # Lock window to fixed size - cannot be resized
     fixed_width = 1788

@@ -87,101 +87,118 @@ body {
     overflow: hidden;
 }
 
-/* Header */
-.app-header {
+/* Custom Frameless Title Bar */
+.custom-title-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 24px;
-    height: 60px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 12px 24px;
+    height: 80px;
+    background-color: var(--dlc-bg-primary);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-app-region: drag;
 }
 
-.header-brand {
+.title-bar-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 20px;
+    -webkit-app-region: no-drag;
 }
 
-.header-logo {
-    height: 45px;
-    width: auto;
+.title-bar-centre {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
 }
 
-.app-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.header-actions {
+.title-bar-right {
     display: flex;
     align-items: center;
     gap: 12px;
+    -webkit-app-region: no-drag;
 }
 
-/* Icon Button */
-.icon-btn {
-    width: 45px;
-    height: 45px;
-    padding: 7.5px;
+.title-bar-logo {
+    height: 56px;
+    width: auto;
+}
+
+/* Title Bar Icon Button (Settings) */
+.title-bar-icon-btn {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
     background-color: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    color: var(--text-secondary);
+    border: none;
+    border-radius: 4px;
+    color: var(--dlc-accent);
     cursor: pointer;
-    transition: all var(--transition);
-}
-
-.icon-btn svg {
-    width: 25px;
-    height: 25px;
-}
-
-.icon-btn:hover {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--dlc-accent);
-}
-
-.icon-btn svg {
-    width: 20px;
-    height: 20px;
-}
-
-/* Connection Status */
-.connection-status {
+    transition: all 0.2s ease;
+    font-size: 20px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 20px;
-    border-radius: var(--border-radius);
-    font-size: 1.09rem;
+    justify-content: center;
+}
+
+.title-bar-icon-btn:hover {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: var(--dlc-accent);
+}
+
+/* Title Bar Control Buttons */
+.title-bar-btn {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--dlc-accent);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.title-bar-btn:hover {
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+.title-bar-btn.close-btn:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* Connection Status in Title Bar */
+.custom-title-bar .connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
     font-weight: 500;
+    background-color: transparent;
 }
 
-.status-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: currentColor;
-}
-
-.connection-status.connected {
-    background-color: var(--success-bg);
-    color: var(--success);
-}
-
-.connection-status.disconnected {
-    background-color: var(--danger-bg);
-    color: var(--danger);
-}
-
-.status-indicator {
+.custom-title-bar .status-indicator {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background-color: currentColor;
+}
+
+.custom-title-bar .connection-status.connected {
+    color: var(--dlc-success);
+}
+
+.custom-title-bar .connection-status.disconnected {
+    color: var(--dlc-danger);
 }
 
 /* Main Content */
