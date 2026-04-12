@@ -96,7 +96,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px 24px;
-    height: 70px;
+    height: 65px;
     background-color: var(--dlc-bg-primary);
     user-select: none;
     -webkit-user-select: none;
@@ -129,22 +129,22 @@ body {
     top: -15px;
     left: 50%;
     transform: translateX(-50%);
-    height: 168px;
+    height: 151px;
     width: auto;
 }
 
 /* Title Bar Icon Button (Settings) */
 .title-bar-icon-btn {
-    width: 70px;
-    height: 70px;
-    padding: 14px;
+    width: 80px;
+    height: 80px;
+    padding: 16px;
     background-color: transparent;
     border: none;
     border-radius: 4px;
     color: var(--dlc-accent);
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 35px;
+    font-size: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -157,16 +157,16 @@ body {
 
 /* Title Bar Control Buttons */
 .title-bar-btn {
-    width: 70px;
-    height: 70px;
-    padding: 14px;
+    width: 80px;
+    height: 80px;
+    padding: 16px;
     background-color: transparent;
     border: none;
     border-radius: 4px;
     color: var(--dlc-accent);
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
     display: flex;
     align-items: center;
