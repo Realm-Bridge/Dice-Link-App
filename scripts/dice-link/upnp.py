@@ -1,11 +1,23 @@
-"""UPnP port forwarding module using upnpy"""
+"""UPnP port forwarding module using miniupnpc"""
 
-import asyncio
-from typing import Optional
-from upnpy import UPnP
+import socket
+import miniupnpc
 
-# Store the UPnP device for cleanup on exit
-_upnp_device = None
+# Store the UPnP client for cleanup on exit
+_upnp_client = None
+
+
+def get_local_ip() -> str:
+    """Get the local IP address of this machine."""
+    try:
+        # Create a socket to determine our local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        return "127.0.0.1"
 
 
 def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> bool:
@@ -19,64 +31,57 @@ def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> bool:
     Returns:
         True if port forwarding was successfully set up, False otherwise
     """
-    global _upnp_device
+    global _upnp_client
     
     try:
         print(f"[UPnP] Discovering UPnP devices...")
-        upnp = UPnP()
-        devices = upnp.discover()
         
-        if not devices:
+        # Create UPnP client
+        upnp = miniupnpc.UPnP()
+        upnp.discoverdelay = 200  # 200ms discovery delay
+        
+        # Discover UPnP devices
+        devices_found = upnp.discover()
+        
+        if devices_found == 0:
             print(f"[UPnP] No UPnP devices found - remote connections will require manual port forwarding")
             return False
         
-        print(f"[UPnP] Found {len(devices)} UPnP device(s)")
+        print(f"[UPnP] Found {devices_found} UPnP device(s)")
         
-        # Try to find an IGD (Internet Gateway Device) which handles port mapping
-        igd = None
-        for device in devices:
-            try:
-                # Check if this device supports port mapping
-                if hasattr(device, 'AddPortMapping'):
-                    igd = device
-                    break
-            except:
-                continue
+        # Select the IGD (Internet Gateway Device)
+        upnp.selectigd()
         
-        if not igd:
-            print(f"[UPnP] No IGD device found - remote connections will require manual port forwarding")
-            return False
+        # Get external IP
+        external_ip = upnp.externalipaddress()
+        print(f"[UPnP] External IP: {external_ip}")
         
-        # Get the external IP to display to user
-        try:
-            external_ip = igd.GetExternalIPAddress()
-            print(f"[UPnP] External IP: {external_ip}")
-        except:
-            external_ip = "unknown"
+        # Get local IP for port mapping
+        local_ip = get_local_ip()
+        print(f"[UPnP] Local IP: {local_ip}")
         
         # Add port mapping (TCP for WebSocket)
-        try:
-            igd.AddPortMapping(
-                NewRemoteHost='',
-                NewExternalPort=port,
-                NewProtocol='TCP',
-                NewInternalPort=port,
-                NewInternalClient='127.0.0.1',
-                NewEnabled='1',
-                NewPortMappingDescription=description,
-                NewLeaseDuration=0  # 0 means infinite
-            )
-            
-            print(f"[UPnP] Successfully forwarded port {port} via UPnP")
-            _upnp_device = igd
+        # Parameters: external_port, protocol, internal_ip, internal_port, description, remote_host, lease_duration
+        result = upnp.addportmapping(
+            port,           # external port
+            'TCP',          # protocol
+            local_ip,       # internal IP (this machine)
+            port,           # internal port
+            description,    # description
+            ''              # remote host (empty = any)
+        )
+        
+        if result:
+            print(f"[UPnP] Successfully forwarded port {port} ({local_ip}:{port} -> {external_ip}:{port})")
+            _upnp_client = upnp
             return True
-            
-        except Exception as e:
-            print(f"[UPnP] Failed to add port mapping: {e}")
+        else:
+            print(f"[UPnP] Failed to add port mapping - remote connections will require manual port forwarding")
             return False
             
     except Exception as e:
         print(f"[UPnP] Error during UPnP setup: {e}")
+        print(f"[UPnP] Remote connections will require manual port forwarding")
         return False
 
 
@@ -90,19 +95,19 @@ def remove_upnp_port_forward(port: int) -> bool:
     Returns:
         True if successfully removed, False otherwise
     """
-    global _upnp_device
+    global _upnp_client
     
-    if not _upnp_device:
+    if not _upnp_client:
         return False
     
     try:
-        _upnp_device.DeletePortMapping(
-            NewRemoteHost='',
-            NewExternalPort=port,
-            NewProtocol='TCP'
-        )
-        print(f"[UPnP] Removed port forwarding for port {port}")
-        return True
+        result = _upnp_client.deleteportmapping(port, 'TCP')
+        if result:
+            print(f"[UPnP] Removed port forwarding for port {port}")
+            return True
+        else:
+            print(f"[UPnP] Could not remove port forwarding for port {port}")
+            return False
     except Exception as e:
         print(f"[UPnP] Error removing port forwarding: {e}")
         return False
