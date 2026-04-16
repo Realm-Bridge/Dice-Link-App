@@ -6,9 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse, Response
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
 
 from state import app_state
 from core.websocket_handler import (
@@ -29,50 +27,6 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Create FastAPI app
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
-
-
-# Custom middleware to handle Private Network Access preflight requests
-class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to handle Chrome's Private Network Access (PNA) preflight requests.
-    When a webpage loaded from a public IP tries to connect to localhost,
-    Chrome sends a preflight request that requires specific headers in the response.
-    """
-    async def dispatch(self, request: Request, call_next):
-        # Handle preflight OPTIONS requests for Private Network Access
-        if request.method == "OPTIONS":
-            # Check if this is a Private Network Access preflight
-            if request.headers.get("Access-Control-Request-Private-Network") == "true":
-                response = Response(status_code=204)
-                response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = "*"
-                response.headers["Access-Control-Allow-Credentials"] = "true"
-                response.headers["Access-Control-Allow-Private-Network"] = "true"
-                return response
-        
-        # Process the request normally
-        response = await call_next(request)
-        
-        # Add Private Network Access headers to all responses
-        origin = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Private-Network"] = "true"
-        
-        return response
-
-
-# Add Private Network Access middleware (must be added before CORS)
-app.add_middleware(PrivateNetworkAccessMiddleware)
-
-# Add CORS middleware to allow cross-origin requests
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
