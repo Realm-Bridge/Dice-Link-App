@@ -1,7 +1,7 @@
 """Configuration settings for Dice Link"""
 
 # WebSocket settings
-WEBSOCKET_HOST = "localhost"
+WEBSOCKET_HOST = "0.0.0.0"
 WEBSOCKET_PORT = 8765
 
 # Application settings
