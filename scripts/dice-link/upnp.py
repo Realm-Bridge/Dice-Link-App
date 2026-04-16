@@ -1,16 +1,29 @@
 """UPnP port forwarding for Dice Link"""
 
 import logging
+import socket
 
-# Try to import upnp_forwarder, but don't fail if not available
+# Try to import upnp_port_forward (pure Python, no compilation needed)
 try:
-    from upnp_forwarder import add_port_mapping, delete_port_mapping, UPnPError
+    from upnp_port_forward import forward_port, remove_port_forward
     UPNP_AVAILABLE = True
 except ImportError:
     UPNP_AVAILABLE = False
-    UPnPError = Exception  # Fallback for type hints
 
 logger = logging.getLogger(__name__)
+
+
+def get_local_ip() -> str:
+    """Get the local IP address of this machine."""
+    try:
+        # Create a socket to determine local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        return "127.0.0.1"
 
 
 def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> bool:
@@ -25,39 +38,30 @@ def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> bool:
         True if port forwarding was successful, False otherwise
     """
     if not UPNP_AVAILABLE:
-        logger.warning("UPnP library not available. Install with: pip install upnp-forwarder")
+        logger.warning("UPnP library not available. Install with: pip install upnp-port-forward")
         print("[UPnP] Library not available - remote connections may require manual port forwarding")
         return False
     
     try:
-        # Attempt to add port mapping
-        # local_port and external_port are the same
-        # protocol is TCP for WebSocket connections
-        # lease_duration of 0 means infinite (until router restart or explicit delete)
-        success = add_port_mapping(
-            local_port=port,
-            external_port=port,
-            protocol='TCP',
-            description=description,
-            lease_duration=0  # Infinite lease
-        )
+        local_ip = get_local_ip()
+        print(f"[UPnP] Attempting to forward port {port} to {local_ip}...")
         
-        if success:
+        # forward_port returns external IP if successful
+        external_ip = forward_port(port)
+        
+        if external_ip:
             print(f"[UPnP] Successfully forwarded port {port}")
-            logger.info(f"UPnP port forwarding enabled for port {port}")
+            print(f"[UPnP] External IP: {external_ip}")
+            logger.info(f"UPnP port forwarding enabled for port {port}, external IP: {external_ip}")
             return True
         else:
             print(f"[UPnP] Failed to forward port {port} - remote connections may require manual port forwarding")
             logger.warning(f"UPnP port forwarding failed for port {port}")
             return False
             
-    except UPnPError as e:
-        print(f"[UPnP] Error: {e} - remote connections may require manual port forwarding")
-        logger.warning(f"UPnP error: {e}")
-        return False
     except Exception as e:
-        print(f"[UPnP] Unexpected error: {e}")
-        logger.error(f"Unexpected UPnP error: {e}")
+        print(f"[UPnP] Error: {e} - remote connections may require manual port forwarding")
+        logger.error(f"UPnP error: {e}")
         return False
 
 
@@ -75,24 +79,13 @@ def remove_upnp_port_forward(port: int) -> bool:
         return False
     
     try:
-        success = delete_port_mapping(
-            external_port=port,
-            protocol='TCP'
-        )
-        
-        if success:
-            print(f"[UPnP] Removed port forwarding for port {port}")
-            logger.info(f"UPnP port forwarding removed for port {port}")
-            return True
-        else:
-            logger.warning(f"Failed to remove UPnP port forwarding for port {port}")
-            return False
+        remove_port_forward(port)
+        print(f"[UPnP] Removed port forwarding for port {port}")
+        logger.info(f"UPnP port forwarding removed for port {port}")
+        return True
             
-    except UPnPError as e:
-        logger.warning(f"UPnP error while removing port forward: {e}")
-        return False
     except Exception as e:
-        logger.error(f"Unexpected error while removing UPnP port forward: {e}")
+        logger.warning(f"Error while removing UPnP port forward: {e}")
         return False
 
 
