@@ -19,7 +19,6 @@ sys.path.insert(0, str(DICE_LINK_DIR))
 os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
-from upnp import setup_upnp_port_forward, remove_upnp_port_forward
 
 
 class WindowController(QObject):
@@ -114,9 +113,6 @@ def main():
     print(f"UI available at http://localhost:{WEBSOCKET_PORT}")
     print(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
     
-    # Attempt to set up UPnP port forwarding for remote connections
-    upnp_success = setup_upnp_port_forward(WEBSOCKET_PORT)
-    
     # Start the FastAPI server in a background thread
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
@@ -164,16 +160,7 @@ def main():
     
     # Show the window and start the application
     browser.show()
-    
-    # Run the application
-    exit_code = app.exec_()
-    
-    # Clean up UPnP port forwarding on exit
-    if upnp_success:
-        print(f"[UPnP] Cleaning up port forwarding...")
-        remove_upnp_port_forward(WEBSOCKET_PORT)
-    
-    sys.exit(exit_code)
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
