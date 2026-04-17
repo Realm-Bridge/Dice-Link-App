@@ -28,6 +28,15 @@ BASE_DIR = Path(__file__).resolve().parent
 # Create FastAPI app
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
 
+# Debug middleware to log all incoming requests
+@app.middleware("http")
+async def debug_all_requests(request: Request, call_next):
+    print(f"[DEBUG] Incoming {request.method} request: {request.url}")
+    print(f"[DEBUG] Client: {request.client}")
+    print(f"[DEBUG] Headers: Host={request.headers.get('host')}, Origin={request.headers.get('origin')}")
+    response = await call_next(request)
+    return response
+
 # Mount static files
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
