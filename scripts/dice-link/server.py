@@ -314,20 +314,31 @@ async def handle_ui_message(message: dict):
 @app.websocket("/ws/dlc")
 async def websocket_dlc(websocket: WebSocket):
     """WebSocket endpoint for DLC connections"""
+    # Detailed logging for debugging
+    client = websocket.client
+    print(f"[DLA DEBUG] /ws/dlc connection attempt received")
+    print(f"[DLA DEBUG] Client address: {client.host}:{client.port}" if client else "[DLA DEBUG] Client address: unknown")
+    print(f"[DLA DEBUG] Headers: {dict(websocket.headers)}")
+    print(f"[DLA DEBUG] Accepting WebSocket connection...")
+    
     await websocket.accept()
+    print(f"[DLA DEBUG] WebSocket connection ACCEPTED for /ws/dlc")
     
     try:
         while True:
             data = await websocket.receive_text()
+            print(f"[DLA DEBUG] Received message from DLC: {data[:200]}..." if len(data) > 200 else f"[DLA DEBUG] Received message from DLC: {data}")
             message = json.loads(data)
             
             response = await handle_dlc_message(websocket, message)
             
             if response:
+                print(f"[DLA DEBUG] Sending response to DLC: {json.dumps(response)[:200]}...")
                 await websocket.send_text(json.dumps(response))
     
     except WebSocketDisconnect:
+        print(f"[DLA DEBUG] WebSocket disconnected (clean disconnect)")
         await handle_dlc_disconnect()
     except Exception as e:
-        print(f"DLC WebSocket error: {e}")
+        print(f"[DLA DEBUG] WebSocket error: {type(e).__name__}: {e}")
         await handle_dlc_disconnect()

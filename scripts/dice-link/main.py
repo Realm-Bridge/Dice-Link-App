@@ -109,9 +109,12 @@ def main():
     print(f"  Physical dice rolling for Foundry VTT")
     print(f"{'='*50}\n")
     print(f"Starting Dice Link Desktop App...")
+    print(f"[DLA DEBUG] WEBSOCKET_HOST configured as: {WEBSOCKET_HOST}")
+    print(f"[DLA DEBUG] WEBSOCKET_PORT configured as: {WEBSOCKET_PORT}")
     print(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
     print(f"UI available at http://localhost:{WEBSOCKET_PORT}")
     print(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
+    print(f"[DLA DEBUG] Waiting for connections on /ws/dlc endpoint...")
     
     # Start the FastAPI server in a background thread
     server_thread = threading.Thread(target=run_server, daemon=True)
