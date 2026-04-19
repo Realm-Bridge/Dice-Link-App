@@ -177,12 +177,13 @@ async def handle_offer(request):
             rebuilt_lines.append(sctp_port)
         if max_message_size:
             rebuilt_lines.append(max_message_size)
-        rebuilt_lines.extend(candidates)
-        # NOTE: Removed a=end-of-candidates as browser rejects it
+        # NOTE: Don't include candidates - browser uses trickle ICE (a=ice-options:trickle)
+        # Candidates are exchanged separately, not in the SDP answer
+        # rebuilt_lines.extend(candidates)
         # if end_of_candidates:
         #     rebuilt_lines.append(end_of_candidates)
         rebuilt_lines.extend(other_lines)
-        print("[FIX 5] Removed 'a=end-of-candidates' (browser rejects it)")
+        print(f"[FIX 5] Removed {len(candidates)} candidates (trickle ICE - candidates exchanged separately)")
         rebuilt_lines.append('')  # Trailing newline
         
         answer_sdp = '\n'.join(rebuilt_lines)
