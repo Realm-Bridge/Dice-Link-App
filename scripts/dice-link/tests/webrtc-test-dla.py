@@ -178,9 +178,11 @@ async def handle_offer(request):
         if max_message_size:
             rebuilt_lines.append(max_message_size)
         rebuilt_lines.extend(candidates)
-        if end_of_candidates:
-            rebuilt_lines.append(end_of_candidates)
+        # NOTE: Removed a=end-of-candidates as browser rejects it
+        # if end_of_candidates:
+        #     rebuilt_lines.append(end_of_candidates)
         rebuilt_lines.extend(other_lines)
+        print("[FIX 5] Removed 'a=end-of-candidates' (browser rejects it)")
         rebuilt_lines.append('')  # Trailing newline
         
         answer_sdp = '\n'.join(rebuilt_lines)
