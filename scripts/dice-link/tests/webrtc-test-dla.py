@@ -44,29 +44,21 @@ async def handle_offer(request):
         if not offer_sdp:
             return web.json_response({"error": "No offer provided"}, status=400)
         
-        print("[WebRTC Test] Received offer from browser")
-        print(f"[WebRTC Test] Offer length: {len(offer_sdp)} characters")
+        print("\n" + "="*60)
+        print("OFFER ANALYSIS")
+        print("="*60)
+        print(f"Offer length: {len(offer_sdp)} characters")
+        print(f"Line ending type: {'CRLF (Windows)' if chr(13)+chr(10) in offer_sdp else 'LF (Unix)'}")
+        print("\n--- FULL OFFER SDP ---")
+        for i, line in enumerate(offer_sdp.split('\n')):
+            # Show line number, content, and any trailing characters
+            repr_line = repr(line)
+            print(f"  {i+1:3}: {repr_line}")
+        print("--- END OFFER SDP ---\n")
         
         # Create peer connection
         pc = RTCPeerConnection()
         test_channel = TestDataChannel()
-        
-        # Create data channel BEFORE setting remote description
-        dc = pc.createDataChannel("test-channel")
-        print(f"[WebRTC Test] Created data channel: {dc.label}")
-        
-        @dc.on("open")
-        def on_open():
-            print("[WebRTC Test] Data channel opened from our side")
-        
-        @dc.on("message")
-        def on_message(message):
-            print(f"[WebRTC Test] Received from browser: {message}")
-            test_channel.messages.append({"from": "browser", "text": message})
-        
-        @dc.on("close")
-        def on_close():
-            print("[WebRTC Test] Data channel closed from our side")
         
         # Handle incoming data channels from browser
         @pc.on("datachannel")
@@ -83,9 +75,39 @@ async def handle_offer(request):
         
         answer_sdp = pc.localDescription.sdp
         
-        print("[WebRTC Test] Created answer")
-        print(f"[WebRTC Test] Answer length: {len(answer_sdp)} characters")
-        print(f"[WebRTC Test] First 150 chars of answer:\n{answer_sdp[:150]}")
+        print("="*60)
+        print("ANSWER ANALYSIS")
+        print("="*60)
+        print(f"Answer length: {len(answer_sdp)} characters")
+        print(f"Line ending type: {'CRLF (Windows)' if chr(13)+chr(10) in answer_sdp else 'LF (Unix)'}")
+        print("\n--- FULL ANSWER SDP ---")
+        for i, line in enumerate(answer_sdp.split('\n')):
+            repr_line = repr(line)
+            # Highlight potentially problematic lines
+            if 'setup:' in line:
+                print(f"  {i+1:3}: {repr_line}  <-- SETUP LINE")
+            else:
+                print(f"  {i+1:3}: {repr_line}")
+        print("--- END ANSWER SDP ---\n")
+        
+        # Check for specific issues
+        print("="*60)
+        print("ISSUE CHECKS")
+        print("="*60)
+        if 'a=setup:active' in answer_sdp:
+            print("  [!] Found 'a=setup:active' - may be rejected by some browsers")
+        if 'a=setup:actpass' in answer_sdp:
+            print("  [OK] Found 'a=setup:actpass'")
+        if 'a=setup:passive' in answer_sdp:
+            print("  [OK] Found 'a=setup:passive'")
+        
+        # Check line ending consistency
+        crlf_count = answer_sdp.count('\r\n')
+        lf_only_count = answer_sdp.count('\n') - crlf_count
+        print(f"  Line endings: {crlf_count} CRLF, {lf_only_count} LF-only")
+        if crlf_count > 0 and lf_only_count > 0:
+            print("  [!] MIXED LINE ENDINGS - this could cause parsing issues!")
+        print("="*60 + "\n")
         
         return web.json_response({"answer": answer_sdp})
     
