@@ -106,10 +106,19 @@ async def handle_offer(request):
         answer_sdp = '\n'.join(new_lines)
         
         # ============================================
-        # FIX 4: Reorder SDP to match browser's expected order
-        # Order should be: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message-size, candidates, end-of-candidates
+        # FIX 5: Extract max-message-size from offer to use same value in answer
         # ============================================
-        lines = answer_sdp.split('\n')
+        offer_max_msg_size = None
+        for line in offer_sdp.split('\n'):
+            if line.startswith('a=max-message-size:'):
+                offer_max_msg_size = line
+                break
+        
+        if offer_max_msg_size:
+            max_message_size = offer_max_msg_size
+            print(f"[FIX 5] Using offer's max-message-size value: {offer_max_msg_size}")
+        else:
+            print(f"[FIX 5] No offer max-message-size found, using answer's value")
         
         # Separate session-level and media-level lines
         session_lines = []  # v=, o=, s=, t=, a=group, a=msid-semantic
@@ -187,7 +196,12 @@ async def handle_offer(request):
         rebuilt_lines.append('')  # Trailing newline
         
         answer_sdp = '\n'.join(rebuilt_lines)
-        print("[FIX 4] Reordered SDP attributes to match expected order")
+        
+        # ============================================
+        # FIX 6: Remove trailing empty line (causes parsing issues)
+        # ============================================
+        answer_sdp = answer_sdp.rstrip('\n')
+        print("[FIX 6] Removed trailing empty lines")
         
         print("="*60)
         print("FIXED ANSWER SDP")
