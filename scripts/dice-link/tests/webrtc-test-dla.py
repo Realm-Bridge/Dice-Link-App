@@ -161,6 +161,7 @@ async def handle_offer(request):
         # Order should be: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message-size
         # ============================================
         lines = answer_sdp.split('\n')
+        for line in lines:
             if line.startswith('v=') or line.startswith('o=') or line.startswith('s=') or line.startswith('t='):
                 session_lines.append(line)
             elif line.startswith('a=group:') or line.startswith('a=msid-semantic'):
