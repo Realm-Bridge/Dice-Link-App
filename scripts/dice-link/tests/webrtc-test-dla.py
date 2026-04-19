@@ -110,6 +110,17 @@ async def create_app():
     """Create the test app"""
     app = web.Application()
     
+    # Add CORS middleware to allow requests from file:// origins
+    @web.middleware
+    async def cors_middleware(request, handler):
+        response = await handler(request)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    app.middlewares.append(cors_middleware)
+    
     # Routes
     app.router.add_post('/api/offer', handle_offer)
     app.router.add_post('/api/send', handle_send_message)
