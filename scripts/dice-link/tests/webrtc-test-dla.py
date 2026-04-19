@@ -51,7 +51,24 @@ async def handle_offer(request):
         pc = RTCPeerConnection()
         test_channel = TestDataChannel()
         
-        # Handle incoming data channels
+        # Create data channel BEFORE setting remote description
+        dc = pc.createDataChannel("test-channel")
+        print(f"[WebRTC Test] Created data channel: {dc.label}")
+        
+        @dc.on("open")
+        def on_open():
+            print("[WebRTC Test] Data channel opened from our side")
+        
+        @dc.on("message")
+        def on_message(message):
+            print(f"[WebRTC Test] Received from browser: {message}")
+            test_channel.messages.append({"from": "browser", "text": message})
+        
+        @dc.on("close")
+        def on_close():
+            print("[WebRTC Test] Data channel closed from our side")
+        
+        # Handle incoming data channels from browser
         @pc.on("datachannel")
         def on_datachannel(channel):
             asyncio.create_task(test_channel.on_datachannel(channel))
@@ -66,13 +83,9 @@ async def handle_offer(request):
         
         answer_sdp = pc.localDescription.sdp
         
-        # Fix invalid SDP lines that aiortc generates
-        # Replace "a=setup:active" (invalid) with "a=setup:actpass" (valid)
-        answer_sdp = answer_sdp.replace("a=setup:active", "a=setup:actpass")
-        
         print("[WebRTC Test] Created answer")
         print(f"[WebRTC Test] Answer length: {len(answer_sdp)} characters")
-        print(f"[WebRTC Test] First 100 chars of answer: {answer_sdp[:100]}")
+        print(f"[WebRTC Test] First 150 chars of answer:\n{answer_sdp[:150]}")
         
         return web.json_response({"answer": answer_sdp})
     
