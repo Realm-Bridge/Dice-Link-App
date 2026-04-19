@@ -78,7 +78,7 @@ The parameters are identical, yet only the static rule works.
 
 ## Root Cause Hypothesis
 
-The Vodafone router appears to NOT support hairpin NAT for UPnP-created dynamic rules, only for manually-created static rules. This is a router firmware limitation, not a DLA code issue.
+The Vodafone router appears to NOT support hairpin NAT for UPnP-created dynamic rules, only for manually-created static rules. This may be a router firmware limitation, not a DLA code issue.
 
 **Evidence:**
 - Rule creation succeeds (visible in router)
