@@ -101,10 +101,12 @@ def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> tuple[
                 log_upnp_services(services)
                 
                 # Look for WANIPConnection or WANPPPConnection service
-                for service_id in services:
+                # Note: get_services() returns service objects directly, not IDs
+                for service in services:
                     try:
-                        service = device[service_id]
-                        service_type = str(service.service).lower() if hasattr(service, 'service') else str(service).lower()
+                        # Get service type string for matching
+                        service_type = str(service).lower()
+                        service_id_str = str(service)
                         
                         # Check for available actions on this service
                         actions = None
@@ -112,17 +114,17 @@ def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> tuple[
                             try:
                                 actions = service.get_actions()
                             except Exception as action_err:
-                                log_upnp_service_detail(service_id, error=str(action_err))
+                                log_upnp_service_detail(service_id_str, error=str(action_err))
                         
-                        log_upnp_service_detail(service_id, service_type=service_type, actions=actions)
+                        log_upnp_service_detail(service_id_str, service_type=service_type, actions=actions)
                         
                         if 'wanipconnection' in service_type or 'wanpppconnection' in service_type:
                             igd_device = device
                             wan_service = service
-                            print(f"[UPnP] Found gateway service: {service_id}")
+                            print(f"[UPnP] Found gateway service: {service_id_str}")
                             break
                     except Exception as service_err:
-                        log_upnp_service_detail(service_id, error=str(service_err))
+                        log_upnp_service_detail(str(service), error=str(service_err))
                         continue
                         
             except Exception as e:
