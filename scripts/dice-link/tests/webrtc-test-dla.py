@@ -106,6 +106,17 @@ async def handle_status(request):
         "messages": test_channel.messages if test_channel else []
     })
 
+async def handle_options(request):
+    """Handle CORS preflight requests"""
+    return web.Response(
+        status=200,
+        headers={
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+        }
+    )
+
 async def create_app():
     """Create the test app"""
     app = web.Application()
@@ -113,6 +124,16 @@ async def create_app():
     # Add CORS middleware to allow requests from file:// origins
     @web.middleware
     async def cors_middleware(request, handler):
+        # Handle preflight OPTIONS requests
+        if request.method == 'OPTIONS':
+            return web.Response(
+                status=200,
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                }
+            )
         response = await handler(request)
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
@@ -122,6 +143,9 @@ async def create_app():
     app.middlewares.append(cors_middleware)
     
     # Routes
+    app.router.add_route('OPTIONS', '/api/offer', handle_options)
+    app.router.add_route('OPTIONS', '/api/send', handle_options)
+    app.router.add_route('OPTIONS', '/api/status', handle_options)
     app.router.add_post('/api/offer', handle_offer)
     app.router.add_post('/api/send', handle_send_message)
     app.router.add_get('/api/status', handle_status)
