@@ -253,15 +253,14 @@ async def handle_offer(request):
         answer_sdp = answer_sdp.rstrip('\n')
         print("[FIX 10] Removed trailing empty lines")
         
+        print("\n" + "="*60)
+        print("DEBUG: FINAL SDP BEING SENT TO BROWSER")
         print("="*60)
-        print("FIXED ANSWER SDP")
-        print("="*60)
+        print(f"Length: {len(answer_sdp)} bytes")
+        print(f"Repr (with hidden chars): {repr(answer_sdp[:200])}")
+        print("\nFinal answer lines:")
         for i, line in enumerate(answer_sdp.split('\n')):
-            repr_line = repr(line)
-            if 'setup:' in line:
-                print(f"  {i+1:3}: {repr_line}  <-- SETUP LINE")
-            else:
-                print(f"  {i+1:3}: {repr_line}")
+            print(f"  {i+1}: {repr(line)}")
         print("="*60 + "\n")
         
         return web.json_response({"answer": answer_sdp})
