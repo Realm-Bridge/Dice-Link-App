@@ -168,7 +168,7 @@ def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> tuple[
                 NewInternalClient=local_ip,
                 NewEnabled=1,
                 NewPortMappingDescription=description,
-                NewLeaseDuration=0  # 0 = permanent until removed
+                NewLeaseDuration=3600  # 1 hour lease - some routers handle this better than 0
             )
             
             print(f"[UPnP] Successfully forwarded port {port}")
