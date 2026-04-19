@@ -98,17 +98,22 @@ async def handle_offer(request):
         # ============================================
         offer_extmap_allow_mixed = None
         offer_ice_options = None
+        offer_msid_semantic = None
         
         for line in offer_sdp.split('\n'):
             if line.startswith('a=extmap-allow-mixed'):
                 offer_extmap_allow_mixed = line
             if line.startswith('a=ice-options:'):
                 offer_ice_options = line
+            if line.startswith('a=msid-semantic:'):
+                offer_msid_semantic = line
         
         if offer_extmap_allow_mixed:
             print(f"[FIX 3] Found in offer: {offer_extmap_allow_mixed}")
         if offer_ice_options:
             print(f"[FIX 3] Found in offer: {offer_ice_options}")
+        if offer_msid_semantic:
+            print(f"[FIX 3] Found in offer: {offer_msid_semantic}")
         
         # ============================================
         # FIX 4: Match offer's connection line format (IPv4 vs IPv6)
@@ -176,13 +181,19 @@ async def handle_offer(request):
         end_of_candidates = None
         extmap_allow_mixed = None
         ice_options = None
+        msid_semantic = None
         other_lines = []
         
         for line in lines:
             if line.startswith('v=') or line.startswith('o=') or line.startswith('s=') or line.startswith('t='):
                 session_lines.append(line)
             elif line.startswith('a=group:') or line.startswith('a=msid-semantic'):
-                session_lines.append(line)
+                # Don't add to session_lines, we'll use the offer's version instead
+                if line.startswith('a=group:'):
+                    session_lines.append(line)
+                else:
+                    # For msid-semantic, save it but don't add yet - we'll use offer's version
+                    msid_semantic = line
             elif line.startswith('m='):
                 media_line = line
             elif line.startswith('c='):
@@ -243,6 +254,14 @@ async def handle_offer(request):
         # Media-level order: m=, c=, a=ice-ufrag, a=ice-pwd, a=ice-options (if present), a=fingerprint, a=setup, a=mid, a=sctp-port, a=max-message-size
         rebuilt_lines = []
         rebuilt_lines.extend(session_lines)
+        
+        # Add a=group:BUNDLE if it exists
+        # (should already be in session_lines)
+        
+        # Add msid-semantic from offer (not answer's version with extra *)
+        if offer_msid_semantic:
+            rebuilt_lines.append(offer_msid_semantic)
+            print(f"[FIX 11] Using offer's msid-semantic: {offer_msid_semantic}")
         
         # Add session-level attributes from offer
         if offer_extmap_allow_mixed:
