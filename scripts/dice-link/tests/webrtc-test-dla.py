@@ -65,6 +65,11 @@ async def handle_offer(request):
         await pc.setLocalDescription(answer)
         
         answer_sdp = pc.localDescription.sdp
+        
+        # Fix invalid SDP lines that aiortc generates
+        # Replace "a=setup:active" (invalid) with "a=setup:actpass" (valid)
+        answer_sdp = answer_sdp.replace("a=setup:active", "a=setup:actpass")
+        
         print("[WebRTC Test] Created answer")
         print(f"[WebRTC Test] Answer length: {len(answer_sdp)} characters")
         print(f"[WebRTC Test] First 100 chars of answer: {answer_sdp[:100]}")
