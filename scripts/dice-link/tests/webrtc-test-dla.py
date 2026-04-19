@@ -88,54 +88,103 @@ async def handle_offer(request):
         
         # ============================================
         # FIX 2: Change a=setup:active to a=setup:passive
-        # (answerer should be passive, offerer was actpass)
         # ============================================
         if 'a=setup:active' in answer_sdp:
             answer_sdp = answer_sdp.replace('a=setup:active', 'a=setup:passive')
             print("[FIX 2] Changed 'a=setup:active' to 'a=setup:passive'")
         
         # ============================================
-        # FIX 3: Move a=setup:passive to correct position
-        # It should appear right after a=mid:0, before fingerprints
-        # ============================================
-        lines = answer_sdp.split('\n')
-        setup_line = None
-        setup_index = None
-        mid_index = None
-        
-        # Find the setup line and mid line
-        for i, line in enumerate(lines):
-            if line.startswith('a=setup:'):
-                setup_line = line
-                setup_index = i
-            if line.startswith('a=mid:'):
-                mid_index = i
-        
-        # If setup line exists and is after mid, we need to move it
-        if setup_line and setup_index and mid_index and setup_index > mid_index + 1:
-            # Remove setup line from current position
-            lines.pop(setup_index)
-            # Insert it right after a=mid:0
-            lines.insert(mid_index + 1, setup_line)
-            answer_sdp = '\n'.join(lines)
-            print(f"[FIX 3] Moved 'a=setup:passive' from line {setup_index+1} to line {mid_index+2}")
-        
-        # ============================================
-        # FIX 4: Keep only sha-256 fingerprint (remove sha-384, sha-512)
+        # FIX 3: Keep only sha-256 fingerprint
         # ============================================
         lines = answer_sdp.split('\n')
         new_lines = []
-        fingerprint_kept = False
         for line in lines:
-            if line.startswith('a=fingerprint:sha-256'):
-                new_lines.append(line)
-                fingerprint_kept = True
-            elif line.startswith('a=fingerprint:sha-384') or line.startswith('a=fingerprint:sha-512'):
-                print(f"[FIX 4] Removed extra fingerprint: {line[:40]}...")
-                continue  # Skip this line
-            else:
-                new_lines.append(line)
+            if line.startswith('a=fingerprint:sha-384') or line.startswith('a=fingerprint:sha-512'):
+                print(f"[FIX 3] Removed extra fingerprint: {line[:40]}...")
+                continue
+            new_lines.append(line)
         answer_sdp = '\n'.join(new_lines)
+        
+        # ============================================
+        # FIX 4: Reorder SDP to match browser's expected order
+        # Order should be: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message-size, candidates, end-of-candidates
+        # ============================================
+        lines = answer_sdp.split('\n')
+        
+        # Separate session-level and media-level lines
+        session_lines = []  # v=, o=, s=, t=, a=group, a=msid-semantic
+        media_line = None   # m=
+        connection_line = None  # c=
+        ice_ufrag = None
+        ice_pwd = None
+        fingerprint = None
+        setup_line = None
+        mid_line = None
+        sctp_port = None
+        max_message_size = None
+        candidates = []
+        end_of_candidates = None
+        other_lines = []
+        
+        for line in lines:
+            if line.startswith('v=') or line.startswith('o=') or line.startswith('s=') or line.startswith('t='):
+                session_lines.append(line)
+            elif line.startswith('a=group:') or line.startswith('a=msid-semantic'):
+                session_lines.append(line)
+            elif line.startswith('m='):
+                media_line = line
+            elif line.startswith('c='):
+                connection_line = line
+            elif line.startswith('a=ice-ufrag:'):
+                ice_ufrag = line
+            elif line.startswith('a=ice-pwd:'):
+                ice_pwd = line
+            elif line.startswith('a=fingerprint:'):
+                fingerprint = line
+            elif line.startswith('a=setup:'):
+                setup_line = line
+            elif line.startswith('a=mid:'):
+                mid_line = line
+            elif line.startswith('a=sctp-port:'):
+                sctp_port = line
+            elif line.startswith('a=max-message-size:'):
+                max_message_size = line
+            elif line.startswith('a=candidate:'):
+                candidates.append(line)
+            elif line.startswith('a=end-of-candidates'):
+                end_of_candidates = line
+            elif line.strip():  # Non-empty lines we haven't categorized
+                other_lines.append(line)
+        
+        # Rebuild SDP in correct order
+        rebuilt_lines = []
+        rebuilt_lines.extend(session_lines)
+        if media_line:
+            rebuilt_lines.append(media_line)
+        if connection_line:
+            rebuilt_lines.append(connection_line)
+        if ice_ufrag:
+            rebuilt_lines.append(ice_ufrag)
+        if ice_pwd:
+            rebuilt_lines.append(ice_pwd)
+        if fingerprint:
+            rebuilt_lines.append(fingerprint)
+        if setup_line:
+            rebuilt_lines.append(setup_line)
+        if mid_line:
+            rebuilt_lines.append(mid_line)
+        if sctp_port:
+            rebuilt_lines.append(sctp_port)
+        if max_message_size:
+            rebuilt_lines.append(max_message_size)
+        rebuilt_lines.extend(candidates)
+        if end_of_candidates:
+            rebuilt_lines.append(end_of_candidates)
+        rebuilt_lines.extend(other_lines)
+        rebuilt_lines.append('')  # Trailing newline
+        
+        answer_sdp = '\n'.join(rebuilt_lines)
+        print("[FIX 4] Reordered SDP attributes to match expected order")
         
         print("="*60)
         print("FIXED ANSWER SDP")
