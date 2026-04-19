@@ -106,20 +106,9 @@ async def handle_offer(request):
         answer_sdp = '\n'.join(new_lines)
         
         # ============================================
-        # FIX 5: Extract max-message-size from offer to use same value in answer
+        # FIX 4: Reorder SDP to match browser's expected order
+        # Order should be: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message-size, candidates, end-of-candidates
         # ============================================
-        offer_max_msg_size = None
-        for line in offer_sdp.split('\n'):
-            if line.startswith('a=max-message-size:'):
-                offer_max_msg_size = line
-                break
-        
-        if offer_max_msg_size:
-            max_message_size = offer_max_msg_size
-            print(f"[FIX 5] Using offer's max-message-size value: {offer_max_msg_size}")
-        else:
-            print(f"[FIX 5] No offer max-message-size found, using answer's value")
-        
         # Separate session-level and media-level lines
         session_lines = []  # v=, o=, s=, t=, a=group, a=msid-semantic
         media_line = None   # m=
@@ -164,6 +153,21 @@ async def handle_offer(request):
                 end_of_candidates = line
             elif line.strip():  # Non-empty lines we haven't categorized
                 other_lines.append(line)
+        
+        # ============================================
+        # FIX 5: Use max-message-size from offer instead of answer
+        # ============================================
+        offer_max_msg_size = None
+        for line in offer_sdp.split('\n'):
+            if line.startswith('a=max-message-size:'):
+                offer_max_msg_size = line
+                break
+        
+        if offer_max_msg_size:
+            max_message_size = offer_max_msg_size
+            print(f"[FIX 5] Using offer's max-message-size value: {offer_max_msg_size}")
+        else:
+            print(f"[FIX 5] No offer max-message-size found, using answer's value")
         
         # Rebuild SDP in correct order
         rebuilt_lines = []
