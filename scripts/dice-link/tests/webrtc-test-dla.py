@@ -45,6 +45,7 @@ async def handle_offer(request):
             return web.json_response({"error": "No offer provided"}, status=400)
         
         print("[WebRTC Test] Received offer from browser")
+        print(f"[WebRTC Test] Offer length: {len(offer_sdp)} characters")
         
         # Create peer connection
         pc = RTCPeerConnection()
@@ -63,12 +64,17 @@ async def handle_offer(request):
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
         
-        print("[WebRTC Test] Created answer, sending to browser")
+        answer_sdp = pc.localDescription.sdp
+        print("[WebRTC Test] Created answer")
+        print(f"[WebRTC Test] Answer length: {len(answer_sdp)} characters")
+        print(f"[WebRTC Test] First 100 chars of answer: {answer_sdp[:100]}")
         
-        return web.json_response({"answer": pc.localDescription.sdp})
+        return web.json_response({"answer": answer_sdp})
     
     except Exception as e:
         print(f"[WebRTC Test] Error: {e}")
+        import traceback
+        print(f"[WebRTC Test] Traceback: {traceback.format_exc()}")
         return web.json_response({"error": str(e)}, status=500)
 
 async def handle_send_message(request):
