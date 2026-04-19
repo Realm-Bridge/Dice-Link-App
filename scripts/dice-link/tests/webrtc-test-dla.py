@@ -94,21 +94,38 @@ async def handle_offer(request):
             print("[FIX 2] Changed 'a=setup:active' to 'a=setup:passive'")
         
         # ============================================
-        # FIX 3: Keep only sha-256 fingerprint
+        # FIX 4: Match offer's connection line format (IPv4 vs IPv6)
         # ============================================
-        lines = answer_sdp.split('\n')
-        new_lines = []
-        for line in lines:
-            if line.startswith('a=fingerprint:sha-384') or line.startswith('a=fingerprint:sha-512'):
-                print(f"[FIX 3] Removed extra fingerprint: {line[:40]}...")
-                continue
-            new_lines.append(line)
-        answer_sdp = '\n'.join(new_lines)
+        offer_connection = None
+        for line in offer_sdp.split('\n'):
+            if line.startswith('c='):
+                offer_connection = line
+                break
+        
+        if offer_connection:
+            connection_line = offer_connection
+            print(f"[FIX 4] Using offer's connection line: {offer_connection}")
         
         # ============================================
-        # FIX 4: Reorder SDP to match browser's expected order
-        # Order should be: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message-size, candidates, end-of-candidates
+        # FIX 5: Extract correct fingerprint algorithm from offer
         # ============================================
+        offer_fingerprint = None
+        for line in offer_sdp.split('\n'):
+            if line.startswith('a=fingerprint:'):
+                offer_fingerprint = line
+                break
+        
+        # Get the fingerprint algorithm from the offer (sha-256, sha-384, or sha-512)
+        offer_fingerprint_algo = None
+        if offer_fingerprint:
+            # Extract algorithm: "a=fingerprint:sha-256 ..." -> "sha-256"
+            offer_fingerprint_algo = offer_fingerprint.split(':')[1].split(' ')[0]
+            print(f"[FIX 5] Offer uses: {offer_fingerprint_algo}")
+        
+        # Remove fingerprints that don't match the offer
+        lines = answer_sdp.split('\n')
+        new_lines = []
+        kept_fingerprint = None
         # Separate session-level and media-level lines
         session_lines = []  # v=, o=, s=, t=, a=group, a=msid-semantic
         media_line = None   # m=
@@ -125,6 +142,25 @@ async def handle_offer(request):
         other_lines = []
         
         for line in lines:
+            if line.startswith('a=fingerprint:'):
+                # Extract this line's algorithm
+                this_algo = line.split(':')[1].split(' ')[0]
+                # Keep it only if it matches the offer's algorithm
+                if offer_fingerprint_algo and this_algo == offer_fingerprint_algo:
+                    new_lines.append(line)
+                    kept_fingerprint = line
+                    print(f"[FIX 5] Keeping fingerprint with {this_algo}")
+                else:
+                    print(f"[FIX 5] Removing fingerprint with {this_algo} (offer uses {offer_fingerprint_algo})")
+            else:
+                new_lines.append(line)
+        answer_sdp = '\n'.join(new_lines)
+        
+        # ============================================
+        # FIX 6: Reorder SDP to match browser's expected order
+        # Order should be: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message-size
+        # ============================================
+        lines = answer_sdp.split('\n')
             if line.startswith('v=') or line.startswith('o=') or line.startswith('s=') or line.startswith('t='):
                 session_lines.append(line)
             elif line.startswith('a=group:') or line.startswith('a=msid-semantic'):
@@ -155,7 +191,7 @@ async def handle_offer(request):
                 other_lines.append(line)
         
         # ============================================
-        # FIX 5: Use max-message-size from offer instead of answer
+        # FIX 7: Use max-message-size from offer
         # ============================================
         offer_max_msg_size = None
         for line in offer_sdp.split('\n'):
@@ -165,9 +201,9 @@ async def handle_offer(request):
         
         if offer_max_msg_size:
             max_message_size = offer_max_msg_size
-            print(f"[FIX 5] Using offer's max-message-size value: {offer_max_msg_size}")
+            print(f"[FIX 7] Using offer's max-message-size value: {offer_max_msg_size}")
         else:
-            print(f"[FIX 5] No offer max-message-size found, using answer's value")
+            print(f"[FIX 7] No offer max-message-size found, using answer's value")
         
         # Rebuild SDP in correct order
         rebuilt_lines = []
@@ -196,16 +232,16 @@ async def handle_offer(request):
         # if end_of_candidates:
         #     rebuilt_lines.append(end_of_candidates)
         rebuilt_lines.extend(other_lines)
-        print(f"[FIX 5] Removed {len(candidates)} candidates (trickle ICE - candidates exchanged separately)")
+        print(f"[FIX 8] Removed {len(candidates)} candidates (trickle ICE - candidates exchanged separately)")
         rebuilt_lines.append('')  # Trailing newline
         
         answer_sdp = '\n'.join(rebuilt_lines)
         
         # ============================================
-        # FIX 6: Remove trailing empty line (causes parsing issues)
+        # FIX 9: Remove trailing empty line (causes parsing issues)
         # ============================================
         answer_sdp = answer_sdp.rstrip('\n')
-        print("[FIX 6] Removed trailing empty lines")
+        print("[FIX 9] Removed trailing empty lines")
         
         print("="*60)
         print("FIXED ANSWER SDP")
