@@ -160,6 +160,19 @@ async def handle_offer(request):
         other_lines = []
         
         for line in lines:
+            if line.startswith('v=') or line.startswith('o=') or line.startswith('s=') or line.startswith('t='):
+                session_lines.append(line)
+            elif line.startswith('a=group:') or line.startswith('a=msid-semantic'):
+                session_lines.append(line)
+            elif line.startswith('m='):
+                media_line = line
+            elif line.startswith('c='):
+                connection_line = line
+            elif line.startswith('a=ice-ufrag:'):
+                ice_ufrag = line
+            elif line.startswith('a=ice-pwd:'):
+                ice_pwd = line
+            elif line.startswith('a=fingerprint:'):
                 fingerprint = line
             elif line.startswith('a=setup:'):
                 setup_line = line
@@ -170,6 +183,11 @@ async def handle_offer(request):
             elif line.startswith('a=max-message-size:'):
                 max_message_size = line
             elif line.startswith('a=candidate:'):
+                candidates.append(line)
+            elif line.startswith('a=end-of-candidates'):
+                end_of_candidates = line
+            elif line.strip():  # Non-empty lines we haven't categorized
+                other_lines.append(line)
                 candidates.append(line)
             elif line.startswith('a=end-of-candidates'):
                 end_of_candidates = line
