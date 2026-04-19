@@ -7,7 +7,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 
 from state import app_state
 from core.websocket_handler import (
@@ -28,39 +27,6 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Create FastAPI app
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
-
-# Add CORS middleware to allow connections from any origin (required for DLC in remote Foundry)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# Middleware to handle Private Network Access preflight (required for Chrome 94+ to allow
-# remote websites to connect to localhost WebSocket)
-# Chrome sends an OPTIONS preflight request BEFORE attempting the WebSocket upgrade
-@app.middleware("http")
-async def add_private_network_access_headers(request: Request, call_next):
-    from starlette.responses import Response
-    
-    # Handle OPTIONS preflight requests for Private Network Access
-    if request.method == "OPTIONS":
-        response = Response(status_code=204)
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Private-Network"] = "true"
-        return response
-    
-    response = await call_next(request)
-    # Allow private network access from any origin
-    response.headers["Access-Control-Allow-Private-Network"] = "true"
-    return response
-
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -348,20 +314,31 @@ async def handle_ui_message(message: dict):
 @app.websocket("/ws/dlc")
 async def websocket_dlc(websocket: WebSocket):
     """WebSocket endpoint for DLC connections"""
+    # Detailed logging for debugging
+    client = websocket.client
+    print(f"[DLA DEBUG] /ws/dlc connection attempt received")
+    print(f"[DLA DEBUG] Client address: {client.host}:{client.port}" if client else "[DLA DEBUG] Client address: unknown")
+    print(f"[DLA DEBUG] Headers: {dict(websocket.headers)}")
+    print(f"[DLA DEBUG] Accepting WebSocket connection...")
+    
     await websocket.accept()
+    print(f"[DLA DEBUG] WebSocket connection ACCEPTED for /ws/dlc")
     
     try:
         while True:
             data = await websocket.receive_text()
+            print(f"[DLA DEBUG] Received message from DLC: {data[:200]}..." if len(data) > 200 else f"[DLA DEBUG] Received message from DLC: {data}")
             message = json.loads(data)
             
             response = await handle_dlc_message(websocket, message)
             
             if response:
+                print(f"[DLA DEBUG] Sending response to DLC: {json.dumps(response)[:200]}...")
                 await websocket.send_text(json.dumps(response))
     
     except WebSocketDisconnect:
+        print(f"[DLA DEBUG] WebSocket disconnected (clean disconnect)")
         await handle_dlc_disconnect()
     except Exception as e:
-        print(f"DLC WebSocket error: {e}")
+        print(f"[DLA DEBUG] WebSocket error: {type(e).__name__}: {e}")
         await handle_dlc_disconnect()

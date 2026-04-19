@@ -17,7 +17,7 @@ const DICE_RANGES = {
 // Default application settings
 const DEFAULT_SETTINGS = {
     host: 'localhost',
-    port: 47293,
+    port: 8765,
     theme: 'dark',
     cameraIndex: 0
 };
