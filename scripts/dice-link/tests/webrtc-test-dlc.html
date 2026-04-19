@@ -347,6 +347,15 @@
                     return;
                 }
 
+                // DEBUG: Print exactly what we're passing to the browser
+                console.log('=== ANSWER SDP RECEIVED ===');
+                console.log('Length:', answerSdp.length);
+                console.log('Lines:');
+                answerSdp.split('\n').forEach((line, i) => {
+                    console.log(`  ${i+1}: ${JSON.stringify(line)}`);
+                });
+                console.log('=== END ANSWER SDP ===');
+
                 const answer = new RTCSessionDescription({
                     type: 'answer',
                     sdp: answerSdp
