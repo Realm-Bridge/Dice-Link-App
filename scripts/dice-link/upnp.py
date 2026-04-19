@@ -92,19 +92,43 @@ def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> tuple[
         wan_service = None
         
         for device in devices:
-            print(f"[UPnP] Checking device: {device.friendly_name}")
+            print(f"[UPnP DEBUG] Checking device: {device.friendly_name}")
+            print(f"[UPnP DEBUG] Device type: {getattr(device, 'type_', 'unknown')}")
+            
             try:
+                # List all available services for debugging
+                services = device.get_services()
+                print(f"[UPnP DEBUG] Available services: {services}")
+                
                 # Look for WANIPConnection or WANPPPConnection service
-                for service_id in device.get_services():
-                    service = device[service_id]
-                    service_type = str(service.service).lower()
-                    if 'wanipconnection' in service_type or 'wanpppconnection' in service_type:
-                        igd_device = device
-                        wan_service = service
-                        print(f"[UPnP] Found gateway service: {service_id}")
-                        break
+                for service_id in services:
+                    print(f"[UPnP DEBUG] Examining service: {service_id}")
+                    try:
+                        service = device[service_id]
+                        service_type = str(service.service).lower() if hasattr(service, 'service') else str(service).lower()
+                        print(f"[UPnP DEBUG] Service type string: {service_type}")
+                        
+                        # Check for available actions on this service
+                        if hasattr(service, 'get_actions'):
+                            try:
+                                actions = service.get_actions()
+                                print(f"[UPnP DEBUG] Service actions: {actions}")
+                            except Exception as action_err:
+                                print(f"[UPnP DEBUG] Could not get actions: {action_err}")
+                        
+                        if 'wanipconnection' in service_type or 'wanpppconnection' in service_type:
+                            igd_device = device
+                            wan_service = service
+                            print(f"[UPnP] Found gateway service: {service_id}")
+                            break
+                    except Exception as service_err:
+                        print(f"[UPnP DEBUG] Error accessing service {service_id}: {service_err}")
+                        continue
+                        
             except Exception as e:
-                print(f"[UPnP] Error checking device services: {e}")
+                print(f"[UPnP DEBUG] Error checking device services: {e}")
+                import traceback
+                print(f"[UPnP DEBUG] Traceback: {traceback.format_exc()}")
                 continue
             
             if wan_service:
