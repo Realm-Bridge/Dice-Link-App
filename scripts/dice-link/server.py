@@ -60,6 +60,18 @@ async def get_dice_ranges():
     return JSONResponse(DICE_RANGES)
 
 
+@app.get("/api/external-ip")
+async def get_external_ip_endpoint():
+    """Get external IP for DLC configuration"""
+    from upnp import get_external_ip
+    external_ip = get_external_ip()
+    return JSONResponse({
+        "externalIp": external_ip,
+        "port": 8765,
+        "wsUrl": f"ws://{external_ip}:8765/ws/dlc" if external_ip else None
+    })
+
+
 # ============== Camera Endpoints (Phase 3) ==============
 
 @app.get("/api/cameras")

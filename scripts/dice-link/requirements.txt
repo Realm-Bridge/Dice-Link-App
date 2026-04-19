@@ -7,3 +7,4 @@ PyQt5>=5.15.0
 PyQtWebEngine>=5.15.0
 opencv-python>=4.8.0
 numpy>=1.24.0
+upnpy>=1.1.8

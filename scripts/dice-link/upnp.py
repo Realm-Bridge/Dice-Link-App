@@ -1,16 +1,18 @@
-"""UPnP port forwarding module using miniupnpc"""
+"""UPnP port forwarding module using upnpy (pure Python)"""
 
 import socket
-import miniupnpc
+import urllib.request
 
-# Store the UPnP client for cleanup on exit
-_upnp_client = None
+# Store UPnP state for cleanup on exit
+_upnp_device = None
+_upnp_service = None
+_forwarded_port = None
+_external_ip = None
 
 
 def get_local_ip() -> str:
     """Get the local IP address of this machine."""
     try:
-        # Create a socket to determine our local IP
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
@@ -20,7 +22,24 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 
-def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> bool:
+def get_external_ip_fallback() -> str:
+    """Get external IP via web service as fallback."""
+    try:
+        with urllib.request.urlopen('https://api.ipify.org', timeout=5) as response:
+            return response.read().decode('utf-8').strip()
+    except Exception:
+        return None
+
+
+def get_external_ip() -> str:
+    """Get the external IP address. Returns cached value if available."""
+    global _external_ip
+    if _external_ip:
+        return _external_ip
+    return get_external_ip_fallback()
+
+
+def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> tuple[bool, str]:
     """
     Attempt to set up UPnP port forwarding for the given port.
     
@@ -29,85 +48,161 @@ def setup_upnp_port_forward(port: int, description: str = "Dice Link") -> bool:
         description: Description for the port mapping
         
     Returns:
-        True if port forwarding was successfully set up, False otherwise
+        Tuple of (success: bool, external_ip: str or None)
     """
-    global _upnp_client
+    global _upnp_device, _upnp_service, _forwarded_port, _external_ip
     
     try:
-        print(f"[UPnP] Discovering UPnP devices...")
+        import upnpy
+    except ImportError:
+        print("[UPnP] upnpy library not installed - run: pip install upnpy")
+        return False, None
+    
+    try:
+        print("[UPnP] Discovering UPnP devices...")
         
-        # Create UPnP client
-        upnp = miniupnpc.UPnP()
-        upnp.discoverdelay = 200  # 200ms discovery delay
+        # Create UPnP client and discover devices
+        upnp = upnpy.UPnP()
         
-        # Discover UPnP devices
-        devices_found = upnp.discover()
+        try:
+            devices = upnp.discover(delay=2)
+        except Exception as e:
+            print(f"[UPnP] Discovery failed: {e}")
+            print("[UPnP] Trying external IP lookup as fallback...")
+            ext_ip = get_external_ip_fallback()
+            if ext_ip:
+                _external_ip = ext_ip
+                print(f"[UPnP] External IP (via web): {ext_ip}")
+                print("[UPnP] UPnP port forwarding unavailable - manual port forwarding required")
+                return False, ext_ip
+            return False, None
         
-        if devices_found == 0:
-            print(f"[UPnP] No UPnP devices found - remote connections will require manual port forwarding")
-            return False
+        if not devices:
+            print("[UPnP] No UPnP devices found")
+            ext_ip = get_external_ip_fallback()
+            if ext_ip:
+                _external_ip = ext_ip
+                print(f"[UPnP] External IP (via web): {ext_ip}")
+            return False, ext_ip
         
-        print(f"[UPnP] Found {devices_found} UPnP device(s)")
+        print(f"[UPnP] Found {len(devices)} UPnP device(s)")
         
-        # Select the IGD (Internet Gateway Device)
-        upnp.selectigd()
+        # Find an IGD (Internet Gateway Device) with WANIPConnection service
+        igd_device = None
+        wan_service = None
         
-        # Get external IP
-        external_ip = upnp.externalipaddress()
-        print(f"[UPnP] External IP: {external_ip}")
+        for device in devices:
+            print(f"[UPnP] Checking device: {device.friendly_name}")
+            try:
+                # Look for WANIPConnection or WANPPPConnection service
+                for service_id in device.get_services():
+                    service = device[service_id]
+                    service_type = str(service.service).lower()
+                    if 'wanipconnection' in service_type or 'wanpppconnection' in service_type:
+                        igd_device = device
+                        wan_service = service
+                        print(f"[UPnP] Found gateway service: {service_id}")
+                        break
+            except Exception as e:
+                print(f"[UPnP] Error checking device services: {e}")
+                continue
+            
+            if wan_service:
+                break
         
-        # Get local IP for port mapping
+        if not wan_service:
+            print("[UPnP] No compatible gateway device found")
+            ext_ip = get_external_ip_fallback()
+            if ext_ip:
+                _external_ip = ext_ip
+                print(f"[UPnP] External IP (via web): {ext_ip}")
+            return False, ext_ip
+        
+        # Get external IP from router
+        try:
+            ext_ip_response = wan_service.GetExternalIPAddress()
+            _external_ip = ext_ip_response.get('NewExternalIPAddress', None)
+            print(f"[UPnP] External IP (from router): {_external_ip}")
+        except Exception as e:
+            print(f"[UPnP] Could not get external IP from router: {e}")
+            _external_ip = get_external_ip_fallback()
+            if _external_ip:
+                print(f"[UPnP] External IP (via web): {_external_ip}")
+        
+        # Get local IP
         local_ip = get_local_ip()
         print(f"[UPnP] Local IP: {local_ip}")
         
-        # Add port mapping (TCP for WebSocket)
-        # Parameters: external_port, protocol, internal_ip, internal_port, description, remote_host, lease_duration
-        result = upnp.addportmapping(
-            port,           # external port
-            'TCP',          # protocol
-            local_ip,       # internal IP (this machine)
-            port,           # internal port
-            description,    # description
-            ''              # remote host (empty = any)
-        )
-        
-        if result:
-            print(f"[UPnP] Successfully forwarded port {port} ({local_ip}:{port} -> {external_ip}:{port})")
-            _upnp_client = upnp
-            return True
-        else:
-            print(f"[UPnP] Failed to add port mapping - remote connections will require manual port forwarding")
-            return False
+        # Add port mapping
+        try:
+            wan_service.AddPortMapping(
+                NewRemoteHost='',
+                NewExternalPort=port,
+                NewProtocol='TCP',
+                NewInternalPort=port,
+                NewInternalClient=local_ip,
+                NewEnabled=1,
+                NewPortMappingDescription=description,
+                NewLeaseDuration=0  # 0 = permanent until removed
+            )
+            
+            print(f"[UPnP] Successfully forwarded port {port}")
+            print(f"[UPnP] Mapping: {_external_ip}:{port} -> {local_ip}:{port}")
+            
+            # Store for cleanup
+            _upnp_device = igd_device
+            _upnp_service = wan_service
+            _forwarded_port = port
+            
+            return True, _external_ip
+            
+        except Exception as e:
+            error_str = str(e)
+            if '718' in error_str:
+                print(f"[UPnP] Port {port} mapping already exists (possibly from previous session)")
+                return True, _external_ip
+            elif '725' in error_str:
+                print(f"[UPnP] Router rejected mapping - may need to enable UPnP in router settings")
+            else:
+                print(f"[UPnP] Failed to add port mapping: {e}")
+            return False, _external_ip
             
     except Exception as e:
         print(f"[UPnP] Error during UPnP setup: {e}")
-        print(f"[UPnP] Remote connections will require manual port forwarding")
-        return False
+        ext_ip = get_external_ip_fallback()
+        if ext_ip:
+            _external_ip = ext_ip
+            print(f"[UPnP] External IP (via web): {ext_ip}")
+        return False, ext_ip
 
 
-def remove_upnp_port_forward(port: int) -> bool:
+def remove_upnp_port_forward(port: int = None) -> bool:
     """
     Remove the UPnP port forwarding rule on exit.
     
     Args:
-        port: The port number to unforward
+        port: The port number to unforward (uses stored port if None)
         
     Returns:
         True if successfully removed, False otherwise
     """
-    global _upnp_client
+    global _upnp_service, _forwarded_port
     
-    if not _upnp_client:
+    if not _upnp_service:
+        return False
+    
+    port_to_remove = port or _forwarded_port
+    if not port_to_remove:
         return False
     
     try:
-        result = _upnp_client.deleteportmapping(port, 'TCP')
-        if result:
-            print(f"[UPnP] Removed port forwarding for port {port}")
-            return True
-        else:
-            print(f"[UPnP] Could not remove port forwarding for port {port}")
-            return False
+        _upnp_service.DeletePortMapping(
+            NewRemoteHost='',
+            NewExternalPort=port_to_remove,
+            NewProtocol='TCP'
+        )
+        print(f"[UPnP] Removed port forwarding for port {port_to_remove}")
+        return True
     except Exception as e:
         print(f"[UPnP] Error removing port forwarding: {e}")
         return False
