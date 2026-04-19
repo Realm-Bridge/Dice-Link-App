@@ -44,16 +44,16 @@ async def handle_offer(request):
         if not offer_sdp:
             return web.json_response({"error": "No offer provided"}, status=400)
         
+        # Normalize offer line endings to LF
+        offer_sdp = offer_sdp.replace('\r\n', '\n')
+        
         print("\n" + "="*60)
         print("OFFER ANALYSIS")
         print("="*60)
         print(f"Offer length: {len(offer_sdp)} characters")
-        print(f"Line ending type: {'CRLF (Windows)' if chr(13)+chr(10) in offer_sdp else 'LF (Unix)'}")
         print("\n--- FULL OFFER SDP ---")
         for i, line in enumerate(offer_sdp.split('\n')):
-            # Show line number, content, and any trailing characters
-            repr_line = repr(line)
-            print(f"  {i+1:3}: {repr_line}")
+            print(f"  {i+1:3}: {repr(line)}")
         print("--- END OFFER SDP ---\n")
         
         # Create peer connection
@@ -73,247 +73,156 @@ async def handle_offer(request):
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
         
-        answer_sdp = pc.localDescription.sdp
+        aiortc_sdp = pc.localDescription.sdp
         
         print("="*60)
-        print("ORIGINAL ANSWER (before fixes)")
+        print("AIORTC ORIGINAL ANSWER")
         print("="*60)
-        print(f"Length: {len(answer_sdp)} chars, Line endings: {'CRLF' if '\\r\\n' in repr(answer_sdp) else 'LF'}")
+        for i, line in enumerate(aiortc_sdp.split('\n')):
+            print(f"  {i+1:3}: {repr(line)}")
+        print("="*60 + "\n")
         
         # ============================================
-        # FIX 1: Normalize line endings to LF (Unix)
+        # NEW APPROACH: Build answer SDP manually
+        # Extract only what we need from aiortc (ice credentials, fingerprint)
+        # and construct SDP with exact same structure as offer
         # ============================================
-        answer_sdp = answer_sdp.replace('\r\n', '\n')
-        print("[FIX 1] Normalized line endings to LF")
         
-        # ============================================
-        # FIX 2: Change a=setup:active to a=setup:passive
-        # ============================================
-        if 'a=setup:active' in answer_sdp:
-            answer_sdp = answer_sdp.replace('a=setup:active', 'a=setup:passive')
-            print("[FIX 2] Changed 'a=setup:active' to 'a=setup:passive'")
+        # Parse aiortc's answer to extract what we need
+        aiortc_lines = aiortc_sdp.replace('\r\n', '\n').split('\n')
         
-        # ============================================
-        # FIX 3: Extract attributes from offer that should be echoed in answer
-        # ============================================
-        offer_extmap_allow_mixed = None
-        offer_ice_options = None
-        offer_msid_semantic = None
+        aiortc_ice_ufrag = None
+        aiortc_ice_pwd = None
+        aiortc_fingerprint_sha256 = None
+        aiortc_o_line = None
         
-        for line in offer_sdp.split('\n'):
-            if line.startswith('a=extmap-allow-mixed'):
-                offer_extmap_allow_mixed = line
-            if line.startswith('a=ice-options:'):
-                offer_ice_options = line
-            if line.startswith('a=msid-semantic:'):
-                offer_msid_semantic = line
-        
-        if offer_extmap_allow_mixed:
-            print(f"[FIX 3] Found in offer: {offer_extmap_allow_mixed}")
-        if offer_ice_options:
-            print(f"[FIX 3] Found in offer: {offer_ice_options}")
-        if offer_msid_semantic:
-            print(f"[FIX 3] Found in offer: {offer_msid_semantic}")
-        
-        # ============================================
-        # FIX 4: Match offer's connection line format (IPv4 vs IPv6)
-        # ============================================
-        offer_connection = None
-        for line in offer_sdp.split('\n'):
-            if line.startswith('c='):
-                offer_connection = line
-                break
-        
-        if offer_connection:
-            print(f"[FIX 4] Using offer's connection line: {offer_connection}")
-        
-        # ============================================
-        # FIX 5: Extract correct fingerprint algorithm from offer
-        # ============================================
-        offer_fingerprint = None
-        for line in offer_sdp.split('\n'):
-            if line.startswith('a=fingerprint:'):
-                offer_fingerprint = line
-                break
-        
-        # Get the fingerprint algorithm from the offer (sha-256, sha-384, or sha-512)
-        offer_fingerprint_algo = None
-        if offer_fingerprint:
-            # Extract algorithm: "a=fingerprint:sha-256 ..." -> "sha-256"
-            offer_fingerprint_algo = offer_fingerprint.split(':')[1].split(' ')[0]
-            print(f"[FIX 5] Offer uses: {offer_fingerprint_algo}")
-        
-        # Remove fingerprints that don't match the offer
-        lines = answer_sdp.split('\n')
-        new_lines = []
-        for line in lines:
-            if line.startswith('a=fingerprint:'):
-                # Extract this line's algorithm
-                this_algo = line.split(':')[1].split(' ')[0]
-                # Keep it only if it matches the offer's algorithm
-                if offer_fingerprint_algo and this_algo == offer_fingerprint_algo:
-                    new_lines.append(line)
-                    print(f"[FIX 5] Keeping fingerprint with {this_algo}")
-                else:
-                    print(f"[FIX 5] Removing fingerprint with {this_algo} (offer uses {offer_fingerprint_algo})")
-            else:
-                new_lines.append(line)
-        answer_sdp = '\n'.join(new_lines)
-        
-        # ============================================
-        # FIX 6: Reorder SDP to match browser's expected order
-        # Order should be: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message-size
-        # ============================================
-        lines = answer_sdp.split('\n')
-        
-        # Separate session-level and media-level lines
-        session_lines = []  # v=, o=, s=, t=, a=group, a=msid-semantic
-        media_line = None   # m=
-        connection_line = None  # c= from answer (will be replaced with offer's)
-        ice_ufrag = None
-        ice_pwd = None
-        fingerprint = None
-        setup_line = None
-        mid_line = None
-        sctp_port = None
-        max_message_size = None
-        candidates = []
-        end_of_candidates = None
-        extmap_allow_mixed = None
-        ice_options = None
-        msid_semantic = None
-        other_lines = []
-        
-        for line in lines:
-            if line.startswith('v=') or line.startswith('o=') or line.startswith('s=') or line.startswith('t='):
-                session_lines.append(line)
-            elif line.startswith('a=group:') or line.startswith('a=msid-semantic'):
-                # Don't add to session_lines, we'll use the offer's version instead
-                if line.startswith('a=group:'):
-                    session_lines.append(line)
-                else:
-                    # For msid-semantic, save it but don't add yet - we'll use offer's version
-                    msid_semantic = line
-            elif line.startswith('m='):
-                media_line = line
-            elif line.startswith('c='):
-                connection_line = line
+        for line in aiortc_lines:
+            if line.startswith('o='):
+                aiortc_o_line = line
             elif line.startswith('a=ice-ufrag:'):
-                ice_ufrag = line
+                aiortc_ice_ufrag = line
             elif line.startswith('a=ice-pwd:'):
-                ice_pwd = line
-            elif line.startswith('a=fingerprint:'):
-                fingerprint = line
-            elif line.startswith('a=setup:'):
-                setup_line = line
-            elif line.startswith('a=mid:'):
-                mid_line = line
-            elif line.startswith('a=sctp-port:'):
-                sctp_port = line
-            elif line.startswith('a=max-message-size:'):
-                max_message_size = line
-            elif line.startswith('a=candidate:'):
-                candidates.append(line)
-            elif line.startswith('a=end-of-candidates'):
-                end_of_candidates = line
+                aiortc_ice_pwd = line
+            elif line.startswith('a=fingerprint:sha-256'):
+                aiortc_fingerprint_sha256 = line
+        
+        print("Extracted from aiortc:")
+        print(f"  o-line: {aiortc_o_line}")
+        print(f"  ice-ufrag: {aiortc_ice_ufrag}")
+        print(f"  ice-pwd: {aiortc_ice_pwd}")
+        print(f"  fingerprint: {aiortc_fingerprint_sha256[:60]}..." if aiortc_fingerprint_sha256 else "  fingerprint: None")
+        
+        # Parse offer to get structure and values we need to echo
+        offer_lines = offer_sdp.split('\n')
+        
+        offer_o_line = None
+        offer_group = None
+        offer_extmap_allow_mixed = None
+        offer_msid_semantic = None
+        offer_m_line = None
+        offer_c_line = None
+        offer_ice_options = None
+        offer_fingerprint = None
+        offer_mid = None
+        offer_sctp_port = None
+        offer_max_message_size = None
+        
+        for line in offer_lines:
+            if line.startswith('o='):
+                offer_o_line = line
+            elif line.startswith('a=group:'):
+                offer_group = line
             elif line.startswith('a=extmap-allow-mixed'):
-                extmap_allow_mixed = line
+                offer_extmap_allow_mixed = line
+            elif line.startswith('a=msid-semantic:'):
+                offer_msid_semantic = line
+            elif line.startswith('m='):
+                offer_m_line = line
+            elif line.startswith('c='):
+                offer_c_line = line
             elif line.startswith('a=ice-options:'):
-                ice_options = line
-            elif line.strip():  # Non-empty lines we haven't categorized
-                other_lines.append(line)
-                candidates.append(line)
-            elif line.startswith('a=end-of-candidates'):
-                end_of_candidates = line
-            elif line.strip():  # Non-empty lines we haven't categorized
-                other_lines.append(line)
+                offer_ice_options = line
+            elif line.startswith('a=fingerprint:'):
+                offer_fingerprint = line
+            elif line.startswith('a=mid:'):
+                offer_mid = line
+            elif line.startswith('a=sctp-port:'):
+                offer_sctp_port = line
+            elif line.startswith('a=max-message-size:'):
+                offer_max_message_size = line
         
-        # ============================================
-        # FIX 7: Use offer's connection line (override answer's)
-        # ============================================
-        if offer_connection:
-            connection_line = offer_connection
+        # Build answer SDP line by line, matching offer structure exactly
+        # Order from Chrome's offer:
+        # v=0
+        # o=- ... (use aiortc's)
+        # s=-
+        # t=0 0
+        # a=group:BUNDLE 0
+        # a=extmap-allow-mixed
+        # a=msid-semantic: WMS
+        # m=application 9 UDP/DTLS/SCTP webrtc-datachannel
+        # c=IN IP4 0.0.0.0
+        # a=ice-ufrag:... (aiortc's)
+        # a=ice-pwd:... (aiortc's)
+        # a=ice-options:trickle
+        # a=fingerprint:sha-256 ... (aiortc's)
+        # a=setup:passive (changed from actpass)
+        # a=mid:0
+        # a=sctp-port:5000
+        # a=max-message-size:262144
         
-        # ============================================
-        # FIX 8: Use max-message-size from offer
-        # ============================================
-        offer_max_msg_size = None
-        for line in offer_sdp.split('\n'):
-            if line.startswith('a=max-message-size:'):
-                offer_max_msg_size = line
-                break
+        answer_lines = []
+        answer_lines.append('v=0')
+        answer_lines.append(aiortc_o_line or 'o=- 0 0 IN IP4 0.0.0.0')
+        answer_lines.append('s=-')
+        answer_lines.append('t=0 0')
         
-        if offer_max_msg_size:
-            max_message_size = offer_max_msg_size
-            print(f"[FIX 8] Using offer's max-message-size value: {offer_max_msg_size}")
-        else:
-            print(f"[FIX 8] No offer max-message-size found, using answer's value")
+        if offer_group:
+            answer_lines.append(offer_group)
         
-        # Rebuild SDP in correct order
-        # Session-level order: v=, o=, s=, t=, a=group, a=extmap-allow-mixed (if present), a=msid-semantic
-        # Media-level order: m=, c=, a=ice-ufrag, a=ice-pwd, a=ice-options (if present), a=fingerprint, a=setup, a=mid, a=sctp-port, a=max-message-size
-        rebuilt_lines = []
-        rebuilt_lines.extend(session_lines)
-        
-        # Add a=group:BUNDLE if it exists
-        # (should already be in session_lines)
-        
-        # Add msid-semantic from offer (not answer's version with extra *)
-        if offer_msid_semantic:
-            rebuilt_lines.append(offer_msid_semantic)
-            print(f"[FIX 11] Using offer's msid-semantic: {offer_msid_semantic}")
-        
-        # Add session-level attributes from offer
         if offer_extmap_allow_mixed:
-            rebuilt_lines.append(offer_extmap_allow_mixed)
-            print(f"[FIX 9] Added to answer: {offer_extmap_allow_mixed}")
+            answer_lines.append(offer_extmap_allow_mixed)
         
-        if media_line:
-            rebuilt_lines.append(media_line)
-        if connection_line:
-            rebuilt_lines.append(connection_line)
-        if ice_ufrag:
-            rebuilt_lines.append(ice_ufrag)
-        if ice_pwd:
-            rebuilt_lines.append(ice_pwd)
+        if offer_msid_semantic:
+            answer_lines.append(offer_msid_semantic)
         
-        # Add ice-options from offer if present
+        # Media section - use port 9 like offer (not aiortc's random port)
+        answer_lines.append('m=application 9 UDP/DTLS/SCTP webrtc-datachannel')
+        
+        if offer_c_line:
+            answer_lines.append(offer_c_line)
+        
+        if aiortc_ice_ufrag:
+            answer_lines.append(aiortc_ice_ufrag)
+        
+        if aiortc_ice_pwd:
+            answer_lines.append(aiortc_ice_pwd)
+        
         if offer_ice_options:
-            rebuilt_lines.append(offer_ice_options)
-            print(f"[FIX 10] Added to answer: {offer_ice_options}")
+            answer_lines.append(offer_ice_options)
         
-        if fingerprint:
-            rebuilt_lines.append(fingerprint)
-        if setup_line:
-            rebuilt_lines.append(setup_line)
-        if mid_line:
-            rebuilt_lines.append(mid_line)
-        if sctp_port:
-            rebuilt_lines.append(sctp_port)
-        if max_message_size:
-            rebuilt_lines.append(max_message_size)
-        # NOTE: Don't include candidates - browser uses trickle ICE (a=ice-options:trickle)
-        # Candidates are exchanged separately, not in the SDP answer
-        # rebuilt_lines.extend(candidates)
-        # if end_of_candidates:
-        #     rebuilt_lines.append(end_of_candidates)
-        rebuilt_lines.extend(other_lines)
-        print(f"[FIX 9] Removed {len(candidates)} candidates (trickle ICE - candidates exchanged separately)")
-        rebuilt_lines.append('')  # Trailing newline
+        if aiortc_fingerprint_sha256:
+            answer_lines.append(aiortc_fingerprint_sha256)
         
-        answer_sdp = '\n'.join(rebuilt_lines)
+        # Answer must use setup:passive (offerer was actpass)
+        answer_lines.append('a=setup:passive')
         
-        # ============================================
-        # FIX 10: Remove trailing empty line (causes parsing issues)
-        # ============================================
-        answer_sdp = answer_sdp.rstrip('\n')
-        print("[FIX 10] Removed trailing empty lines")
+        if offer_mid:
+            answer_lines.append(offer_mid)
+        
+        if offer_sctp_port:
+            answer_lines.append(offer_sctp_port)
+        
+        if offer_max_message_size:
+            answer_lines.append(offer_max_message_size)
+        
+        # Join with LF and add trailing LF (like offer has)
+        answer_sdp = '\n'.join(answer_lines) + '\n'
         
         print("\n" + "="*60)
-        print("DEBUG: FINAL SDP BEING SENT TO BROWSER")
+        print("MANUALLY CONSTRUCTED ANSWER SDP")
         print("="*60)
         print(f"Length: {len(answer_sdp)} bytes")
-        print(f"Repr (with hidden chars): {repr(answer_sdp[:200])}")
         print("\nFinal answer lines:")
         for i, line in enumerate(answer_sdp.split('\n')):
             print(f"  {i+1}: {repr(line)}")
