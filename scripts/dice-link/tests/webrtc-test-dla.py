@@ -94,6 +94,23 @@ async def handle_offer(request):
             print("[FIX 2] Changed 'a=setup:active' to 'a=setup:passive'")
         
         # ============================================
+        # FIX 3: Extract attributes from offer that should be echoed in answer
+        # ============================================
+        offer_extmap_allow_mixed = None
+        offer_ice_options = None
+        
+        for line in offer_sdp.split('\n'):
+            if line.startswith('a=extmap-allow-mixed'):
+                offer_extmap_allow_mixed = line
+            if line.startswith('a=ice-options:'):
+                offer_ice_options = line
+        
+        if offer_extmap_allow_mixed:
+            print(f"[FIX 3] Found in offer: {offer_extmap_allow_mixed}")
+        if offer_ice_options:
+            print(f"[FIX 3] Found in offer: {offer_ice_options}")
+        
+        # ============================================
         # FIX 4: Match offer's connection line format (IPv4 vs IPv6)
         # ============================================
         offer_connection = None
@@ -157,6 +174,8 @@ async def handle_offer(request):
         max_message_size = None
         candidates = []
         end_of_candidates = None
+        extmap_allow_mixed = None
+        ice_options = None
         other_lines = []
         
         for line in lines:
@@ -186,6 +205,10 @@ async def handle_offer(request):
                 candidates.append(line)
             elif line.startswith('a=end-of-candidates'):
                 end_of_candidates = line
+            elif line.startswith('a=extmap-allow-mixed'):
+                extmap_allow_mixed = line
+            elif line.startswith('a=ice-options:'):
+                ice_options = line
             elif line.strip():  # Non-empty lines we haven't categorized
                 other_lines.append(line)
                 candidates.append(line)
@@ -216,8 +239,16 @@ async def handle_offer(request):
             print(f"[FIX 8] No offer max-message-size found, using answer's value")
         
         # Rebuild SDP in correct order
+        # Session-level order: v=, o=, s=, t=, a=group, a=extmap-allow-mixed (if present), a=msid-semantic
+        # Media-level order: m=, c=, a=ice-ufrag, a=ice-pwd, a=ice-options (if present), a=fingerprint, a=setup, a=mid, a=sctp-port, a=max-message-size
         rebuilt_lines = []
         rebuilt_lines.extend(session_lines)
+        
+        # Add session-level attributes from offer
+        if offer_extmap_allow_mixed:
+            rebuilt_lines.append(offer_extmap_allow_mixed)
+            print(f"[FIX 9] Added to answer: {offer_extmap_allow_mixed}")
+        
         if media_line:
             rebuilt_lines.append(media_line)
         if connection_line:
@@ -226,6 +257,12 @@ async def handle_offer(request):
             rebuilt_lines.append(ice_ufrag)
         if ice_pwd:
             rebuilt_lines.append(ice_pwd)
+        
+        # Add ice-options from offer if present
+        if offer_ice_options:
+            rebuilt_lines.append(offer_ice_options)
+            print(f"[FIX 10] Added to answer: {offer_ice_options}")
+        
         if fingerprint:
             rebuilt_lines.append(fingerprint)
         if setup_line:
