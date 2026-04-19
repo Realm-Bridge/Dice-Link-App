@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Test App - DLC Side</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            min-height: 100px;
+            margin-bottom: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .status.disconnected {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+        
+        .status.connected {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        
+        .messages {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .message {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .message.from-dla {
+            border-left-color: #764ba2;
+        }
+        
+        .message-label {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 11px;
+            margin-bottom: 2px;
+        }
+        
+        .message.from-dla .message-label {
+            color: #764ba2;
+        }
+        
+        .message-text {
+            color: #333;
+            word-break: break-all;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 WebRTC Test App</h1>
+        <p class="subtitle">DLC Side - Tests if WebRTC bypasses PNA restrictions</p>
+        
+        <!-- Connection Status -->
+        <div class="section">
+            <div class="section-title">Connection Status</div>
+            <div id="status" class="status disconnected">Disconnected</div>
+        </div>
+        
+        <!-- Step 1: Generate Offer -->
+        <div class="section">
+            <div class="section-title">Step 1: Generate Offer</div>
+            <button class="btn-primary" onclick="generateOffer()">Generate WebRTC Offer</button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                This creates a WebRTC offer. Copy the text below and paste it into the DLA test app.
+            </p>
+            <textarea id="offerBox" placeholder="Your offer will appear here..." readonly></textarea>
+            <button class="btn-secondary" onclick="copyToClipboard('offerBox')">Copy Offer</button>
+        </div>
+        
+        <!-- Step 2: Receive Answer -->
+        <div class="section">
+            <div class="section-title">Step 2: Receive Answer from DLA</div>
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                Paste the answer you received from the DLA test app:
+            </p>
+            <textarea id="answerBox" placeholder="Paste the answer here..."></textarea>
+            <button class="btn-primary" onclick="acceptAnswer()">Accept Answer & Connect</button>
+        </div>
+        
+        <!-- Step 3: Send Test Messages -->
+        <div class="section">
+            <div class="section-title">Step 3: Send Test Messages</div>
+            <input type="text" id="messageInput" placeholder="Enter a test message..." />
+            <button class="btn-primary" onclick="sendMessage()" id="sendBtn" disabled>Send Message</button>
+        </div>
+        
+        <!-- Messages Log -->
+        <div class="section">
+            <div class="section-title">Messages (Received from DLA)</div>
+            <div class="messages" id="messageLog">
+                <div style="color: #999; font-style: italic;">Messages will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pc = null;
+        let dataChannel = null;
+        let messageCount = 0;
+
+        function updateStatus() {
+            const statusEl = document.getElementById('status');
+            if (dataChannel && dataChannel.readyState === 'open') {
+                statusEl.textContent = '✅ Connected';
+                statusEl.className = 'status connected';
+                document.getElementById('sendBtn').disabled = false;
+            } else {
+                statusEl.textContent = '❌ Disconnected';
+                statusEl.className = 'status disconnected';
+                document.getElementById('sendBtn').disabled = true;
+            }
+        }
+
+        function logMessage(from, text) {
+            const log = document.getElementById('messageLog');
+            if (log.children.length === 1 && log.children[0].textContent.includes('Messages will appear')) {
+                log.innerHTML = '';
+            }
+            
+            const msgEl = document.createElement('div');
+            msgEl.className = `message ${from === 'dla' ? 'from-dla' : ''}`;
+            msgEl.innerHTML = `
+                <div class="message-label">${from === 'dla' ? '📩 From DLA' : '📤 Sent'}</div>
+                <div class="message-text">${escapeHtml(text)}</div>
+            `;
+            log.appendChild(msgEl);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).value;
+            if (!text) {
+                alert('Nothing to copy');
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+
+        async function generateOffer() {
+            try {
+                pc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+
+                dataChannel = pc.createDataChannel('test-channel');
+                setupDataChannel();
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                document.getElementById('offerBox').value = pc.localDescription.sdp;
+                logMessage('system', 'Offer generated. Copy and paste it into the DLA test app.');
+            } catch (error) {
+                alert('Error generating offer: ' + error);
+            }
+        }
+
+        function setupDataChannel() {
+            dataChannel.onopen = () => {
+                logMessage('system', 'Data channel opened!');
+                updateStatus();
+            };
+
+            dataChannel.onclose = () => {
+                logMessage('system', 'Data channel closed');
+                updateStatus();
+            };
+
+            dataChannel.onmessage = (event) => {
+                logMessage('dla', event.data);
+            };
+
+            dataChannel.onerror = (error) => {
+                logMessage('system', 'Error: ' + error);
+            };
+        }
+
+        async function acceptAnswer() {
+            try {
+                const answerSdp = document.getElementById('answerBox').value.trim();
+                if (!answerSdp) {
+                    alert('Please paste the answer first');
+                    return;
+                }
+
+                if (!pc) {
+                    alert('Please generate an offer first');
+                    return;
+                }
+
+                const answer = new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answerSdp
+                });
+
+                await pc.setRemoteDescription(answer);
+                logMessage('system', 'Answer accepted. Waiting for connection...');
+                
+                // Check connection status periodically
+                const checkConnection = setInterval(() => {
+                    updateStatus();
+                    if (dataChannel && dataChannel.readyState === 'open') {
+                        clearInterval(checkConnection);
+                    }
+                }, 500);
+            } catch (error) {
+                alert('Error accepting answer: ' + error);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+
+            if (!dataChannel || dataChannel.readyState !== 'open') {
+                alert('Data channel not open');
+                return;
+            }
+
+            try {
+                dataChannel.send(message);
+                logMessage('user', message);
+                input.value = '';
+            } catch (error) {
+                alert('Error sending message: ' + error);
+            }
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initial status update
+        updateStatus();
+    </script>
+</body>
+</html>
