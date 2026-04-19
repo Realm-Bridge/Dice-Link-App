@@ -76,37 +76,76 @@ async def handle_offer(request):
         answer_sdp = pc.localDescription.sdp
         
         print("="*60)
-        print("ANSWER ANALYSIS")
+        print("ORIGINAL ANSWER (before fixes)")
         print("="*60)
-        print(f"Answer length: {len(answer_sdp)} characters")
-        print(f"Line ending type: {'CRLF (Windows)' if chr(13)+chr(10) in answer_sdp else 'LF (Unix)'}")
-        print("\n--- FULL ANSWER SDP ---")
+        print(f"Length: {len(answer_sdp)} chars, Line endings: {'CRLF' if '\\r\\n' in repr(answer_sdp) else 'LF'}")
+        
+        # ============================================
+        # FIX 1: Normalize line endings to LF (Unix)
+        # ============================================
+        answer_sdp = answer_sdp.replace('\r\n', '\n')
+        print("[FIX 1] Normalized line endings to LF")
+        
+        # ============================================
+        # FIX 2: Change a=setup:active to a=setup:passive
+        # (answerer should be passive, offerer was actpass)
+        # ============================================
+        if 'a=setup:active' in answer_sdp:
+            answer_sdp = answer_sdp.replace('a=setup:active', 'a=setup:passive')
+            print("[FIX 2] Changed 'a=setup:active' to 'a=setup:passive'")
+        
+        # ============================================
+        # FIX 3: Move a=setup:passive to correct position
+        # It should appear right after a=mid:0, before fingerprints
+        # ============================================
+        lines = answer_sdp.split('\n')
+        setup_line = None
+        setup_index = None
+        mid_index = None
+        
+        # Find the setup line and mid line
+        for i, line in enumerate(lines):
+            if line.startswith('a=setup:'):
+                setup_line = line
+                setup_index = i
+            if line.startswith('a=mid:'):
+                mid_index = i
+        
+        # If setup line exists and is after mid, we need to move it
+        if setup_line and setup_index and mid_index and setup_index > mid_index + 1:
+            # Remove setup line from current position
+            lines.pop(setup_index)
+            # Insert it right after a=mid:0
+            lines.insert(mid_index + 1, setup_line)
+            answer_sdp = '\n'.join(lines)
+            print(f"[FIX 3] Moved 'a=setup:passive' from line {setup_index+1} to line {mid_index+2}")
+        
+        # ============================================
+        # FIX 4: Keep only sha-256 fingerprint (remove sha-384, sha-512)
+        # ============================================
+        lines = answer_sdp.split('\n')
+        new_lines = []
+        fingerprint_kept = False
+        for line in lines:
+            if line.startswith('a=fingerprint:sha-256'):
+                new_lines.append(line)
+                fingerprint_kept = True
+            elif line.startswith('a=fingerprint:sha-384') or line.startswith('a=fingerprint:sha-512'):
+                print(f"[FIX 4] Removed extra fingerprint: {line[:40]}...")
+                continue  # Skip this line
+            else:
+                new_lines.append(line)
+        answer_sdp = '\n'.join(new_lines)
+        
+        print("="*60)
+        print("FIXED ANSWER SDP")
+        print("="*60)
         for i, line in enumerate(answer_sdp.split('\n')):
             repr_line = repr(line)
-            # Highlight potentially problematic lines
             if 'setup:' in line:
                 print(f"  {i+1:3}: {repr_line}  <-- SETUP LINE")
             else:
                 print(f"  {i+1:3}: {repr_line}")
-        print("--- END ANSWER SDP ---\n")
-        
-        # Check for specific issues
-        print("="*60)
-        print("ISSUE CHECKS")
-        print("="*60)
-        if 'a=setup:active' in answer_sdp:
-            print("  [!] Found 'a=setup:active' - may be rejected by some browsers")
-        if 'a=setup:actpass' in answer_sdp:
-            print("  [OK] Found 'a=setup:actpass'")
-        if 'a=setup:passive' in answer_sdp:
-            print("  [OK] Found 'a=setup:passive'")
-        
-        # Check line ending consistency
-        crlf_count = answer_sdp.count('\r\n')
-        lf_only_count = answer_sdp.count('\n') - crlf_count
-        print(f"  Line endings: {crlf_count} CRLF, {lf_only_count} LF-only")
-        if crlf_count > 0 and lf_only_count > 0:
-            print("  [!] MIXED LINE ENDINGS - this could cause parsing issues!")
         print("="*60 + "\n")
         
         return web.json_response({"answer": answer_sdp})
