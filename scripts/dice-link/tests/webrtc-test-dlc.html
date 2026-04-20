@@ -411,6 +411,34 @@
                 diagnosticOutput.value += `Length: ${hardcodedSdp.length}\n`;
                 diagnosticOutput.value += `Hex (first 200 chars): ${toHex(hardcodedSdp.substring(0, 200))}\n\n`;
                 
+                diagnosticOutput.value += `\n--- RAW HEX COMPARISON (FIRST 60 BYTES, NO SPLITTING) ---\n`;
+                diagnosticOutput.value += `Chrome raw bytes (first 60):   ${toHex(chromeGeneratedSdp.substring(0, 60))}\n`;
+                diagnosticOutput.value += `Hardcoded raw bytes (first 60): ${toHex(hardcodedSdp.substring(0, 60))}\n\n`;
+                
+                // Check specific line ending bytes
+                const crlfIndex = chromeGeneratedSdp.indexOf('\r\n');
+                const lfIndex = chromeGeneratedSdp.indexOf('\n');
+                
+                diagnosticOutput.value += `--- LINE ENDING DETECTION ---\n`;
+                if (crlfIndex !== -1) {
+                    diagnosticOutput.value += `Chrome: Contains \\r\\n at position ${crlfIndex}\n`;
+                    diagnosticOutput.value += `Chrome bytes around first newline: ${toHex(chromeGeneratedSdp.substring(crlfIndex - 3, crlfIndex + 4))}\n`;
+                } else if (lfIndex !== -1) {
+                    diagnosticOutput.value += `Chrome: Contains only \\n (no \\r) at position ${lfIndex}\n`;
+                }
+                
+                const hardcodedCrlfIndex = hardcodedSdp.indexOf('\r\n');
+                const hardcodedLfIndex = hardcodedSdp.indexOf('\n');
+                
+                if (hardcodedCrlfIndex !== -1) {
+                    diagnosticOutput.value += `Hardcoded: Contains \\r\\n at position ${hardcodedCrlfIndex}\n`;
+                    diagnosticOutput.value += `Hardcoded bytes around first newline: ${toHex(hardcodedSdp.substring(hardcodedCrlfIndex - 3, hardcodedCrlfIndex + 4))}\n`;
+                } else if (hardcodedLfIndex !== -1) {
+                    diagnosticOutput.value += `Hardcoded: Contains only \\n (no \\r) at position ${hardcodedLfIndex}\n`;
+                }
+                
+                diagnosticOutput.value += `\n`;
+                
                 // Compare line by line
                 const chromeLines = chromeGeneratedSdp.split('\n');
                 const hardcodedLines = hardcodedSdp.split('\n');
