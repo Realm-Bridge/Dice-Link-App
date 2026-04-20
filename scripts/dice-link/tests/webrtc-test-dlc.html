@@ -352,12 +352,23 @@
                     updateStatus();
                 };
                 
+                // Debug: Log exactly what we're about to parse
+                console.log('[v0] === OFFER SDP ABOUT TO PARSE ===');
+                console.log('[v0] Length:', offerSdp.length);
+                console.log('[v0] Lines:');
+                offerSdp.split('\n').forEach((line, i) => {
+                    console.log(`[v0]   ${i+1}: ${JSON.stringify(line)}`);
+                });
+                console.log('[v0] === END OFFER SDP ===');
+                
                 const offer = new RTCSessionDescription({
                     type: 'offer',
                     sdp: offerSdp
                 });
                 
+                console.log('[v0] Calling setRemoteDescription...');
                 await pc.setRemoteDescription(offer);
+                console.log('[v0] setRemoteDescription succeeded!');
                 
                 // Create answer
                 const answer = await pc.createAnswer();
