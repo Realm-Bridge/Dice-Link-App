@@ -10,11 +10,16 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaStreamTrack
 
+# Global data channel reference for sending messages from CLI
+active_data_channel = None
+
 class TestDataChannel:
     def __init__(self):
         self.messages = []
     
     async def on_datachannel(self, channel):
+        global active_data_channel
+        active_data_channel = channel
         print(f"[WebRTC Test] Data channel opened: {channel.label}")
         
         @channel.on("message")
@@ -24,6 +29,8 @@ class TestDataChannel:
         
         @channel.on("close")
         def on_close():
+            global active_data_channel
+            active_data_channel = None
             print("[WebRTC Test] Data channel closed")
         
         # Send a test message back
@@ -337,6 +344,31 @@ async def handle_options(request):
         }
     )
 
+async def handle_send_message(request):
+    """Send a message to the browser via the data channel"""
+    global active_data_channel, test_channel
+    
+    try:
+        data = await request.json()
+        message = data.get("message", "").strip()
+        
+        if not message:
+            return web.json_response({"error": "Empty message"}, status=400)
+        
+        if not active_data_channel:
+            return web.json_response({"error": "No active data channel"}, status=400)
+        
+        active_data_channel.send(message)
+        print(f"[WebRTC Test] Sent to browser via HTTP: {message}")
+        if test_channel:
+            test_channel.messages.append({"from": "dla", "text": message})
+        
+        return web.json_response({"status": "sent", "message": message})
+    
+    except Exception as e:
+        print(f"[WebRTC Test] Error sending message: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def create_app():
     """Create the test app"""
     app = web.Application()
@@ -367,12 +399,12 @@ async def create_app():
     app.router.add_route('OPTIONS', '/api/answer', handle_options)
     app.router.add_route('OPTIONS', '/api/ice-candidate', handle_options)
     app.router.add_route('OPTIONS', '/api/send', handle_options)
-    app.router.add_route('OPTIONS', '/api/status', handle_options)
+    app.router.add_route('OPTIONS', '/api/send-message', handle_options)
     app.router.add_get('/api/offer', handle_generate_offer)
     app.router.add_post('/api/answer', handle_answer)
     app.router.add_post('/api/ice-candidate', handle_ice_candidates)
-    app.router.add_post('/api/send', handle_send_message)
     app.router.add_get('/api/status', handle_status)
+    app.router.add_post('/api/send-message', handle_send_message)
     
     return app
 
