@@ -236,6 +236,16 @@
             <button onclick="compareSdpHex()" style="margin-left: 10px;">Compare SDP Hex Dump</button>
             <textarea id="diagnosticOutput" style="width: 100%; height: 150px; margin-top: 10px; font-size: 11px; font-family: monospace;"></textarea>
         </div>
+
+        <div class="diagnostic-section">
+            <h3>🔄 BROWSER AS OFFERER: Generate offer in browser instead of DLA</h3>
+            <p style="font-size: 12px; margin-bottom: 10px; color: #666;">
+                If Chrome rejects external offers but accepts local ones, this tests if browser-generated offers are accepted. This reverses the normal flow.
+            </p>
+            <button onclick="generateOfferInBrowser()">Generate Offer in Browser</button>
+            <button onclick="sendOfferToDLA()" style="margin-left: 10px;">Send Offer to DLA</button>
+            <textarea id="browserOfferOutput" style="width: 100%; height: 100px; margin-top: 10px; font-size: 11px; font-family: monospace;" readonly></textarea>
+        </div>
         
         <!-- Connection Status -->
         <div class="section">
@@ -614,6 +624,116 @@
                 sendMessage();
             }
         });
+
+        // Browser as Offerer flow
+        let browserOfferPc = null;
+        let browserOfferDataChannel = null;
+
+        async function generateOfferInBrowser() {
+            try {
+                const output = document.getElementById('browserOfferOutput');
+                output.value = '[Generating offer in browser...]\n';
+
+                // Create new peer connection for browser-as-offerer flow
+                browserOfferPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+
+                // Create data channel
+                browserOfferDataChannel = browserOfferPc.createDataChannel('test');
+                setupBrowserDataChannel();
+
+                // Handle ICE candidates from browser - send to DLA
+                browserOfferPc.onicecandidate = async (event) => {
+                    if (event.candidate) {
+                        output.value += `[Candidate] ${event.candidate.candidate.substring(0, 50)}...\n`;
+                    }
+                };
+
+                // Generate offer
+                const offer = await browserOfferPc.createOffer();
+                await browserOfferPc.setLocalDescription(offer);
+
+                const offerSdp = browserOfferPc.localDescription.sdp;
+                document.getElementById('offerBox').value = offerSdp;
+
+                output.value += '[SUCCESS] Browser generated offer\n';
+                output.value += `[Offer length: ${offerSdp.length} characters]\n`;
+                output.value += '[Ready to send to DLA]\n';
+
+                logMessage('system', 'Offer generated in browser. Click "Send Offer to DLA".');
+            } catch (error) {
+                alert('Error generating offer in browser: ' + error);
+            }
+        }
+
+        async function sendOfferToDLA() {
+            try {
+                const offerSdp = document.getElementById('offerBox').value.trim();
+
+                if (!offerSdp) {
+                    alert('Please generate an offer in browser first');
+                    return;
+                }
+
+                const output = document.getElementById('browserOfferOutput');
+                output.value += '\n[Sending offer to DLA...]\n';
+
+                // Send browser offer to DLA
+                const response = await fetch('http://localhost:8080/api/receive-offer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ offer: offerSdp })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    alert('Error sending offer to DLA: ' + result.error);
+                    output.value += `[ERROR] ${result.error}\n`;
+                    return;
+                }
+
+                // Receive answer from DLA
+                const answerSdp = result.answer;
+                output.value += '[SUCCESS] Received answer from DLA\n';
+                output.value += `[Answer length: ${answerSdp.length} characters]\n`;
+
+                // Set remote description with DLA's answer
+                const answer = new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answerSdp
+                });
+
+                await browserOfferPc.setRemoteDescription(answer);
+                output.value += '[SUCCESS] Remote description set\n';
+                output.value += '[Waiting for connection...]\n';
+
+                logMessage('system', 'Offer sent to DLA and answer received. Connecting...');
+            } catch (error) {
+                alert('Error in browser-as-offerer flow: ' + error);
+            }
+        }
+
+        function setupBrowserDataChannel() {
+            browserOfferDataChannel.onopen = () => {
+                logMessage('system', 'Data channel opened (browser-as-offerer)!');
+                updateStatus();
+            };
+
+            browserOfferDataChannel.onclose = () => {
+                logMessage('system', 'Data channel closed');
+                updateStatus();
+            };
+
+            browserOfferDataChannel.onmessage = (event) => {
+                logMessage('dla', event.data);
+            };
+
+            browserOfferDataChannel.onerror = (error) => {
+                logMessage('system', 'Error: ' + error);
+            };
+        }
 
         // Initial status update
         updateStatus();

@@ -303,20 +303,79 @@ async def handle_ice_candidates(request):
 
 async def handle_send_message(request):
     """Send a test message through data channel"""
-    global pc
+    global pc, active_data_channel, test_channel
     
     try:
         data = await request.json()
         message = data.get("message", "Test message")
         
-        if pc and pc.dataChannels:
-            for channel in pc.dataChannels:
-                channel.send(message)
-                print(f"[WebRTC Test] Sent via data channel: {message}")
-            return web.json_response({"status": "sent"})
+        if active_data_channel and message.strip():
+            active_data_channel.send(message)
+            print(f"[WebRTC Test] Sent via data channel: {message}")
+            if test_channel:
+                test_channel.messages.append({"from": "dla", "text": message})
+            return web.json_response({"status": "sent", "message": message})
         else:
-            return web.json_response({"error": "No data channel available"}, status=400)
+            return web.json_response({"error": "No active data channel"}, status=400)
     
+    except Exception as e:
+        print(f"[WebRTC Test] Error sending message: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+async def handle_receive_offer(request):
+    """Receive offer from browser (browser-as-offerer flow) and generate answer"""
+    global pc, test_channel
+    
+    try:
+        data = await request.json()
+        browser_offer_sdp = data.get("offer")
+        
+        if not browser_offer_sdp:
+            return web.json_response({"error": "No offer provided"}, status=400)
+        
+        print("[WebRTC Test] ===== BROWSER-AS-OFFERER FLOW =====")
+        print(f"[WebRTC Test] Received offer from browser ({len(browser_offer_sdp)} chars)")
+        
+        # Create new peer connection for this flow
+        pc = RTCPeerConnection()
+        test_channel = TestDataChannel()
+        pc.add_track(test_channel)
+        
+        # Set up data channel handler
+        @pc.on("datachannel")
+        def on_datachannel(channel):
+            print(f"[WebRTC Test] Browser data channel received: {channel.label}")
+            # Browser is creating the data channel this time
+        
+        # Set remote description (browser's offer)
+        browser_offer = RTCSessionDescription(
+            sdp=browser_offer_sdp,
+            type="offer"
+        )
+        
+        try:
+            await pc.setRemoteDescription(browser_offer)
+            print("[WebRTC Test] Remote description (browser offer) set successfully")
+        except Exception as e:
+            print(f"[WebRTC Test] Error setting remote description: {e}")
+            return web.json_response({"error": f"Failed to parse browser offer: {str(e)}"}, status=400)
+        
+        # Create answer
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        
+        answer_sdp = pc.localDescription.sdp
+        print(f"[WebRTC Test] Generated answer ({len(answer_sdp)} chars)")
+        print("[WebRTC Test] Answer SDP:")
+        for i, line in enumerate(answer_sdp.split('\r\n'), 1):
+            if line:
+                print(f"  {i}: {line}")
+        
+        return web.json_response({"answer": answer_sdp, "status": "success"})
+    
+    except Exception as e:
+        print(f"[WebRTC Test] Error in browser-as-offerer flow: {e}")
+        return web.json_response({"error": str(e)}, status=500)
     except Exception as e:
         print(f"[WebRTC Test] Error: {e}")
         return web.json_response({"error": str(e)}, status=500)
@@ -408,6 +467,7 @@ async def create_app():
     app.router.add_post('/api/ice-candidate', handle_ice_candidates)
     app.router.add_get('/api/status', handle_status)
     app.router.add_post('/api/send-message', handle_send_message)
+    app.router.add_post('/api/receive-offer', handle_receive_offer)
     
     return app
 
