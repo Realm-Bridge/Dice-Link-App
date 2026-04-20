@@ -259,33 +259,19 @@ async def handle_answer(request):
         return web.json_response({"error": str(e)}, status=500)
 
 async def handle_ice_candidates(request):
-    """Receive ICE candidates from browser"""
+    """Receive ICE candidates from browser - log only, don't try to add manually"""
     global pc, ice_candidates_from_browser
     
     try:
         data = await request.json()
         candidate_data = data.get("candidate")
-        sdp_mid = data.get("sdpMid", "0")
-        sdp_mline_index = data.get("sdpMLineIndex", 0)
         
         if not candidate_data:
             return web.json_response({"error": "No candidate provided"}, status=400)
         
-        if not pc:
-            return web.json_response({"error": "No peer connection created"}, status=400)
-        
-        try:
-            # aiortc's addIceCandidate can accept a dict with candidate string
-            candidate_dict = {
-                "candidate": candidate_data,
-                "sdpMid": sdp_mid,
-                "sdpMLineIndex": sdp_mline_index
-            }
-            await pc.addIceCandidate(candidate_dict)
-            print(f"[WebRTC Test] Added ICE candidate from browser: {candidate_data[:50]}...")
-            ice_candidates_from_browser.append(candidate_data)
-        except Exception as e:
-            print(f"[WebRTC Test] Error adding ICE candidate: {e}")
+        # Just log the candidate - aiortc may handle these internally
+        print(f"[WebRTC Test] Browser sent ICE candidate: {candidate_data[:50]}...")
+        ice_candidates_from_browser.append(candidate_data)
         
         return web.json_response({"status": "received"})
     
