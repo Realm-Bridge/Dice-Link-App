@@ -58,15 +58,139 @@ async def handle_generate_offer(request):
         offer = await pc.createOffer()
         await pc.setLocalDescription(offer)
         
-        offer_sdp = pc.localDescription.sdp
+        raw_offer_sdp = pc.localDescription.sdp
         
         print("\n" + "="*60)
-        print("DLA-GENERATED OFFER (to send to browser)")
+        print("AIORTC RAW OFFER (before fixing)")
+        print("="*60)
+        for i, line in enumerate(raw_offer_sdp.split('\n')):
+            print(f"  {i+1:3}: {repr(line)}")
+        print("="*60 + "\n")
+        
+        # ============================================
+        # FIX THE OFFER SDP
+        # aiortc generates SDP that browsers reject
+        # We need to reformat it to match browser expectations
+        # ============================================
+        
+        # Normalize line endings to LF
+        raw_offer_sdp = raw_offer_sdp.replace('\r\n', '\n').replace('\r', '\n')
+        
+        # Parse aiortc's offer
+        lines = raw_offer_sdp.strip().split('\n')
+        
+        # Extract components
+        v_line = None
+        o_line = None
+        s_line = None
+        t_line = None
+        group_line = None
+        msid_semantic = None
+        m_line = None
+        c_line = None
+        mid_line = None
+        sctp_port = None
+        max_message_size = None
+        ice_ufrag = None
+        ice_pwd = None
+        fingerprint_sha256 = None
+        setup_line = None
+        candidates = []
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('v='):
+                v_line = line
+            elif line.startswith('o='):
+                o_line = line
+            elif line.startswith('s='):
+                s_line = line
+            elif line.startswith('t='):
+                t_line = line
+            elif line.startswith('a=group:'):
+                group_line = line
+            elif line.startswith('a=msid-semantic:'):
+                msid_semantic = line
+            elif line.startswith('m='):
+                m_line = line
+            elif line.startswith('c='):
+                c_line = line
+            elif line.startswith('a=mid:'):
+                mid_line = line
+            elif line.startswith('a=sctp-port:'):
+                sctp_port = line
+            elif line.startswith('a=max-message-size:'):
+                max_message_size = line
+            elif line.startswith('a=ice-ufrag:'):
+                ice_ufrag = line
+            elif line.startswith('a=ice-pwd:'):
+                ice_pwd = line
+            elif line.startswith('a=fingerprint:sha-256'):
+                fingerprint_sha256 = line
+            elif line.startswith('a=setup:'):
+                setup_line = line
+            elif line.startswith('a=candidate:'):
+                candidates.append(line)
+        
+        # Build offer in correct order for browsers
+        # Session level: v, o, s, t, a=group, a=extmap-allow-mixed (optional), a=msid-semantic
+        # Media level: m, c, a=ice-ufrag, a=ice-pwd, a=ice-options, a=fingerprint, a=setup, a=mid, a=sctp-port, a=max-message-size, candidates
+        
+        fixed_lines = []
+        
+        # Session section
+        fixed_lines.append(v_line or 'v=0')
+        fixed_lines.append(o_line or 'o=- 0 0 IN IP4 0.0.0.0')
+        fixed_lines.append(s_line or 's=-')
+        fixed_lines.append(t_line or 't=0 0')
+        if group_line:
+            fixed_lines.append(group_line)
+        fixed_lines.append('a=extmap-allow-mixed')
+        # Use simple msid-semantic without the asterisk
+        fixed_lines.append('a=msid-semantic: WMS')
+        
+        # Media section - use port 9 (standard for trickle ICE)
+        fixed_lines.append('m=application 9 UDP/DTLS/SCTP webrtc-datachannel')
+        
+        # Use IPv4 0.0.0.0 (browsers prefer this)
+        fixed_lines.append('c=IN IP4 0.0.0.0')
+        
+        # ICE credentials (required, come early)
+        if ice_ufrag:
+            fixed_lines.append(ice_ufrag)
+        if ice_pwd:
+            fixed_lines.append(ice_pwd)
+        
+        # ice-options for trickle ICE
+        fixed_lines.append('a=ice-options:trickle')
+        
+        # Fingerprint (only sha-256)
+        if fingerprint_sha256:
+            fixed_lines.append(fingerprint_sha256)
+        
+        # Setup (offerer uses actpass)
+        fixed_lines.append('a=setup:actpass')
+        
+        # Media ID
+        if mid_line:
+            fixed_lines.append(mid_line)
+        
+        # SCTP settings
+        if sctp_port:
+            fixed_lines.append(sctp_port)
+        fixed_lines.append('a=max-message-size:262144')
+        
+        # Join with LF and add trailing LF
+        offer_sdp = '\n'.join(fixed_lines) + '\n'
+        
+        print("\n" + "="*60)
+        print("FIXED OFFER (to send to browser)")
         print("="*60)
         print(f"Offer length: {len(offer_sdp)} characters")
-        print("\n--- FULL OFFER SDP ---")
+        print("\n--- FIXED OFFER SDP ---")
         for i, line in enumerate(offer_sdp.split('\n')):
-            print(f"  {i+1:3}: {repr(line)}")
+            if line:
+                print(f"  {i+1:3}: {repr(line)}")
         print("--- END OFFER SDP ---\n")
         
         return web.json_response({"offer": offer_sdp})
