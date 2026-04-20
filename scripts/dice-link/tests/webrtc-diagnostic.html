@@ -182,6 +182,9 @@
                 offererPc.onicecandidate = (event) => {
                     if (event.candidate) {
                         addLog(`Offerer ICE candidate: ${event.candidate.candidate.substring(0, 50)}...`, 'info');
+                        answererPc.addIceCandidate(event.candidate).catch(err => {
+                            addLog(`ERROR: Failed to add offerer's candidate to answerer: ${err.message}`, 'error');
+                        });
                     } else {
                         addLog('Offerer ICE gathering complete', 'success');
                     }
@@ -209,6 +212,9 @@
                 answererPc.onicecandidate = (event) => {
                     if (event.candidate) {
                         addLog(`Answerer ICE candidate: ${event.candidate.candidate.substring(0, 50)}...`, 'info');
+                        offererPc.addIceCandidate(event.candidate).catch(err => {
+                            addLog(`ERROR: Failed to add answerer's candidate to offerer: ${err.message}`, 'error');
+                        });
                     } else {
                         addLog('Answerer ICE gathering complete', 'success');
                     }
