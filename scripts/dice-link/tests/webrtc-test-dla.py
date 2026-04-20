@@ -54,7 +54,10 @@ async def handle_generate_offer(request):
         
         @dc.on("open")
         async def on_open():
+            global active_data_channel
+            active_data_channel = dc
             print("[WebRTC Test] Data channel opened")
+            print("[WebRTC Test] active_data_channel is now set")
         
         @dc.on("message")
         def on_message(message):
