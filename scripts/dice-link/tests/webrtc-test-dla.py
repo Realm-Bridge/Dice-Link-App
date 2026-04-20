@@ -202,8 +202,8 @@ async def handle_generate_offer(request):
         return web.json_response({"error": str(e)}, status=500)
 
 async def handle_answer(request):
-    """Receive answer from browser, set as remote description"""
-    global pc
+    """Receive answer from browser, set as remote description, and handle ICE candidates"""
+    global pc, ice_candidates_from_browser
     
     try:
         data = await request.json()
@@ -219,17 +219,14 @@ async def handle_answer(request):
         answer_sdp = answer_sdp.replace('\r\n', '\n')
         
         print("\n" + "="*60)
-        print("BROWSER-GENERATED ANSWER ANALYSIS (THIS IS WHAT WE NEED TO COPY!)")
+        print("BROWSER-GENERATED ANSWER RECEIVED")
         print("="*60)
         print(f"Answer length: {len(answer_sdp)} characters")
         print("\n--- FULL ANSWER SDP ---")
         for i, line in enumerate(answer_sdp.split('\n')):
-            print(f"  {i+1:3}: {repr(line)}")
+            if line:
+                print(f"  {i+1:3}: {repr(line)}")
         print("--- END ANSWER SDP ---\n")
-        print("\n--- BROWSER ANSWER DETAILS ---")
-        print(f"Hex dump (first 200 bytes): {answer_sdp[:200].encode().hex()}")
-        print(f"Repr (first 150 chars): {repr(answer_sdp[:150])}")
-        print("="*60 + "\n")
         
         # Set remote description
         answer = RTCSessionDescription(sdp=answer_sdp, type="answer")
@@ -243,6 +240,41 @@ async def handle_answer(request):
         print(f"[WebRTC Test] Error accepting answer: {e}")
         import traceback
         print(f"[WebRTC Test] Traceback: {traceback.format_exc()}")
+        return web.json_response({"error": str(e)}, status=500)
+
+async def handle_ice_candidates(request):
+    """Receive ICE candidates from browser"""
+    global pc, ice_candidates_from_browser
+    
+    try:
+        data = await request.json()
+        candidate_data = data.get("candidate")
+        sdp_mid = data.get("sdpMid", "0")
+        sdp_mline_index = data.get("sdpMLineIndex", 0)
+        
+        if not candidate_data:
+            return web.json_response({"error": "No candidate provided"}, status=400)
+        
+        if not pc:
+            return web.json_response({"error": "No peer connection created"}, status=400)
+        
+        try:
+            from aiortc import RTCIceCandidate
+            candidate = RTCIceCandidate(
+                candidate=candidate_data,
+                sdpMid=sdp_mid,
+                sdpMLineIndex=sdp_mline_index
+            )
+            await pc.addIceCandidate(candidate)
+            print(f"[WebRTC Test] Added ICE candidate from browser: {candidate_data[:50]}...")
+            ice_candidates_from_browser.append(candidate_data)
+        except Exception as e:
+            print(f"[WebRTC Test] Error adding ICE candidate: {e}")
+        
+        return web.json_response({"status": "received"})
+    
+    except Exception as e:
+        print(f"[WebRTC Test] Error processing ICE candidate: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
 async def handle_send_message(request):
@@ -319,10 +351,12 @@ async def create_app():
     # Routes
     app.router.add_route('OPTIONS', '/api/offer', handle_options)
     app.router.add_route('OPTIONS', '/api/answer', handle_options)
+    app.router.add_route('OPTIONS', '/api/ice-candidate', handle_options)
     app.router.add_route('OPTIONS', '/api/send', handle_options)
     app.router.add_route('OPTIONS', '/api/status', handle_options)
     app.router.add_get('/api/offer', handle_generate_offer)
     app.router.add_post('/api/answer', handle_answer)
+    app.router.add_post('/api/ice-candidate', handle_ice_candidates)
     app.router.add_post('/api/send', handle_send_message)
     app.router.add_get('/api/status', handle_status)
     
@@ -331,6 +365,7 @@ async def create_app():
 # Global variables
 pc = None
 test_channel = None
+ice_candidates_from_browser = []
 
 if __name__ == '__main__':
     print("\n" + "="*50)

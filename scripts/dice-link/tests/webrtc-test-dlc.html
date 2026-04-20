@@ -325,6 +325,26 @@
                     iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
                 });
                 
+                // Handle ICE candidates from this peer - send them to DLA
+                pc.onicecandidate = async (event) => {
+                    if (event.candidate) {
+                        console.log('[DLC] Sending ICE candidate to DLA:', event.candidate.candidate.substring(0, 50));
+                        try {
+                            await fetch('http://localhost:8080/api/ice-candidate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    candidate: event.candidate.candidate,
+                                    sdpMid: event.candidate.sdpMid,
+                                    sdpMLineIndex: event.candidate.sdpMLineIndex
+                                })
+                            });
+                        } catch (err) {
+                            console.error('[DLC] Error sending ICE candidate:', err);
+                        }
+                    }
+                };
+                
                 // Set up to receive data channels from DLA
                 pc.ondatachannel = (event) => {
                     dataChannel = event.channel;
