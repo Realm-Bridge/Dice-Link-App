@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Diagnostic - Automated Connection Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .status {
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .status.pending {
+            background: #333;
+            color: #FFC107;
+        }
+        .status.success {
+            background: #1B5E20;
+            color: #4CAF50;
+        }
+        .status.error {
+            background: #B71C1C;
+            color: #FF6B6B;
+        }
+        .log {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+        .log-entry.info {
+            color: #64B5F6;
+        }
+        .log-entry.success {
+            color: #81C784;
+        }
+        .log-entry.error {
+            color: #E57373;
+        }
+        .log-entry.warning {
+            color: #FFB74D;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        @media (max-width: 768px) {
+            .results {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC Diagnostic Test</h1>
+        <p class="subtitle">Automated connection test: Two RTCPeerConnections in one page, no manual SDP exchange</p>
+
+        <div class="test-section">
+            <div class="status pending" id="statusDisplay">Status: Waiting to start...</div>
+            <button id="startBtn" onclick="startTest()">Start Diagnostic Test</button>
+            <button id="resetBtn" onclick="resetTest()" disabled>Reset Test</button>
+            <div class="log" id="logDisplay"></div>
+        </div>
+
+        <div class="test-section" id="resultsSection" style="display: none;">
+            <h2>Test Results</h2>
+            <div class="results" id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let offererPc = null;
+        let answererPc = null;
+        let logs = [];
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${message}`;
+            logs.push({ message: entry, type });
+            updateLogDisplay();
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateLogDisplay() {
+            const logDiv = document.getElementById('logDisplay');
+            logDiv.innerHTML = logs.map(log => 
+                `<div class="log-entry ${log.type}">${log.message}</div>`
+            ).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(text, type) {
+            const statusDiv = document.getElementById('statusDisplay');
+            statusDiv.textContent = text;
+            statusDiv.className = `status ${type}`;
+        }
+
+        async function startTest() {
+            logs = [];
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('resetBtn').disabled = false;
+            document.getElementById('resultsSection').style.display = 'none';
+
+            updateStatus('Status: Running diagnostic...', 'pending');
+            addLog('Starting WebRTC diagnostic test');
+
+            try {
+                // Create offerer
+                addLog('Creating offerer RTCPeerConnection');
+                offererPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+
+                // Create data channel on offerer
+                const dc = offererPc.createDataChannel('diagnostic-channel');
+                addLog('Created data channel: diagnostic-channel');
+                setupDataChannel(dc, 'offerer');
+
+                // Handle ICE candidates
+                offererPc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        addLog(`Offerer ICE candidate: ${event.candidate.candidate.substring(0, 50)}...`, 'info');
+                        answererPc.addIceCandidate(event.candidate).catch(err => {
+                            addLog(`ERROR: Failed to add offerer's candidate to answerer: ${err.message}`, 'error');
+                        });
+                    } else {
+                        addLog('Offerer ICE gathering complete', 'success');
+                    }
+                };
+
+                // Create offer
+                addLog('Creating offer');
+                const offer = await offererPc.createOffer();
+                await offererPc.setLocalDescription(offer);
+                addLog(`Offer created (${offer.sdp.length} bytes)`);
+
+                // Create answerer
+                addLog('Creating answerer RTCPeerConnection');
+                answererPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+
+                // Handle incoming data channel on answerer
+                answererPc.ondatachannel = (event) => {
+                    addLog('Answerer received data channel', 'success');
+                    setupDataChannel(event.channel, 'answerer');
+                };
+
+                // Handle ICE candidates
+                answererPc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        addLog(`Answerer ICE candidate: ${event.candidate.candidate.substring(0, 50)}...`, 'info');
+                        offererPc.addIceCandidate(event.candidate).catch(err => {
+                            addLog(`ERROR: Failed to add answerer's candidate to offerer: ${err.message}`, 'error');
+                        });
+                    } else {
+                        addLog('Answerer ICE gathering complete', 'success');
+                    }
+                };
+
+                // Set remote description on answerer
+                addLog('Answerer: Setting remote description (offer)');
+                await answererPc.setRemoteDescription(new RTCSessionDescription(offer));
+                addLog('Answerer: Remote description set', 'success');
+
+                // Create answer
+                addLog('Answerer: Creating answer');
+                const answer = await answererPc.createAnswer();
+                await answererPc.setLocalDescription(answer);
+                addLog(`Answer created (${answer.sdp.length} bytes)`, 'success');
+
+                // Set remote description on offerer
+                addLog('Offerer: Setting remote description (answer)');
+                await offererPc.setRemoteDescription(new RTCSessionDescription(answer));
+                addLog('Offerer: Remote description set', 'success');
+
+                // Wait for connection
+                addLog('Waiting for connection to establish...');
+                await waitForConnection(15000);
+
+            } catch (error) {
+                addLog(`ERROR: ${error.message}`, 'error');
+                updateStatus(`Status: Failed - ${error.message}`, 'error');
+            }
+        }
+
+        function setupDataChannel(channel, side) {
+            addLog(`${side}: Data channel event handlers attached`, 'info');
+
+            channel.onopen = () => {
+                addLog(`${side}: Data channel opened!`, 'success');
+                if (side === 'offerer') {
+                    channel.send('Hello from offerer');
+                }
+            };
+
+            channel.onmessage = (event) => {
+                addLog(`${side}: Received message: "${event.data}"`, 'success');
+            };
+
+            channel.onerror = (error) => {
+                addLog(`${side}: Data channel error: ${error.message}`, 'error');
+            };
+
+            channel.onclose = () => {
+                addLog(`${side}: Data channel closed`, 'warning');
+            };
+        }
+
+        async function waitForConnection(timeout) {
+            return new Promise((resolve, reject) => {
+                const startTime = Date.now();
+
+                const checkConnection = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+
+                    // Check offerer and answerer peer connection states
+                    const offererConnected = offererPc && (offererPc.connectionState === 'connected' || offererPc.iceConnectionState === 'connected');
+                    const answererConnected = answererPc && (answererPc.connectionState === 'connected' || answererPc.iceConnectionState === 'connected');
+
+                    addLog(`Connection states - Offerer: ${offererPc?.connectionState || 'N/A'} (ICE: ${offererPc?.iceConnectionState || 'N/A'}), Answerer: ${answererPc?.connectionState || 'N/A'} (ICE: ${answererPc?.iceConnectionState || 'N/A'})`);
+
+                    if (offererConnected && answererConnected) {
+                        clearInterval(checkConnection);
+                        addLog('SUCCESS: Both peers connected!', 'success');
+                        updateStatus('Status: SUCCESS - Connection established', 'success');
+                        showResults();
+                        resolve();
+                    } else if (elapsed > timeout) {
+                        clearInterval(checkConnection);
+                        reject(new Error(`Connection timeout after ${timeout}ms`));
+                    }
+                }, 1000);
+            });
+        }
+
+        function showResults() {
+            document.getElementById('resultsSection').style.display = 'block';
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            const offererSdp = offererPc?.localDescription?.sdp || 'Not available';
+            const answererSdp = answererPc?.localDescription?.sdp || 'Not available';
+
+            resultsContainer.innerHTML = `
+                <div>
+                    <h3>Offerer Local Description (Offer)</h3>
+                    <textarea readonly style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #444; padding: 10px;">${offererSdp}</textarea>
+                </div>
+                <div>
+                    <h3>Answerer Local Description (Answer)</h3>
+                    <textarea readonly style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #444; padding: 10px;">${answererSdp}</textarea>
+                </div>
+            `;
+        }
+
+        function resetTest() {
+            if (offererPc) offererPc.close();
+            if (answererPc) answererPc.close();
+            offererPc = null;
+            answererPc = null;
+            logs = [];
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = true;
+            document.getElementById('resultsSection').style.display = 'none';
+            updateStatus('Status: Ready to start', 'pending');
+            updateLogDisplay();
+        }
+    </script>
+</body>
+</html>

@@ -42,6 +42,34 @@
             font-size: 14px;
         }
         
+        .diagnostic-section {
+            background: #f5f5f5;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .diagnostic-section h3 {
+            color: #ff9800;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .diagnostic-section button {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .diagnostic-section button:hover {
+            background: #e68900;
+        }
+        
         .section {
             margin-bottom: 30px;
             padding-bottom: 30px;
@@ -196,8 +224,28 @@
 </head>
 <body>
     <div class="container">
-        <h1>🧪 WebRTC Test App</h1>
+        <h1>🔧 WebRTC Test App</h1>
         <p class="subtitle">DLC Side - Tests if WebRTC bypasses PNA restrictions</p>
+        
+        <div class="diagnostic-section">
+            <h3>⚙️ DIAGNOSTIC: Test Local SDP Parsing (No HTTP/DLA)</h3>
+            <p style="font-size: 12px; margin-bottom: 10px; color: #666;">
+                Tests if hardcoded SDP from browser context can be parsed. If this works but DLA test fails, the issue is cross-origin/HTTP delivery, not SDP format.
+            </p>
+            <button onclick="testLocalSdpParsing()">Test Local SDP Parse</button>
+            <button onclick="compareSdpHex()" style="margin-left: 10px;">Compare SDP Hex Dump</button>
+            <textarea id="diagnosticOutput" style="width: 100%; height: 150px; margin-top: 10px; font-size: 11px; font-family: monospace;"></textarea>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>🔄 BROWSER AS OFFERER: Generate offer in browser instead of DLA</h3>
+            <p style="font-size: 12px; margin-bottom: 10px; color: #666;">
+                If Chrome rejects external offers but accepts local ones, this tests if browser-generated offers are accepted. This reverses the normal flow.
+            </p>
+            <button onclick="generateOfferInBrowser()">Generate Offer in Browser</button>
+            <button onclick="sendOfferToDLA()" style="margin-left: 10px;">Send Offer to DLA</button>
+            <textarea id="browserOfferOutput" style="width: 100%; height: 100px; margin-top: 10px; font-size: 11px; font-family: monospace;" readonly></textarea>
+        </div>
         
         <!-- Connection Status -->
         <div class="section">
@@ -205,25 +253,24 @@
             <div id="status" class="status disconnected">Disconnected</div>
         </div>
         
-        <!-- Step 1: Generate Offer -->
+        <!-- Step 1: Get Offer from DLA -->
         <div class="section">
-            <div class="section-title">Step 1: Generate Offer</div>
-            <button class="btn-primary" onclick="generateOffer()">Generate WebRTC Offer</button>
+            <div class="section-title">Step 1: Get Offer from DLA</div>
+            <button class="btn-primary" onclick="getOfferFromDLA()">Fetch Offer from DLA</button>
             <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                This creates a WebRTC offer. Copy the text below and paste it into the DLA test app.
+                This retrieves the offer from the DLA test app.
             </p>
-            <textarea id="offerBox" placeholder="Your offer will appear here..." readonly></textarea>
-            <button class="btn-secondary" onclick="copyToClipboard('offerBox')">Copy Offer</button>
+            <textarea id="offerBox" placeholder="Offer will appear here..." readonly></textarea>
         </div>
         
-        <!-- Step 2: Receive Answer -->
+        <!-- Step 2: Generate and Send Answer -->
         <div class="section">
-            <div class="section-title">Step 2: Receive Answer from DLA</div>
-            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                Paste the answer you received from the DLA test app:
+            <div class="section-title">Step 2: Generate Answer & Connect</div>
+            <button class="btn-primary" onclick="generateAnswer()">Generate Answer & Send to DLA</button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                This generates a WebRTC answer based on the DLA's offer and automatically sends it back.
             </p>
-            <textarea id="answerBox" placeholder="Paste the answer here..."></textarea>
-            <button class="btn-primary" onclick="acceptAnswer()">Accept Answer & Connect</button>
+            <textarea id="answerBox" placeholder="Your answer will appear here..." readonly></textarea>
         </div>
         
         <!-- Step 3: Send Test Messages -->
@@ -249,7 +296,10 @@
 
         function updateStatus() {
             const statusEl = document.getElementById('status');
-            if (dataChannel && dataChannel.readyState === 'open') {
+            // Check both data channels (DLA-as-offerer and browser-as-offerer flows)
+            const isConnected = (dataChannel && dataChannel.readyState === 'open') || 
+                               (browserOfferDataChannel && browserOfferDataChannel.readyState === 'open');
+            if (isConnected) {
                 statusEl.textContent = '✅ Connected';
                 statusEl.className = 'status connected';
                 document.getElementById('sendBtn').disabled = false;
@@ -295,22 +345,236 @@
             });
         }
 
-        async function generateOffer() {
+        async function getOfferFromDLA() {
             try {
+                const response = await fetch('http://localhost:8080/api/offer');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error from DLA: ' + data.error);
+                    return;
+                }
+                
+                document.getElementById('offerBox').value = data.offer;
+                logMessage('system', 'Offer received from DLA.');
+            } catch (error) {
+                alert('Error fetching offer from DLA: ' + error);
+            }
+        }
+
+        async function testLocalSdpParsing() {
+            const diagnosticOutput = document.getElementById('diagnosticOutput');
+            diagnosticOutput.value = '[Testing local SDP parsing...]\n';
+            
+            try {
+                // Create a fresh peer connection
+                const testPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+                
+                // The exact working SDP from the diagnostic test with CRLF line endings
+                const workingSdp = "v=0\r\no=- 4098042193945182461 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\na=ice-ufrag:YK/H\r\na=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd\r\na=ice-options:trickle\r\na=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4\r\na=setup:actpass\r\na=mid:0\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n";
+                
+                diagnosticOutput.value += `[v0] SDP length: ${workingSdp.length}\n`;
+                diagnosticOutput.value += `[v0] Parsing SDP from local context (no HTTP)...\n`;
+                
+                const offer = new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: workingSdp
+                });
+                
+                diagnosticOutput.value += `[v0] Created RTCSessionDescription\n`;
+                
+                await testPc.setRemoteDescription(offer);
+                diagnosticOutput.value += `[SUCCESS] Local SDP parsed without error!\n`;
+                diagnosticOutput.value += `[IMPLICATION] If DLA test fails but this passes, issue is cross-origin/HTTP delivery.\n`;
+                
+                testPc.close();
+            } catch (error) {
+                diagnosticOutput.value += `[ERROR] ${error.message}\n`;
+                diagnosticOutput.value += `[IMPLICATION] SDP format itself is rejected by browser.\n`;
+            }
+        }
+
+        async function compareSdpHex() {
+            const diagnosticOutput = document.getElementById('diagnosticOutput');
+            diagnosticOutput.value = '[Comparing Chrome-generated SDP vs hardcoded SDP]\n';
+            
+            try {
+                // Create peer and generate a fresh offer from Chrome
+                const testPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+                testPc.createDataChannel('test');
+                
+                const offer = await testPc.createOffer();
+                await testPc.setLocalDescription(offer);
+                
+                const chromeGeneratedSdp = testPc.localDescription.sdp;
+                
+                // The hardcoded SDP with proper CRLF line endings
+                // Chrome generates SDP with \r\n, not just \n
+                const hardcodedSdp = "v=0\r\no=- 4098042193945182461 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\na=ice-ufrag:YK/H\r\na=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd\r\na=ice-options:trickle\r\na=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4\r\na=setup:actpass\r\na=mid:0\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n";
+                
+                diagnosticOutput.value += `\n--- CHROME GENERATED SDP ---\n`;
+                diagnosticOutput.value += `Length: ${chromeGeneratedSdp.length}\n`;
+                diagnosticOutput.value += `Hex (first 200 chars): ${toHex(chromeGeneratedSdp.substring(0, 200))}\n\n`;
+                
+                diagnosticOutput.value += `--- HARDCODED SDP ---\n`;
+                diagnosticOutput.value += `Length: ${hardcodedSdp.length}\n`;
+                diagnosticOutput.value += `Hex (first 200 chars): ${toHex(hardcodedSdp.substring(0, 200))}\n\n`;
+                
+                diagnosticOutput.value += `\n--- RAW HEX COMPARISON (FIRST 60 BYTES, NO SPLITTING) ---\n`;
+                diagnosticOutput.value += `Chrome raw bytes (first 60):   ${toHex(chromeGeneratedSdp.substring(0, 60))}\n`;
+                diagnosticOutput.value += `Hardcoded raw bytes (first 60): ${toHex(hardcodedSdp.substring(0, 60))}\n\n`;
+                
+                // Check specific line ending bytes
+                const crlfIndex = chromeGeneratedSdp.indexOf('\r\n');
+                const lfIndex = chromeGeneratedSdp.indexOf('\n');
+                
+                diagnosticOutput.value += `--- LINE ENDING DETECTION ---\n`;
+                if (crlfIndex !== -1) {
+                    diagnosticOutput.value += `Chrome: Contains \\r\\n at position ${crlfIndex}\n`;
+                    diagnosticOutput.value += `Chrome bytes around first newline: ${toHex(chromeGeneratedSdp.substring(crlfIndex - 3, crlfIndex + 4))}\n`;
+                } else if (lfIndex !== -1) {
+                    diagnosticOutput.value += `Chrome: Contains only \\n (no \\r) at position ${lfIndex}\n`;
+                }
+                
+                const hardcodedCrlfIndex = hardcodedSdp.indexOf('\r\n');
+                const hardcodedLfIndex = hardcodedSdp.indexOf('\n');
+                
+                if (hardcodedCrlfIndex !== -1) {
+                    diagnosticOutput.value += `Hardcoded: Contains \\r\\n at position ${hardcodedCrlfIndex}\n`;
+                    diagnosticOutput.value += `Hardcoded bytes around first newline: ${toHex(hardcodedSdp.substring(hardcodedCrlfIndex - 3, hardcodedCrlfIndex + 4))}\n`;
+                } else if (hardcodedLfIndex !== -1) {
+                    diagnosticOutput.value += `Hardcoded: Contains only \\n (no \\r) at position ${hardcodedLfIndex}\n`;
+                }
+                
+                diagnosticOutput.value += `\n`;
+                
+                // Compare line by line
+                const chromeLines = chromeGeneratedSdp.split('\n');
+                const hardcodedLines = hardcodedSdp.split('\n');
+                
+                diagnosticOutput.value += `--- LINE BY LINE COMPARISON ---\n`;
+                diagnosticOutput.value += `Chrome lines: ${chromeLines.length}, Hardcoded lines: ${hardcodedLines.length}\n\n`;
+                
+                let firstDifference = -1;
+                for (let i = 0; i < Math.min(chromeLines.length, hardcodedLines.length); i++) {
+                    if (chromeLines[i] !== hardcodedLines[i]) {
+                        firstDifference = i;
+                        diagnosticOutput.value += `Line ${i + 1} DIFFERS:\n`;
+                        diagnosticOutput.value += `  Chrome:   ${JSON.stringify(chromeLines[i])}\n`;
+                        diagnosticOutput.value += `  Hardcoded: ${JSON.stringify(hardcodedLines[i])}\n`;
+                        diagnosticOutput.value += `  Chrome hex:    ${toHex(chromeLines[i])}\n`;
+                        diagnosticOutput.value += `  Hardcoded hex: ${toHex(hardcodedLines[i])}\n\n`;
+                    }
+                }
+                
+                if (firstDifference === -1) {
+                    diagnosticOutput.value += `All lines match perfectly!\n`;
+                } else {
+                    diagnosticOutput.value += `First difference at line ${firstDifference + 1}\n`;
+                }
+                
+                testPc.close();
+                
+            } catch (error) {
+                diagnosticOutput.value += `ERROR: ${error.message}\n`;
+            }
+        }
+        
+        function toHex(str) {
+            let hex = '';
+            for (let i = 0; i < str.length; i++) {
+                hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        async function generateAnswer() {
+            try {
+                const offerSdp = document.getElementById('offerBox').value.trim();
+                
+                if (!offerSdp) {
+                    alert('Please fetch the offer from DLA first');
+                    return;
+                }
+                
+                // Create peer connection and set remote description (the offer)
                 pc = new RTCPeerConnection({
                     iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
                 });
-
-                dataChannel = pc.createDataChannel('test-channel');
-                setupDataChannel();
-
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-
-                document.getElementById('offerBox').value = pc.localDescription.sdp;
-                logMessage('system', 'Offer generated. Copy and paste it into the DLA test app.');
+                
+                // Handle ICE candidates from this peer - send them to DLA
+                pc.onicecandidate = async (event) => {
+                    if (event.candidate) {
+                        console.log('[DLC] Sending ICE candidate to DLA:', event.candidate.candidate.substring(0, 50));
+                        try {
+                            await fetch('http://localhost:8080/api/ice-candidate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    candidate: event.candidate.candidate,
+                                    sdpMid: event.candidate.sdpMid,
+                                    sdpMLineIndex: event.candidate.sdpMLineIndex
+                                })
+                            });
+                        } catch (err) {
+                            console.error('[DLC] Error sending ICE candidate:', err);
+                        }
+                    }
+                };
+                
+                // Set up to receive data channels from DLA
+                pc.ondatachannel = (event) => {
+                    dataChannel = event.channel;
+                    setupDataChannel();
+                    updateStatus();
+                };
+                
+                // Debug: Log exactly what we're about to parse
+                console.log('[v0] === OFFER SDP ABOUT TO PARSE ===');
+                console.log('[v0] Length:', offerSdp.length);
+                console.log('[v0] Lines:');
+                offerSdp.split('\n').forEach((line, i) => {
+                    console.log(`[v0]   ${i+1}: ${JSON.stringify(line)}`);
+                });
+                console.log('[v0] === END OFFER SDP ===');
+                
+                const offer = new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: offerSdp
+                });
+                
+                console.log('[v0] Calling setRemoteDescription...');
+                await pc.setRemoteDescription(offer);
+                console.log('[v0] setRemoteDescription succeeded!');
+                
+                // Create answer
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                
+                const answerSdp = pc.localDescription.sdp;
+                document.getElementById('answerBox').value = answerSdp;
+                
+                logMessage('system', 'Answer generated. Sending to DLA...');
+                
+                // Send answer back to DLA
+                const response = await fetch('http://localhost:8080/api/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answer: answerSdp })
+                });
+                
+                const result = await response.json();
+                if (result.error) {
+                    alert('Error sending answer to DLA: ' + result.error);
+                } else {
+                    logMessage('system', 'Answer sent to DLA successfully!');
+                }
             } catch (error) {
-                alert('Error generating offer: ' + error);
+                alert('Error generating answer: ' + error);
             }
         }
 
@@ -334,48 +598,6 @@
             };
         }
 
-        async function acceptAnswer() {
-            try {
-                const answerSdp = document.getElementById('answerBox').value.trim();
-                if (!answerSdp) {
-                    alert('Please paste the answer first');
-                    return;
-                }
-
-                if (!pc) {
-                    alert('Please generate an offer first');
-                    return;
-                }
-
-                // DEBUG: Print exactly what we're passing to the browser
-                console.log('=== ANSWER SDP RECEIVED ===');
-                console.log('Length:', answerSdp.length);
-                console.log('Lines:');
-                answerSdp.split('\n').forEach((line, i) => {
-                    console.log(`  ${i+1}: ${JSON.stringify(line)}`);
-                });
-                console.log('=== END ANSWER SDP ===');
-
-                const answer = new RTCSessionDescription({
-                    type: 'answer',
-                    sdp: answerSdp
-                });
-
-                await pc.setRemoteDescription(answer);
-                logMessage('system', 'Answer accepted. Waiting for connection...');
-                
-                // Check connection status periodically
-                const checkConnection = setInterval(() => {
-                    updateStatus();
-                    if (dataChannel && dataChannel.readyState === 'open') {
-                        clearInterval(checkConnection);
-                    }
-                }, 500);
-            } catch (error) {
-                alert('Error accepting answer: ' + error);
-            }
-        }
-
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -385,18 +607,19 @@
                 return;
             }
 
-            if (!dataChannel || dataChannel.readyState !== 'open') {
+            // Use whichever data channel is open (browser-as-offerer or DLA-as-offerer)
+            const activeChannel = (browserOfferDataChannel && browserOfferDataChannel.readyState === 'open') 
+                ? browserOfferDataChannel 
+                : dataChannel;
+
+            if (!activeChannel || activeChannel.readyState !== 'open') {
                 alert('Data channel not open');
                 return;
             }
 
-            try {
-                dataChannel.send(message);
-                logMessage('user', message);
-                input.value = '';
-            } catch (error) {
-                alert('Error sending message: ' + error);
-            }
+            activeChannel.send(message);
+            logMessage('sent', message);
+            input.value = '';
         }
 
         // Allow Enter key to send message
@@ -405,6 +628,116 @@
                 sendMessage();
             }
         });
+
+        // Browser as Offerer flow
+        let browserOfferPc = null;
+        let browserOfferDataChannel = null;
+
+        async function generateOfferInBrowser() {
+            try {
+                const output = document.getElementById('browserOfferOutput');
+                output.value = '[Generating offer in browser...]\n';
+
+                // Create new peer connection for browser-as-offerer flow
+                browserOfferPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+
+                // Create data channel
+                browserOfferDataChannel = browserOfferPc.createDataChannel('test');
+                setupBrowserDataChannel();
+
+                // Handle ICE candidates from browser - send to DLA
+                browserOfferPc.onicecandidate = async (event) => {
+                    if (event.candidate) {
+                        output.value += `[Candidate] ${event.candidate.candidate.substring(0, 50)}...\n`;
+                    }
+                };
+
+                // Generate offer
+                const offer = await browserOfferPc.createOffer();
+                await browserOfferPc.setLocalDescription(offer);
+
+                const offerSdp = browserOfferPc.localDescription.sdp;
+                document.getElementById('offerBox').value = offerSdp;
+
+                output.value += '[SUCCESS] Browser generated offer\n';
+                output.value += `[Offer length: ${offerSdp.length} characters]\n`;
+                output.value += '[Ready to send to DLA]\n';
+
+                logMessage('system', 'Offer generated in browser. Click "Send Offer to DLA".');
+            } catch (error) {
+                alert('Error generating offer in browser: ' + error);
+            }
+        }
+
+        async function sendOfferToDLA() {
+            try {
+                const offerSdp = document.getElementById('offerBox').value.trim();
+
+                if (!offerSdp) {
+                    alert('Please generate an offer in browser first');
+                    return;
+                }
+
+                const output = document.getElementById('browserOfferOutput');
+                output.value += '\n[Sending offer to DLA...]\n';
+
+                // Send browser offer to DLA
+                const response = await fetch('http://localhost:8080/api/receive-offer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ offer: offerSdp })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    alert('Error sending offer to DLA: ' + result.error);
+                    output.value += `[ERROR] ${result.error}\n`;
+                    return;
+                }
+
+                // Receive answer from DLA
+                const answerSdp = result.answer;
+                output.value += '[SUCCESS] Received answer from DLA\n';
+                output.value += `[Answer length: ${answerSdp.length} characters]\n`;
+
+                // Set remote description with DLA's answer
+                const answer = new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answerSdp
+                });
+
+                await browserOfferPc.setRemoteDescription(answer);
+                output.value += '[SUCCESS] Remote description set\n';
+                output.value += '[Waiting for connection...]\n';
+
+                logMessage('system', 'Offer sent to DLA and answer received. Connecting...');
+            } catch (error) {
+                alert('Error in browser-as-offerer flow: ' + error);
+            }
+        }
+
+        function setupBrowserDataChannel() {
+            browserOfferDataChannel.onopen = () => {
+                logMessage('system', 'Data channel opened (browser-as-offerer)!');
+                updateStatus();
+            };
+
+            browserOfferDataChannel.onclose = () => {
+                logMessage('system', 'Data channel closed');
+                updateStatus();
+            };
+
+            browserOfferDataChannel.onmessage = (event) => {
+                logMessage('dla', event.data);
+            };
+
+            browserOfferDataChannel.onerror = (error) => {
+                logMessage('system', 'Error: ' + error);
+            };
+        }
 
         // Initial status update
         updateStatus();

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC SDP Capture Tool</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 { color: #569cd6; }
+        h2 { color: #9cdcfe; margin-top: 30px; }
+        .step {
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #252526;
+        }
+        .step-number {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        textarea {
+            width: 100%;
+            height: 180px;
+            background: #1e1e1e;
+            color: #ce9178;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 8px 4px 8px 0;
+        }
+        button:hover { background: #1177bb; }
+        button.secondary {
+            background: #3c3c3c;
+            border: 1px solid #555;
+        }
+        button.secondary:hover { background: #505050; }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 10px;
+            background: #3c3c3c;
+            color: #888;
+        }
+        .status.ok { background: #1b4332; color: #52b788; }
+        .status.error { background: #4a1942; color: #f48fb1; }
+        .note {
+            background: #1f3040;
+            border-left: 3px solid #569cd6;
+            padding: 10px 15px;
+            margin: 10px 0;
+            font-size: 13px;
+            color: #9cdcfe;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>WebRTC SDP Capture Tool</h1>
+    <p>Use this in <strong>two separate browser tabs</strong> to capture real browser-generated offer and answer SDPs.</p>
+
+    <div class="note">
+        Tab 1 = Offerer &nbsp;|&nbsp; Tab 2 = Answerer &nbsp;|&nbsp; Copy/paste between them to connect
+    </div>
+
+    <!-- ===================== OFFERER SECTION ===================== -->
+    <h2>OFFERER TAB <span class="status" id="offererStatus">Not started</span></h2>
+
+    <div class="step">
+        <div class="step-number">Step 1 - In this tab (Offerer)</div>
+        <p>Click the button to generate an offer. Copy the offer and paste it into the Answerer tab (Step 2).</p>
+        <button onclick="generateOffer()">Generate Offer</button>
+        <label>Offer SDP (copy this, paste into Answerer tab Step 2):</label>
+        <textarea id="offerOutput" readonly placeholder="Offer will appear here after clicking Generate Offer..."></textarea>
+        <button class="secondary" onclick="copyText('offerOutput')">Copy Offer</button>
+    </div>
+
+    <div class="step">
+        <div class="step-number">Step 4 - In this tab (Offerer)</div>
+        <p>Paste the answer from the Answerer tab here, then click Accept Answer.</p>
+        <label>Paste Answer SDP here (from Answerer tab Step 3):</label>
+        <textarea id="answerInput" placeholder="Paste the answer from the Answerer tab here..."></textarea>
+        <button onclick="acceptAnswer()">Accept Answer</button>
+    </div>
+
+    <div class="step">
+        <div class="step-number">Step 5 - Results (Offerer tab)</div>
+        <p>If successful, the SDPs below are what we need. These are real browser-generated SDPs.</p>
+        <label>FINAL: Browser-generated Offer SDP:</label>
+        <textarea id="capturedOffer" readonly placeholder="Will be populated after Step 1..."></textarea>
+        <label>FINAL: Browser-generated Answer SDP (this is what DLA needs to generate):</label>
+        <textarea id="capturedAnswer" readonly placeholder="Will be populated after Step 4..."></textarea>
+    </div>
+
+    <hr style="border-color: #444; margin: 40px 0;">
+
+    <!-- ===================== ANSWERER SECTION ===================== -->
+    <h2>ANSWERER TAB <span class="status" id="answererStatus">Not started</span></h2>
+
+    <div class="step">
+        <div class="step-number">Step 2 - In a second tab (Answerer)</div>
+        <p>Paste the offer from the Offerer tab here, then click Generate Answer.</p>
+        <label>Paste Offer SDP here (from Offerer tab Step 1):</label>
+        <textarea id="offerInput" placeholder="Paste the offer from the Offerer tab here..."></textarea>
+        <button onclick="generateAnswer()">Generate Answer</button>
+    </div>
+
+    <div class="step">
+        <div class="step-number">Step 3 - In this tab (Answerer)</div>
+        <p>Copy this answer and paste it into the Offerer tab (Step 4).</p>
+        <label>Answer SDP (copy this, paste into Offerer tab Step 4):</label>
+        <textarea id="answerOutput" readonly placeholder="Answer will appear here after clicking Generate Answer..."></textarea>
+        <button class="secondary" onclick="copyText('answerOutput')">Copy Answer</button>
+    </div>
+
+    <script>
+        let offererPc = null;
+        let answererPc = null;
+
+        function setStatus(id, text, type) {
+            const el = document.getElementById(id);
+            el.textContent = text;
+            el.className = 'status' + (type ? ' ' + type : '');
+        }
+
+        function copyText(id) {
+            const el = document.getElementById(id);
+            if (!el.value) {
+                alert('Nothing to copy yet.');
+                return;
+            }
+            navigator.clipboard.writeText(el.value).then(() => {
+                alert('Copied to clipboard.');
+            });
+        }
+
+        async function generateOffer() {
+            try {
+                setStatus('offererStatus', 'Generating offer...', '');
+
+                offererPc = new RTCPeerConnection();
+
+                // Create a data channel so the SDP includes datachannel negotiation
+                offererPc.createDataChannel('test');
+
+                const offer = await offererPc.createOffer();
+                await offererPc.setLocalDescription(offer);
+
+                const sdp = offererPc.localDescription.sdp;
+                // Remove max-message-size - Chrome generates it but doesn't accept it
+                const cleanSdp = sdp.split('\n').filter(line => !line.includes('max-message-size')).join('\n');
+                
+                document.getElementById('offerOutput').value = cleanSdp;
+                document.getElementById('capturedOffer').value = cleanSdp;
+
+                console.log('=== BROWSER-GENERATED OFFER (max-message-size removed) ===');
+                console.log('Length:', cleanSdp.length);
+                cleanSdp.split('\n').forEach((line, i) => {
+                    if (line) console.log(i + 1, JSON.stringify(line));
+                });
+                console.log('=== END OFFER ===');
+
+                setStatus('offererStatus', 'Offer ready - paste into Answerer tab', 'ok');
+            } catch (e) {
+                setStatus('offererStatus', 'Error: ' + e.message, 'error');
+                alert('Error generating offer: ' + e);
+            }
+        }
+
+        async function generateAnswer() {
+            try {
+                setStatus('answererStatus', 'Generating answer...', '');
+
+                const offerSdp = document.getElementById('offerInput').value.trim();
+                if (!offerSdp) {
+                    alert('Paste the offer first.');
+                    return;
+                }
+
+                answererPc = new RTCPeerConnection();
+
+                await answererPc.setRemoteDescription(new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: offerSdp
+                }));
+
+                const answer = await answererPc.createAnswer();
+                await answererPc.setLocalDescription(answer);
+
+                const sdp = answererPc.localDescription.sdp;
+                document.getElementById('answerOutput').value = sdp;
+
+                console.log('=== BROWSER-GENERATED ANSWER ===');
+                console.log('Length:', sdp.length);
+                sdp.split('\n').forEach((line, i) => {
+                    if (line) console.log(i + 1, JSON.stringify(line));
+                });
+                console.log('=== END ANSWER ===');
+
+                setStatus('answererStatus', 'Answer ready - paste into Offerer tab', 'ok');
+            } catch (e) {
+                setStatus('answererStatus', 'Error: ' + e.message, 'error');
+                alert('Error generating answer: ' + e);
+            }
+        }
+
+        async function acceptAnswer() {
+            try {
+                const answerSdp = document.getElementById('answerInput').value.trim();
+                if (!answerSdp) {
+                    alert('Paste the answer first.');
+                    return;
+                }
+
+                if (!offererPc) {
+                    alert('Generate an offer first (Step 1).');
+                    return;
+                }
+
+                await offererPc.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answerSdp
+                }));
+
+                document.getElementById('capturedAnswer').value = answerSdp;
+
+                console.log('=== BROWSER-GENERATED ANSWER (captured in offerer tab) ===');
+                console.log('Length:', answerSdp.length);
+                answerSdp.split('\n').forEach((line, i) => {
+                    if (line) console.log(i + 1, JSON.stringify(line));
+                });
+                console.log('=== END ANSWER ===');
+
+                setStatus('offererStatus', 'Connected! SDPs captured below.', 'ok');
+                alert('Success! Check the Results section at the bottom for the captured SDPs.');
+            } catch (e) {
+                setStatus('offererStatus', 'Error: ' + e.message, 'error');
+                alert('Error accepting answer: ' + e);
+            }
+        }
+    </script>
+
+</body>
+</html>

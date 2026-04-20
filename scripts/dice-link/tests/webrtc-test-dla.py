@@ -10,11 +10,16 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaStreamTrack
 
+# Global data channel reference for sending messages from CLI
+active_data_channel = None
+
 class TestDataChannel:
     def __init__(self):
         self.messages = []
     
     async def on_datachannel(self, channel):
+        global active_data_channel
+        active_data_channel = channel
         print(f"[WebRTC Test] Data channel opened: {channel.label}")
         
         @channel.on("message")
@@ -24,6 +29,8 @@ class TestDataChannel:
         
         @channel.on("close")
         def on_close():
+            global active_data_channel
+            active_data_channel = None
             print("[WebRTC Test] Data channel closed")
         
         # Send a test message back
@@ -33,227 +40,352 @@ class TestDataChannel:
         print(f"[WebRTC Test] Sent to browser: {test_msg}")
         self.messages.append({"from": "dla", "text": test_msg})
 
-async def handle_offer(request):
-    """Receive offer from browser, create answer"""
+async def handle_generate_offer(request):
+    """Generate offer and send to browser"""
     global pc, test_channel
     
     try:
-        data = await request.json()
-        offer_sdp = data.get("offer")
-        
-        if not offer_sdp:
-            return web.json_response({"error": "No offer provided"}, status=400)
-        
-        # Normalize offer line endings to LF
-        offer_sdp = offer_sdp.replace('\r\n', '\n')
-        
-        print("\n" + "="*60)
-        print("OFFER ANALYSIS")
-        print("="*60)
-        print(f"Offer length: {len(offer_sdp)} characters")
-        print("\n--- FULL OFFER SDP ---")
-        for i, line in enumerate(offer_sdp.split('\n')):
-            print(f"  {i+1:3}: {repr(line)}")
-        print("--- END OFFER SDP ---\n")
-        
         # Create peer connection
         pc = RTCPeerConnection()
         test_channel = TestDataChannel()
         
-        # Handle incoming data channels from browser
-        @pc.on("datachannel")
-        def on_datachannel(channel):
-            asyncio.create_task(test_channel.on_datachannel(channel))
+        # Create data channel
+        dc = pc.createDataChannel('test-channel')
         
-        # Set remote description
-        offer = RTCSessionDescription(sdp=offer_sdp, type="offer")
-        await pc.setRemoteDescription(offer)
+        @dc.on("open")
+        async def on_open():
+            global active_data_channel
+            active_data_channel = dc
+            print("[WebRTC Test] Data channel opened")
+            print("[WebRTC Test] active_data_channel is now set")
         
-        # Create answer
-        answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
+        @dc.on("message")
+        def on_message(message):
+            print(f"[WebRTC Test] Received from browser: {message}")
+            test_channel.messages.append({"from": "browser", "text": message})
         
-        aiortc_sdp = pc.localDescription.sdp
+        # Create offer
+        offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
         
+        raw_offer_sdp = pc.localDescription.sdp
+        
+        print("\n" + "="*60)
+        print("AIORTC RAW OFFER (before fixing)")
         print("="*60)
-        print("AIORTC ORIGINAL ANSWER")
-        print("="*60)
-        for i, line in enumerate(aiortc_sdp.split('\n')):
+        for i, line in enumerate(raw_offer_sdp.split('\n')):
             print(f"  {i+1:3}: {repr(line)}")
         print("="*60 + "\n")
         
         # ============================================
-        # NEW APPROACH: Build answer SDP manually
-        # Extract only what we need from aiortc (ice credentials, fingerprint)
-        # and construct SDP with exact same structure as offer
+        # FIX THE OFFER SDP
+        # aiortc generates SDP that browsers reject
+        # We need to reformat it to match browser expectations
         # ============================================
         
-        # Parse aiortc's answer to extract what we need
-        aiortc_lines = aiortc_sdp.replace('\r\n', '\n').split('\n')
+        # Normalize line endings to LF
+        raw_offer_sdp = raw_offer_sdp.replace('\r\n', '\n').replace('\r', '\n')
         
-        aiortc_ice_ufrag = None
-        aiortc_ice_pwd = None
-        aiortc_fingerprint_sha256 = None
-        aiortc_o_line = None
+        # Parse aiortc's offer
+        lines = raw_offer_sdp.strip().split('\n')
         
-        for line in aiortc_lines:
-            if line.startswith('o='):
-                aiortc_o_line = line
-            elif line.startswith('a=ice-ufrag:'):
-                aiortc_ice_ufrag = line
-            elif line.startswith('a=ice-pwd:'):
-                aiortc_ice_pwd = line
-            elif line.startswith('a=fingerprint:sha-256'):
-                aiortc_fingerprint_sha256 = line
+        # Extract components
+        v_line = None
+        o_line = None
+        s_line = None
+        t_line = None
+        group_line = None
+        msid_semantic = None
+        m_line = None
+        c_line = None
+        mid_line = None
+        sctp_port = None
+        max_message_size = None
+        ice_ufrag = None
+        ice_pwd = None
+        fingerprint_sha256 = None
+        setup_line = None
+        candidates = []
         
-        print("Extracted from aiortc:")
-        print(f"  o-line: {aiortc_o_line}")
-        print(f"  ice-ufrag: {aiortc_ice_ufrag}")
-        print(f"  ice-pwd: {aiortc_ice_pwd}")
-        print(f"  fingerprint: {aiortc_fingerprint_sha256[:60]}..." if aiortc_fingerprint_sha256 else "  fingerprint: None")
-        
-        # Parse offer to get structure and values we need to echo
-        offer_lines = offer_sdp.split('\n')
-        
-        offer_o_line = None
-        offer_group = None
-        offer_extmap_allow_mixed = None
-        offer_msid_semantic = None
-        offer_m_line = None
-        offer_c_line = None
-        offer_ice_options = None
-        offer_fingerprint = None
-        offer_mid = None
-        offer_sctp_port = None
-        offer_max_message_size = None
-        
-        for line in offer_lines:
-            if line.startswith('o='):
-                offer_o_line = line
+        for line in lines:
+            line = line.strip()
+            if line.startswith('v='):
+                v_line = line
+            elif line.startswith('o='):
+                o_line = line
+            elif line.startswith('s='):
+                s_line = line
+            elif line.startswith('t='):
+                t_line = line
             elif line.startswith('a=group:'):
-                offer_group = line
-            elif line.startswith('a=extmap-allow-mixed'):
-                offer_extmap_allow_mixed = line
+                group_line = line
             elif line.startswith('a=msid-semantic:'):
-                offer_msid_semantic = line
+                msid_semantic = line
             elif line.startswith('m='):
-                offer_m_line = line
+                m_line = line
             elif line.startswith('c='):
-                offer_c_line = line
-            elif line.startswith('a=ice-options:'):
-                offer_ice_options = line
-            elif line.startswith('a=fingerprint:'):
-                offer_fingerprint = line
+                c_line = line
             elif line.startswith('a=mid:'):
-                offer_mid = line
+                mid_line = line
             elif line.startswith('a=sctp-port:'):
-                offer_sctp_port = line
+                sctp_port = line
             elif line.startswith('a=max-message-size:'):
-                offer_max_message_size = line
+                max_message_size = line
+            elif line.startswith('a=ice-ufrag:'):
+                ice_ufrag = line
+            elif line.startswith('a=ice-pwd:'):
+                ice_pwd = line
+            elif line.startswith('a=fingerprint:sha-256'):
+                fingerprint_sha256 = line
+            elif line.startswith('a=setup:'):
+                setup_line = line
+            elif line.startswith('a=candidate:'):
+                candidates.append(line)
         
-        # Build answer SDP line by line, matching offer structure exactly
-        # Order from Chrome's offer:
-        # v=0
-        # o=- ... (use aiortc's)
-        # s=-
-        # t=0 0
-        # a=group:BUNDLE 0
-        # a=extmap-allow-mixed
-        # a=msid-semantic: WMS
-        # m=application 9 UDP/DTLS/SCTP webrtc-datachannel
-        # c=IN IP4 0.0.0.0
-        # a=ice-ufrag:... (aiortc's)
-        # a=ice-pwd:... (aiortc's)
-        # a=ice-options:trickle
-        # a=fingerprint:sha-256 ... (aiortc's)
-        # a=setup:passive (changed from actpass)
-        # a=mid:0
-        # a=sctp-port:5000
-        # a=max-message-size:262144
+        # Filter candidates to IPv4 only (remove IPv6 for file:// origin compatibility)
+        ipv4_candidates = []
+        for candidate in candidates:
+            # Candidate format: a=candidate:... typ host [other fields]
+            # IPv4 addresses don't contain colons in the address part (before the port)
+            # IPv6 addresses contain colons and are wrapped in brackets like [2a0a:...]
+            if '[' not in candidate and ']' not in candidate:
+                ipv4_candidates.append(candidate)
         
-        answer_lines = []
-        answer_lines.append('v=0')
-        answer_lines.append(aiortc_o_line or 'o=- 0 0 IN IP4 0.0.0.0')
-        answer_lines.append('s=-')
-        answer_lines.append('t=0 0')
+        print(f"[WebRTC Test] Total candidates from aiortc: {len(candidates)}")
+        print(f"[WebRTC Test] IPv4-only candidates: {len(ipv4_candidates)}")
         
-        if offer_group:
-            answer_lines.append(offer_group)
+        # Build offer in correct order for browsers
+        fixed_lines = []
         
-        if offer_extmap_allow_mixed:
-            answer_lines.append(offer_extmap_allow_mixed)
+        # Session section
+        fixed_lines.append(v_line or 'v=0')
+        fixed_lines.append(o_line or 'o=- 0 0 IN IP4 0.0.0.0')
+        fixed_lines.append(s_line or 's=-')
+        fixed_lines.append(t_line or 't=0 0')
+        if group_line:
+            fixed_lines.append(group_line)
+        fixed_lines.append('a=extmap-allow-mixed')
+        # Use simple msid-semantic without the asterisk
+        fixed_lines.append('a=msid-semantic: WMS')
         
-        if offer_msid_semantic:
-            answer_lines.append(offer_msid_semantic)
+        # Media section - use port 9 (standard for trickle ICE)
+        fixed_lines.append('m=application 9 UDP/DTLS/SCTP webrtc-datachannel')
         
-        # Media section - use port 9 like offer (not aiortc's random port)
-        answer_lines.append('m=application 9 UDP/DTLS/SCTP webrtc-datachannel')
+        # Use IPv4 0.0.0.0 (browsers prefer this)
+        fixed_lines.append('c=IN IP4 0.0.0.0')
         
-        if offer_c_line:
-            answer_lines.append(offer_c_line)
+        # ICE credentials (required, come early)
+        if ice_ufrag:
+            fixed_lines.append(ice_ufrag)
+        if ice_pwd:
+            fixed_lines.append(ice_pwd)
         
-        if aiortc_ice_ufrag:
-            answer_lines.append(aiortc_ice_ufrag)
+        # ice-options for trickle ICE
+        fixed_lines.append('a=ice-options:trickle')
         
-        if aiortc_ice_pwd:
-            answer_lines.append(aiortc_ice_pwd)
+        # Fingerprint (only sha-256)
+        if fingerprint_sha256:
+            fixed_lines.append(fingerprint_sha256)
         
-        if offer_ice_options:
-            answer_lines.append(offer_ice_options)
+        # Setup (offerer uses actpass)
+        fixed_lines.append('a=setup:actpass')
         
-        if aiortc_fingerprint_sha256:
-            answer_lines.append(aiortc_fingerprint_sha256)
+        # Media ID
+        if mid_line:
+            fixed_lines.append(mid_line)
         
-        # Answer must use setup:passive (offerer was actpass)
-        answer_lines.append('a=setup:passive')
+        # SCTP settings
+        if sctp_port:
+            fixed_lines.append(sctp_port)
         
-        if offer_mid:
-            answer_lines.append(offer_mid)
+        # Add ICE candidates (IPv4 only) - these are essential for connection
+        for candidate in ipv4_candidates:
+            fixed_lines.append(candidate)
         
-        if offer_sctp_port:
-            answer_lines.append(offer_sctp_port)
+        # Join with CRLF line endings (required by WebRTC SDP spec)
+        # Chrome generates SDP with \r\n, not just \n
+        constructed_offer_sdp = '\r\n'.join(fixed_lines) + '\r\n'
         
-        if offer_max_message_size:
-            answer_lines.append(offer_max_message_size)
+        # ============================================
+        # Use aiortc's actual generated offer with real ICE candidates
+        # This has the full candidate list that browsers need to connect
+        # ============================================
+        USE_HARDCODED_SDP = False  # Set to False to use aiortc's actual offer
         
-        # Join with LF and add trailing LF (like offer has)
-        answer_sdp = '\n'.join(answer_lines) + '\n'
+        if USE_HARDCODED_SDP:
+            # This is the EXACT offer format that worked in the browser-to-browser diagnostic
+            # We only replace ice-ufrag, ice-pwd, and fingerprint with our actual values
+            # CRITICAL: Must use \r\n (CRLF) line endings, not just \n
+            offer_sdp = f"v=0\r\no=- 4098042193945182461 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\n{ice_ufrag}\r\n{ice_pwd}\r\na=ice-options:trickle\r\n{fingerprint_sha256}\r\na=setup:actpass\r\na=mid:0\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n"
+            print("\n*** USING HARDCODED BROWSER-FORMAT SDP WITH CRLF LINE ENDINGS ***\n")
+        else:
+            offer_sdp = constructed_offer_sdp
         
         print("\n" + "="*60)
-        print("MANUALLY CONSTRUCTED ANSWER SDP")
+        print("FIXED OFFER (to send to browser)")
         print("="*60)
-        print(f"Length: {len(answer_sdp)} bytes")
-        print("\nFinal answer lines:")
-        for i, line in enumerate(answer_sdp.split('\n')):
-            print(f"  {i+1}: {repr(line)}")
-        print("="*60 + "\n")
+        print(f"Offer length: {len(offer_sdp)} characters")
+        print("\n--- FIXED OFFER SDP ---")
+        for i, line in enumerate(offer_sdp.split('\n')):
+            if line:
+                print(f"  {i+1:3}: {repr(line)}")
+        print("--- END OFFER SDP ---\n")
         
-        return web.json_response({"answer": answer_sdp})
+        return web.json_response({"offer": offer_sdp})
     
     except Exception as e:
-        print(f"[WebRTC Test] Error: {e}")
+        print(f"[WebRTC Test] Error generating offer: {e}")
         import traceback
         print(f"[WebRTC Test] Traceback: {traceback.format_exc()}")
         return web.json_response({"error": str(e)}, status=500)
 
+async def handle_answer(request):
+    """Receive answer from browser, set as remote description, and handle ICE candidates"""
+    global pc, ice_candidates_from_browser
+    
+    try:
+        data = await request.json()
+        answer_sdp = data.get("answer")
+        
+        if not answer_sdp:
+            return web.json_response({"error": "No answer provided"}, status=400)
+        
+        if not pc:
+            return web.json_response({"error": "No peer connection created. Generate offer first."}, status=400)
+        
+        # Normalize answer line endings to LF
+        answer_sdp = answer_sdp.replace('\r\n', '\n')
+        
+        print("\n" + "="*60)
+        print("BROWSER-GENERATED ANSWER RECEIVED")
+        print("="*60)
+        print(f"Answer length: {len(answer_sdp)} characters")
+        print("\n--- FULL ANSWER SDP ---")
+        for i, line in enumerate(answer_sdp.split('\n')):
+            if line:
+                print(f"  {i+1:3}: {repr(line)}")
+        print("--- END ANSWER SDP ---\n")
+        
+        # Set remote description
+        answer = RTCSessionDescription(sdp=answer_sdp, type="answer")
+        await pc.setRemoteDescription(answer)
+        
+        print("[WebRTC Test] Answer accepted successfully!")
+        
+        return web.json_response({"status": "success"})
+    
+    except Exception as e:
+        print(f"[WebRTC Test] Error accepting answer: {e}")
+        import traceback
+        print(f"[WebRTC Test] Traceback: {traceback.format_exc()}")
+        return web.json_response({"error": str(e)}, status=500)
+
+async def handle_ice_candidates(request):
+    """Receive ICE candidates from browser - log only, don't try to add manually"""
+    global pc, ice_candidates_from_browser
+    
+    try:
+        data = await request.json()
+        candidate_data = data.get("candidate")
+        
+        if not candidate_data:
+            return web.json_response({"error": "No candidate provided"}, status=400)
+        
+        # Just log the candidate - aiortc may handle these internally
+        print(f"[WebRTC Test] Browser sent ICE candidate: {candidate_data[:50]}...")
+        ice_candidates_from_browser.append(candidate_data)
+        
+        return web.json_response({"status": "received"})
+    
+    except Exception as e:
+        print(f"[WebRTC Test] Error processing ICE candidate: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def handle_send_message(request):
     """Send a test message through data channel"""
-    global pc
+    global pc, active_data_channel, test_channel
     
     try:
         data = await request.json()
         message = data.get("message", "Test message")
         
-        if pc and pc.dataChannels:
-            for channel in pc.dataChannels:
-                channel.send(message)
-                print(f"[WebRTC Test] Sent via data channel: {message}")
-            return web.json_response({"status": "sent"})
+        if active_data_channel and message.strip():
+            active_data_channel.send(message)
+            print(f"[WebRTC Test] Sent via data channel: {message}")
+            if test_channel:
+                test_channel.messages.append({"from": "dla", "text": message})
+            return web.json_response({"status": "sent", "message": message})
         else:
-            return web.json_response({"error": "No data channel available"}, status=400)
+            return web.json_response({"error": "No active data channel"}, status=400)
     
     except Exception as e:
-        print(f"[WebRTC Test] Error: {e}")
+        print(f"[WebRTC Test] Error sending message: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+async def handle_receive_offer(request):
+    """Receive offer from browser (browser-as-offerer flow) and generate answer"""
+    global pc, test_channel, active_data_channel
+    
+    try:
+        data = await request.json()
+        browser_offer_sdp = data.get("offer")
+        
+        if not browser_offer_sdp:
+            return web.json_response({"error": "No offer provided"}, status=400)
+        
+        print("[WebRTC Test] ===== BROWSER-AS-OFFERER FLOW =====")
+        print(f"[WebRTC Test] Received offer from browser ({len(browser_offer_sdp)} chars)")
+        
+        # Create new peer connection for this flow
+        pc = RTCPeerConnection()
+        test_channel = TestDataChannel()
+        
+        # Set up data channel handler (browser will create the data channel)
+        @pc.on("datachannel")
+        def on_datachannel(channel):
+            global active_data_channel
+            active_data_channel = channel
+            print(f"[WebRTC Test] Browser data channel received: {channel.label}")
+            
+            @channel.on("message")
+            def on_message(message):
+                print(f"[WebRTC Test] Received from browser: {message}")
+                test_channel.messages.append({"from": "browser", "text": message})
+            
+            @channel.on("close")
+            def on_close():
+                global active_data_channel
+                active_data_channel = None
+                print("[WebRTC Test] Browser data channel closed")
+        
+        # Set remote description (browser's offer)
+        browser_offer = RTCSessionDescription(
+            sdp=browser_offer_sdp,
+            type="offer"
+        )
+        
+        try:
+            await pc.setRemoteDescription(browser_offer)
+            print("[WebRTC Test] Remote description (browser offer) set successfully")
+        except Exception as e:
+            print(f"[WebRTC Test] Error setting remote description: {e}")
+            return web.json_response({"error": f"Failed to parse browser offer: {str(e)}"}, status=400)
+        
+        # Create answer
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        
+        answer_sdp = pc.localDescription.sdp
+        print(f"[WebRTC Test] Generated answer ({len(answer_sdp)} chars)")
+        print("[WebRTC Test] Answer SDP:")
+        for i, line in enumerate(answer_sdp.split('\r\n'), 1):
+            if line:
+                print(f"  {i}: {line}")
+        
+        return web.json_response({"answer": answer_sdp, "status": "success"})
+    
+    except Exception as e:
+        print(f"[WebRTC Test] Error in browser-as-offerer flow: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
 async def handle_status(request):
@@ -282,6 +414,31 @@ async def handle_options(request):
         }
     )
 
+async def handle_send_message(request):
+    """Send a message to the browser via the data channel"""
+    global active_data_channel, test_channel
+    
+    try:
+        data = await request.json()
+        message = data.get("message", "").strip()
+        
+        if not message:
+            return web.json_response({"error": "Empty message"}, status=400)
+        
+        if not active_data_channel:
+            return web.json_response({"error": "No active data channel"}, status=400)
+        
+        active_data_channel.send(message)
+        print(f"[WebRTC Test] Sent to browser via HTTP: {message}")
+        if test_channel:
+            test_channel.messages.append({"from": "dla", "text": message})
+        
+        return web.json_response({"status": "sent", "message": message})
+    
+    except Exception as e:
+        print(f"[WebRTC Test] Error sending message: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def create_app():
     """Create the test app"""
     app = web.Application()
@@ -309,17 +466,23 @@ async def create_app():
     
     # Routes
     app.router.add_route('OPTIONS', '/api/offer', handle_options)
+    app.router.add_route('OPTIONS', '/api/answer', handle_options)
+    app.router.add_route('OPTIONS', '/api/ice-candidate', handle_options)
     app.router.add_route('OPTIONS', '/api/send', handle_options)
-    app.router.add_route('OPTIONS', '/api/status', handle_options)
-    app.router.add_post('/api/offer', handle_offer)
-    app.router.add_post('/api/send', handle_send_message)
+    app.router.add_route('OPTIONS', '/api/send-message', handle_options)
+    app.router.add_get('/api/offer', handle_generate_offer)
+    app.router.add_post('/api/answer', handle_answer)
+    app.router.add_post('/api/ice-candidate', handle_ice_candidates)
     app.router.add_get('/api/status', handle_status)
+    app.router.add_post('/api/send-message', handle_send_message)
+    app.router.add_post('/api/receive-offer', handle_receive_offer)
     
     return app
 
 # Global variables
 pc = None
 test_channel = None
+ice_candidates_from_browser = []
 
 if __name__ == '__main__':
     print("\n" + "="*50)
