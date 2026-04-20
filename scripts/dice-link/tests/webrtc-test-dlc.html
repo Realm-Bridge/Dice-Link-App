@@ -296,7 +296,10 @@
 
         function updateStatus() {
             const statusEl = document.getElementById('status');
-            if (dataChannel && dataChannel.readyState === 'open') {
+            // Check both data channels (DLA-as-offerer and browser-as-offerer flows)
+            const isConnected = (dataChannel && dataChannel.readyState === 'open') || 
+                               (browserOfferDataChannel && browserOfferDataChannel.readyState === 'open');
+            if (isConnected) {
                 statusEl.textContent = '✅ Connected';
                 statusEl.className = 'status connected';
                 document.getElementById('sendBtn').disabled = false;
@@ -604,18 +607,19 @@
                 return;
             }
 
-            if (!dataChannel || dataChannel.readyState !== 'open') {
+            // Use whichever data channel is open (browser-as-offerer or DLA-as-offerer)
+            const activeChannel = (browserOfferDataChannel && browserOfferDataChannel.readyState === 'open') 
+                ? browserOfferDataChannel 
+                : dataChannel;
+
+            if (!activeChannel || activeChannel.readyState !== 'open') {
                 alert('Data channel not open');
                 return;
             }
 
-            try {
-                dataChannel.send(message);
-                logMessage('user', message);
-                input.value = '';
-            } catch (error) {
-                alert('Error sending message: ' + error);
-            }
+            activeChannel.send(message);
+            logMessage('sent', message);
+            input.value = '';
         }
 
         // Allow Enter key to send message
