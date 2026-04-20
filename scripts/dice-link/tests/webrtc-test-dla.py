@@ -152,31 +152,18 @@ async def handle_offer(request):
                 offer_max_message_size = line
         
         # Build answer SDP line by line, matching offer structure exactly
-        # Order from Chrome's offer:
-        # v=0
-        # o=- ... (use aiortc's)
-        # s=-
-        # t=0 0
-        # a=group:BUNDLE 0
-        # a=extmap-allow-mixed
-        # a=msid-semantic: WMS
-        # m=application 9 UDP/DTLS/SCTP webrtc-datachannel
-        # c=IN IP4 0.0.0.0
-        # a=ice-ufrag:... (aiortc's)
-        # a=ice-pwd:... (aiortc's)
-        # a=ice-options:trickle
-        # a=fingerprint:sha-256 ... (aiortc's)
-        # a=setup:passive (changed from actpass)
-        # a=mid:0
-        # a=sctp-port:5000
-        # a=max-message-size:262144
+        # MINIMAL required attributes only - remove anything that causes parsing errors
+        # Order matters!
         
         answer_lines = []
+        
+        # Session level
         answer_lines.append('v=0')
         answer_lines.append(aiortc_o_line or 'o=- 0 0 IN IP4 0.0.0.0')
         answer_lines.append('s=-')
         answer_lines.append('t=0 0')
         
+        # Session-level attributes (these go BEFORE media section)
         if offer_group:
             answer_lines.append(offer_group)
         
@@ -186,37 +173,44 @@ async def handle_offer(request):
         if offer_msid_semantic:
             answer_lines.append(offer_msid_semantic)
         
-        # Media section - use port 9 like offer (not aiortc's random port)
+        # Media section
         answer_lines.append('m=application 9 UDP/DTLS/SCTP webrtc-datachannel')
         
+        # Connection line (must come after m=)
         if offer_c_line:
             answer_lines.append(offer_c_line)
         
+        # Media-level attributes in order
         if aiortc_ice_ufrag:
             answer_lines.append(aiortc_ice_ufrag)
         
         if aiortc_ice_pwd:
             answer_lines.append(aiortc_ice_pwd)
         
+        # Ice options
         if offer_ice_options:
             answer_lines.append(offer_ice_options)
         
+        # Fingerprint (must come before setup)
         if aiortc_fingerprint_sha256:
             answer_lines.append(aiortc_fingerprint_sha256)
         
-        # Answer must use setup:passive (offerer was actpass)
+        # Setup (answer sets this to passive since offer was actpass)
         answer_lines.append('a=setup:passive')
         
+        # Media ID
         if offer_mid:
             answer_lines.append(offer_mid)
         
+        # SCTP port
         if offer_sctp_port:
             answer_lines.append(offer_sctp_port)
         
+        # Max message size (MUST use the value from the offer, not aiortc's)
         if offer_max_message_size:
             answer_lines.append(offer_max_message_size)
         
-        # Join with LF and add trailing LF (like offer has)
+        # Join with LF and add trailing LF (match offer's line ending style)
         answer_sdp = '\n'.join(answer_lines) + '\n'
         
         print("\n" + "="*60)
