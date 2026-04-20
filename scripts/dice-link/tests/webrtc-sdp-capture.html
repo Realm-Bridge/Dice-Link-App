@@ -177,12 +177,15 @@
                 await offererPc.setLocalDescription(offer);
 
                 const sdp = offererPc.localDescription.sdp;
-                document.getElementById('offerOutput').value = sdp;
-                document.getElementById('capturedOffer').value = sdp;
+                // Remove max-message-size - Chrome generates it but doesn't accept it
+                const cleanSdp = sdp.split('\n').filter(line => !line.includes('max-message-size')).join('\n');
+                
+                document.getElementById('offerOutput').value = cleanSdp;
+                document.getElementById('capturedOffer').value = cleanSdp;
 
-                console.log('=== BROWSER-GENERATED OFFER ===');
-                console.log('Length:', sdp.length);
-                sdp.split('\n').forEach((line, i) => {
+                console.log('=== BROWSER-GENERATED OFFER (max-message-size removed) ===');
+                console.log('Length:', cleanSdp.length);
+                cleanSdp.split('\n').forEach((line, i) => {
                     if (line) console.log(i + 1, JSON.stringify(line));
                 });
                 console.log('=== END OFFER ===');
