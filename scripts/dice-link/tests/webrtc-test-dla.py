@@ -132,11 +132,19 @@ async def handle_generate_offer(request):
             elif line.startswith('a=candidate:'):
                 candidates.append(line)
         
-        # Build offer in correct order for browsers
-        # Session level: v, o, s, t, a=group, a=extmap-allow-mixed (optional), a=msid-semantic
-        # Media level: m, c, a=ice-ufrag, a=ice-pwd, a=ice-options, a=fingerprint, a=setup, a=mid, a=sctp-port, a=max-message-size, candidates
+        # Filter candidates to IPv4 only (remove IPv6 for file:// origin compatibility)
+        ipv4_candidates = []
+        for candidate in candidates:
+            # Candidate format: a=candidate:... typ host [other fields]
+            # IPv4 addresses don't contain colons in the address part (before the port)
+            # IPv6 addresses contain colons and are wrapped in brackets like [2a0a:...]
+            if '[' not in candidate and ']' not in candidate:
+                ipv4_candidates.append(candidate)
         
-        fixed_lines = []
+        print(f"[WebRTC Test] Total candidates from aiortc: {len(candidates)}")
+        print(f"[WebRTC Test] IPv4-only candidates: {len(ipv4_candidates)}")
+        
+        # Build offer in correct order for browsers
         
         # Session section
         fixed_lines.append(v_line or 'v=0')
@@ -178,6 +186,10 @@ async def handle_generate_offer(request):
         # SCTP settings
         if sctp_port:
             fixed_lines.append(sctp_port)
+        
+        # Add ICE candidates (IPv4 only) - these are essential for connection
+        for candidate in ipv4_candidates:
+            fixed_lines.append(candidate)
         
         # Join with CRLF line endings (required by WebRTC SDP spec)
         # Chrome generates SDP with \r\n, not just \n
