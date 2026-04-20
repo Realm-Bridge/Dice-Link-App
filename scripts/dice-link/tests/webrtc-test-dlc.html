@@ -326,7 +326,6 @@
                 });
                 
                 // Set up to receive data channels from DLA
-                @pc.on("datachannel")
                 pc.ondatachannel = (event) => {
                     dataChannel = event.channel;
                     setupDataChannel();
