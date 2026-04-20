@@ -223,9 +223,12 @@ async def handle_offer(request):
         print("MANUALLY CONSTRUCTED ANSWER SDP")
         print("="*60)
         print(f"Length: {len(answer_sdp)} bytes")
+        print(f"Hex dump (first 200 bytes): {answer_sdp[:200].encode().hex()}")
+        print(f"Repr (first 150 chars): {repr(answer_sdp[:150])}")
         print("\nFinal answer lines:")
         for i, line in enumerate(answer_sdp.split('\n')):
-            print(f"  {i+1}: {repr(line)}")
+            if line or i < len(answer_sdp.split('\n')) - 1:  # Skip the final empty line from split
+                print(f"  {i+1}: {repr(line)}")
         print("="*60 + "\n")
         
         return web.json_response({"answer": answer_sdp})

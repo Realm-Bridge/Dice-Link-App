@@ -350,9 +350,14 @@
                 // DEBUG: Print exactly what we're passing to the browser
                 console.log('=== ANSWER SDP RECEIVED ===');
                 console.log('Length:', answerSdp.length);
-                console.log('Lines:');
-                answerSdp.split('\n').forEach((line, i) => {
-                    console.log(`  ${i+1}: ${JSON.stringify(line)}`);
+                console.log('Hex (first 200 chars):', btoa(answerSdp.substring(0, 200)));
+                console.log('Repr (first 150 chars):', JSON.stringify(answerSdp.substring(0, 150)));
+                console.log('Lines (excluding final empty):');
+                const lines = answerSdp.split('\n');
+                lines.forEach((line, i) => {
+                    if (line || i < lines.length - 1) {
+                        console.log(`  ${i+1}: ${JSON.stringify(line)}`);
+                    }
                 });
                 console.log('=== END ANSWER SDP ===');
 
