@@ -179,38 +179,23 @@ async def handle_generate_offer(request):
         if sctp_port:
             fixed_lines.append(sctp_port)
         
-        # Join with LF and add trailing LF
-        constructed_offer_sdp = '\n'.join(fixed_lines) + '\n'
+        # Join with CRLF line endings (required by WebRTC SDP spec)
+        # Chrome generates SDP with \r\n, not just \n
+        constructed_offer_sdp = '\r\n'.join(fixed_lines) + '\r\n'
         
         # ============================================
-        # DIAGNOSTIC TEST: Use exact browser-generated SDP
+        # DIAGNOSTIC TEST: Use exact browser-generated SDP format
         # This tests whether Chrome will accept a known-working SDP
-        # If this fails, the problem is NOT the SDP format
+        # Must use \r\n line endings to match Chrome's output
         # ============================================
         USE_HARDCODED_SDP = True  # Set to False to use constructed SDP
         
         if USE_HARDCODED_SDP:
-            # This is the EXACT offer that worked in the browser-to-browser diagnostic
+            # This is the EXACT offer format that worked in the browser-to-browser diagnostic
             # We only replace ice-ufrag, ice-pwd, and fingerprint with our actual values
-            offer_sdp = f"""v=0
-o=- 4098042193945182461 2 IN IP4 127.0.0.1
-s=-
-t=0 0
-a=group:BUNDLE 0
-a=extmap-allow-mixed
-a=msid-semantic: WMS
-m=application 9 UDP/DTLS/SCTP webrtc-datachannel
-c=IN IP4 0.0.0.0
-{ice_ufrag}
-{ice_pwd}
-a=ice-options:trickle
-{fingerprint_sha256}
-a=setup:actpass
-a=mid:0
-a=sctp-port:5000
-a=max-message-size:262144
-"""
-            print("\n*** USING HARDCODED BROWSER-FORMAT SDP (DIAGNOSTIC MODE) ***\n")
+            # CRITICAL: Must use \r\n (CRLF) line endings, not just \n
+            offer_sdp = f"v=0\r\no=- 4098042193945182461 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\n{ice_ufrag}\r\n{ice_pwd}\r\na=ice-options:trickle\r\n{fingerprint_sha256}\r\na=setup:actpass\r\na=mid:0\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n"
+            print("\n*** USING HARDCODED BROWSER-FORMAT SDP WITH CRLF LINE ENDINGS ***\n")
         else:
             offer_sdp = constructed_offer_sdp
         

@@ -359,24 +359,8 @@
                     iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
                 });
                 
-                // The exact working SDP from the diagnostic test
-                const workingSdp = `v=0
-o=- 4098042193945182461 2 IN IP4 127.0.0.1
-s=-
-t=0 0
-a=group:BUNDLE 0
-a=extmap-allow-mixed
-a=msid-semantic: WMS
-m=application 9 UDP/DTLS/SCTP webrtc-datachannel
-c=IN IP4 0.0.0.0
-a=ice-ufrag:YK/H
-a=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd
-a=ice-options:trickle
-a=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4
-a=setup:actpass
-a=mid:0
-a=sctp-port:5000
-a=max-message-size:262144`;
+                // The exact working SDP from the diagnostic test with CRLF line endings
+                const workingSdp = "v=0\r\no=- 4098042193945182461 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\na=ice-ufrag:YK/H\r\na=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd\r\na=ice-options:trickle\r\na=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4\r\na=setup:actpass\r\na=mid:0\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n";
                 
                 diagnosticOutput.value += `[v0] SDP length: ${workingSdp.length}\n`;
                 diagnosticOutput.value += `[v0] Parsing SDP from local context (no HTTP)...\n`;
@@ -415,24 +399,9 @@ a=max-message-size:262144`;
                 
                 const chromeGeneratedSdp = testPc.localDescription.sdp;
                 
-                // The hardcoded SDP we've been trying
-                const hardcodedSdp = `v=0
-o=- 4098042193945182461 2 IN IP4 127.0.0.1
-s=-
-t=0 0
-a=group:BUNDLE 0
-a=extmap-allow-mixed
-a=msid-semantic: WMS
-m=application 9 UDP/DTLS/SCTP webrtc-datachannel
-c=IN IP4 0.0.0.0
-a=ice-ufrag:YK/H
-a=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd
-a=ice-options:trickle
-a=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4
-a=setup:actpass
-a=mid:0
-a=sctp-port:5000
-a=max-message-size:262144`;
+                // The hardcoded SDP with proper CRLF line endings
+                // Chrome generates SDP with \r\n, not just \n
+                const hardcodedSdp = "v=0\r\no=- 4098042193945182461 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\na=ice-ufrag:YK/H\r\na=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd\r\na=ice-options:trickle\r\na=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4\r\na=setup:actpass\r\na=mid:0\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n";
                 
                 diagnosticOutput.value += `\n--- CHROME GENERATED SDP ---\n`;
                 diagnosticOutput.value += `Length: ${chromeGeneratedSdp.length}\n`;
