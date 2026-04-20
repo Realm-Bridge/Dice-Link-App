@@ -10,94 +10,197 @@ WebRTC Data Channels are being used to bypass Private Network Access (PNA) brows
 
 ## Current Status (April 2026)
 
-**Working:** Firefox successfully connects to aiortc (Python DLA) with bidirectional data channel messaging.
+**WORKING - Both Firefox and Chrome:**
 
-**Pending:** Chrome testing - Chrome has stricter SDP validation than Firefox and may require additional adjustments.
+| Browser | Flow | Status |
+|---------|------|--------|
+| Firefox | DLA-as-offerer | Working |
+| Firefox | Browser-as-offerer | Working |
+| Chrome | Browser-as-offerer | Working |
+| Chrome | DLA-as-offerer | FAILS (Chrome rejects external offers) |
+
+**Recommendation:** Use **browser-as-offerer** flow for cross-browser compatibility.
+
+---
+
+## The Solution: Browser-as-Offerer Flow
+
+Chrome has strict security validation that rejects externally-generated SDP offers. The solution is to reverse the signaling flow so the browser generates the offer (which Chrome trusts) and DLA generates the answer.
+
+### Why This Works
+
+1. Chrome trusts its own SDP format completely
+2. Chrome accepts answers from external sources (DLA) without issue
+3. This pattern works in all environments: `file://`, `localhost`, native apps, browser windows
+
+### Implementation Flow
+
+```
+DLC (Browser)                           DLA (Python/aiortc)
+     |                                       |
+     |-- 1. Browser creates offer locally -->|
+     |      (RTCPeerConnection.createOffer)  |
+     |                                       |
+     |-- 2. POST /api/receive-offer -------->|
+     |       (send browser's offer to DLA)   |
+     |                                       |
+     |<-- 3. Answer SDP --------------------|
+     |       (DLA generates answer)          |
+     |                                       |
+     |-- 4. Browser sets remote description  |
+     |      (with DLA's answer)              |
+     |                                       |
+     |<== 5. Data channel opens ============>|
+     |<== 6. Bidirectional messages ========>|
+```
+
+### DLC Implementation (Browser/JavaScript)
+
+```javascript
+// 1. Create peer connection
+const pc = new RTCPeerConnection({
+    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+});
+
+// 2. Create data channel BEFORE creating offer
+const dataChannel = pc.createDataChannel('dice-link');
+
+// 3. Set up data channel handlers
+dataChannel.onopen = () => {
+    console.log('Data channel opened!');
+};
+
+dataChannel.onmessage = (event) => {
+    console.log('Message from DLA:', event.data);
+};
+
+// 4. Generate offer
+const offer = await pc.createOffer();
+await pc.setLocalDescription(offer);
+
+// 5. Send offer to DLA
+const response = await fetch('http://localhost:8080/api/receive-offer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ offer: pc.localDescription.sdp })
+});
+
+const result = await response.json();
+
+// 6. Set DLA's answer as remote description
+const answer = new RTCSessionDescription({
+    type: 'answer',
+    sdp: result.answer
+});
+await pc.setRemoteDescription(answer);
+
+// 7. Connection established - data channel will open automatically
+```
+
+### DLA Implementation (Python/aiortc)
+
+```python
+from aiortc import RTCPeerConnection, RTCSessionDescription
+
+# Global reference to store active data channel
+active_data_channel = None
+
+async def handle_receive_offer(request):
+    """Receive browser's offer and generate answer"""
+    global active_data_channel
+    
+    data = await request.json()
+    browser_offer_sdp = data.get("offer")
+    
+    # Create peer connection
+    pc = RTCPeerConnection()
+    
+    # Handle incoming data channel from browser
+    @pc.on("datachannel")
+    def on_datachannel(channel):
+        global active_data_channel
+        active_data_channel = channel
+        print(f"Data channel received: {channel.label}")
+        
+        @channel.on("message")
+        def on_message(message):
+            print(f"Received from browser: {message}")
+        
+        @channel.on("close")
+        def on_close():
+            global active_data_channel
+            active_data_channel = None
+    
+    # Set browser's offer as remote description
+    browser_offer = RTCSessionDescription(
+        sdp=browser_offer_sdp,
+        type="offer"
+    )
+    await pc.setRemoteDescription(browser_offer)
+    
+    # Create and set answer
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+    
+    # Return answer to browser
+    return web.json_response({
+        "answer": pc.localDescription.sdp,
+        "status": "success"
+    })
+```
 
 ---
 
 ## Critical Lessons Learned
 
-### Lesson 1: Line Endings - CRLF vs LF
+### Lesson 1: Chrome Rejects External Offers
+
+**Chrome has strict security validation for externally-delivered SDP offers.**
+
+When we sent an aiortc-generated offer to Chrome via HTTP, Chrome rejected it with:
+```
+OperationError: Failed to execute 'setRemoteDescription' on 'RTCPeerConnection': 
+Failed to parse SessionDescription. a=candidate:... Invalid SDP line.
+```
+
+**Key evidence:**
+- The same SDP parsed successfully in Chrome's local diagnostic test
+- Firefox accepted the exact same SDP without issues
+- Chrome's error was "Invalid SDP line" but the format was correct
+
+**Root cause:** Chrome applies stricter validation to SDPs received from external sources than to locally-generated ones. This is a security feature, not a bug.
+
+**Solution:** Browser-as-offerer flow - Chrome trusts its own offers completely.
+
+### Lesson 2: Line Endings - CRLF Required
 
 **The WebRTC SDP specification (RFC 8866) requires CRLF (`\r\n`) line endings.**
 
-- **Previous documentation was WRONG** - We initially believed browsers wanted LF (`\n`) only
-- **Chrome generates CRLF** - When Chrome creates an SDP, it uses `\r\n` line endings
-- **aiortc generates LF** - Python's aiortc library generates `\n` only
-- **Solution:** When constructing SDP in Python, join lines with `\r\n`:
-  ```python
-  sdp = "\r\n".join(lines) + "\r\n"
-  ```
+- aiortc generates LF (`\n`) only by default
+- Browsers expect and generate CRLF (`\r\n`)
+- When constructing SDP in Python, join lines with CRLF:
 
-**How we discovered this:** Hex dump comparison of Chrome-generated SDP vs aiortc-generated SDP revealed `0d0a` (CRLF) vs `0a` (LF) differences.
-
-### Lesson 2: ICE Candidates MUST Be Included in the Offer
-
-**The most critical bug we found:** Our SDP construction code was stripping ICE candidate lines.
-
-- aiortc's `createOffer()` generates an SDP with `a=candidate:` lines containing actual IP addresses and ports
-- Our code was extracting various SDP attributes but **never adding the candidates back** to the constructed offer
-- Without candidates, the browser has no connection targets and ICE fails immediately
-
-**Firefox Connection Log showed:**
-```
-Remote component 1 in state 3 - dumping candidates
-[NOTHING LISTED]
-all checks completed success=0 fail=1
-```
-
-**Solution:** Include all `a=candidate:` lines from aiortc's original offer:
 ```python
-# Extract candidates from raw offer
+sdp = "\r\n".join(lines) + "\r\n"
+```
+
+### Lesson 3: ICE Candidates MUST Be Included
+
+**The most critical bug we found:** SDP construction code was stripping ICE candidate lines.
+
+Without `a=candidate:` lines, the browser has no connection targets and ICE fails immediately.
+
+**Solution:** Always include all candidates from aiortc's offer:
+```python
 for line in raw_lines:
     if line.startswith('a=candidate:'):
         candidates.append(line)
-
-# Add them to the constructed offer (after SCTP settings)
-for candidate in candidates:
-    fixed_lines.append(candidate)
 ```
 
-### Lesson 3: Browser Differences - Firefox vs Chrome
+### Lesson 4: Data Channel Reference Storage
 
-**Firefox is more lenient than Chrome with SDP parsing.**
+**When DLA creates the data channel (DLA-as-offerer), store reference on `dc.on("open")`:**
 
-- Firefox successfully connected once we included ICE candidates
-- Chrome rejects externally-delivered SDPs that Firefox accepts
-- This is NOT a security bug in Chrome - it's intentional stricter validation
-- **Test in Firefox first** to verify SDP format is correct, then address Chrome-specific issues
-
-**Diagnostic approach:** If Firefox works but Chrome doesn't, the issue is Chrome-specific validation, not fundamental SDP format problems.
-
-### Lesson 4: IPv4 vs IPv6 Candidates
-
-**aiortc auto-discovers ALL network interfaces:**
-- IPv4 candidates: `192.168.1.55:59010` (local network), `83.105.151.227` (public IP)
-- IPv6 candidates: `2a0a:ef40:10cc:7201::...` (if IPv6 is enabled)
-
-**Initial concern:** We thought IPv6 candidates from `file://` origin would fail.
-
-**Actual result:** Firefox handles both IPv4 and IPv6 candidates fine. The real issue was missing candidates entirely, not IPv6 vs IPv4.
-
-**Note:** IPv6 filtering may still be needed for Chrome or other edge cases. The filter logic should check for actual IPv6 address format, not bracket notation (brackets are only used in URLs, not in SDP candidate lines).
-
-### Lesson 5: Data Channel Reference Storage
-
-**When DLA creates the data channel, the `on_datachannel` event does NOT fire on DLA.**
-
-- `on_datachannel` fires when the REMOTE peer creates a channel
-- Since DLA is the offerer and creates the channel, DLA must store the reference differently
-
-**Wrong approach:**
-```python
-@pc.on("datachannel")
-async def on_datachannel(channel):
-    global active_data_channel
-    active_data_channel = channel  # This never fires for DLA!
-```
-
-**Correct approach:**
 ```python
 dc = pc.createDataChannel("test")
 
@@ -107,43 +210,35 @@ async def on_open():
     active_data_channel = dc  # Store when OUR channel opens
 ```
 
-### Lesson 6: Firefox Debugging Tools
+**When browser creates the data channel (browser-as-offerer), store reference on `pc.on("datachannel")`:**
 
-**`about:webrtc` in Firefox provides detailed WebRTC diagnostics:**
+```python
+@pc.on("datachannel")
+def on_datachannel(channel):
+    global active_data_channel
+    active_data_channel = channel  # Store the received channel
+```
 
-1. **RTCPeerConnection Statistics** - Shows connection state, ICE stats, raw candidates
-2. **Connection Log** - Timestamped events showing exactly what happened
-3. **SDP sections** - Shows Local SDP (Answer) and Remote SDP (Offer) as received
+### Lesson 5: Firefox vs Chrome Debugging Strategy
 
-**Key things to look for:**
-- "Raw Local Candidate" and "Raw Remote Candidate" - should NOT be empty
-- ICE State table - shows which candidates succeeded/failed
-- Connection Log warnings like "Ignoring loopback addr"
+1. **Test Firefox first** - Firefox is more lenient, helps verify SDP format is correct
+2. **If Firefox works but Chrome fails** - Issue is Chrome-specific validation
+3. **Use `about:webrtc` in Firefox** - Shows connection logs, ICE candidates, SDP details
+4. **Use Chrome DevTools Console** - Shows specific error messages about SDP parsing
 
-### Lesson 7: The Offer/Answer Flow Matters
+### Lesson 6: IPv4 vs IPv6 Candidates
 
-**Our flow (DLA as offerer) works with Firefox:**
-1. DLA creates offer with data channel
-2. Browser receives offer via HTTP fetch
-3. Browser creates answer
-4. Browser sends answer via HTTP POST
-5. DLA sets remote description with browser's answer
-6. ICE candidates exchanged
-7. Data channel opens
-
-**Alternative flow (browser as offerer) may be needed for Chrome:**
-- Some documentation suggests browsers are more lenient when THEY create the offer
-- If Chrome continues to reject DLA's offer, we may need to reverse the flow
+aiortc auto-discovers all network interfaces including IPv6. Both Firefox and Chrome handle mixed IPv4/IPv6 candidates fine. The real issue was missing candidates entirely, not IPv6 presence.
 
 ---
 
-## Working SDP Format (Verified April 2026 - Firefox)
+## Working SDP Formats
 
-### Offer SDP (from aiortc/DLA)
+### Browser-Generated Offer (Chrome)
 
 ```
 v=0
-o=- 3985688943 3985688943 IN IP4 0.0.0.0
+o=- 3524470939 2 IN IP4 127.0.0.1
 s=-
 t=0 0
 a=group:BUNDLE 0
@@ -151,148 +246,100 @@ a=extmap-allow-mixed
 a=msid-semantic: WMS
 m=application 9 UDP/DTLS/SCTP webrtc-datachannel
 c=IN IP4 0.0.0.0
-a=sendrecv
-a=ice-pwd:0ed1942bc27f2857310a7678721387f6
-a=ice-ufrag:3c477f54
-a=mid:0
-a=setup:actpass
-a=sctp-port:5000
-a=max-message-size:1073741823
-a=candidate:... (IPv4 and IPv6 candidates from aiortc)
-a=candidate:...
+a=ice-ufrag:xxxx
+a=ice-pwd:xxxxxxxxxxxxxxxxxxxx
+a=ice-options:trickle
 a=fingerprint:sha-256 XX:XX:XX:...
+a=setup:actpass
+a=mid:0
+a=sctp-port:5000
+a=max-message-size:262144
 ```
 
-**Key differences from browser-generated SDP:**
-- aiortc uses `0.0.0.0` for origin IP (browsers use `127.0.0.1`)
-- aiortc includes `a=sendrecv` (browsers may omit)
-- aiortc includes `a=max-message-size` with large value
-- Candidates appear after other attributes (order varies)
-
-### Answer SDP (from Firefox)
+### DLA-Generated Answer (aiortc)
 
 ```
 v=0
-o=mozilla...THIS_IS_SDPARTA-99.0 5716558636668147076 0 IN IP4 0.0.0.0
+o=- 3109055570914192449 2 IN IP4 127.0.0.1
 s=-
 t=0 0
-a=sendrecv
+a=group:BUNDLE 0
 a=extmap-allow-mixed
-a=fingerprint:sha-256 XX:XX:XX:...
-a=ice-options:trickle
-a=msid-semantic:WMS *
-m=application 0 UDP/DTLS/SCTP webrtc-datachannel
+a=msid-semantic: WMS
+m=application 9 UDP/DTLS/SCTP webrtc-datachannel
 c=IN IP4 0.0.0.0
-a=ice-ufrag:c2b79cfa
-a=mid:0
+a=ice-ufrag:xxxx
+a=ice-pwd:xxxxxxxxxxxxxxxxxxxx
+a=fingerprint:sha-256 XX:XX:XX:...
 a=setup:active
+a=mid:0
 a=sctp-port:5000
 a=max-message-size:1073741823
+a=candidate:... (IPv4 candidates)
+a=candidate:... (IPv6 candidates if present)
 ```
 
-**Note:** Firefox's answer includes `a=setup:active` (responding to offerer's `actpass`).
+**Note:** Answerer uses `a=setup:active` (responding to offerer's `actpass`).
 
 ---
 
-## SDP Construction Requirements
+## API Endpoints for DLA
 
-### 1. Line Endings (CRITICAL)
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/receive-offer` | POST | Receive browser offer, return DLA answer (browser-as-offerer) |
+| `/api/offer` | GET | Get DLA offer (DLA-as-offerer, Firefox only) |
+| `/api/answer` | POST | Receive browser answer (DLA-as-offerer) |
+| `/api/send-message` | POST | Send message to browser via data channel |
+| `/api/status` | GET | Check connection status |
 
-```python
-# CORRECT - Use CRLF
-sdp = "\r\n".join(lines) + "\r\n"
-
-# WRONG - LF only will fail in some browsers
-sdp = "\n".join(lines) + "\n"
-```
-
-### 2. Required Attributes (minimum for data channel)
-
-**Session level:**
-- `v=0`
-- `o=- {session-id} {version} IN IP4 {ip}`
-- `s=-`
-- `t=0 0`
-- `a=group:BUNDLE 0`
-- `a=msid-semantic: WMS` or `a=msid-semantic:WMS *`
-
-**Media level:**
-- `m=application {port} UDP/DTLS/SCTP webrtc-datachannel`
-- `c=IN IP4 0.0.0.0`
-- `a=ice-ufrag:{value}`
-- `a=ice-pwd:{value}`
-- `a=fingerprint:sha-256 {value}`
-- `a=setup:{actpass|active}`
-- `a=mid:0`
-- `a=sctp-port:5000`
-- `a=candidate:...` (one or more ICE candidates)
-
-### 3. Setup Values
-
-- **Offerer** uses `a=setup:actpass`
-- **Answerer** uses `a=setup:active`
-
-### 4. ICE Candidates
-
-**Format:**
-```
-a=candidate:{foundation} {component} {protocol} {priority} {ip} {port} typ {type} [other fields]
-```
-
-**Example:**
-```
-a=candidate:0 1 UDP 2122252543 192.168.1.55 59010 typ host
-a=candidate:1 1 UDP 1685987327 83.105.151.227 59010 typ srflx raddr 192.168.1.55 rport 59010
-```
+**For Chrome compatibility, use `/api/receive-offer` endpoint.**
 
 ---
 
 ## Common Mistakes (Do NOT Repeat)
 
-1. **Missing ICE candidates** - The offer MUST include `a=candidate:` lines with actual IP addresses
-2. **Wrong line endings** - Use CRLF (`\r\n`), not LF (`\n`) only
-3. **Storing data channel reference incorrectly** - For the offerer, store on `dc.on("open")`, not `pc.on("datachannel")`
-4. **Assuming Firefox behavior = Chrome behavior** - Chrome is stricter; test both
-5. **Guessing at SDP format changes** - Always diagnose first with hex dumps and browser tools
+1. **Using DLA-as-offerer with Chrome** - Chrome rejects external offers; use browser-as-offerer
+2. **Missing ICE candidates** - Offer/answer MUST include `a=candidate:` lines
+3. **Wrong line endings** - Use CRLF (`\r\n`), not LF (`\n`)
+4. **Wrong data channel reference storage** - Depends on who creates the channel
+5. **Assuming Firefox behavior = Chrome behavior** - Always test both
 6. **Suggesting WebSockets** - They don't work due to PNA restrictions
-7. **Stripping candidates during SDP construction** - Always preserve and include ICE candidates
 
 ---
 
 ## Debugging Checklist
 
-When WebRTC fails:
+### 1. Check Which Flow to Use
+- Chrome: Browser-as-offerer only
+- Firefox: Either flow works
 
-### 1. Check Line Endings
-```python
-# Hex dump first 60 bytes
-print(' '.join(f'{ord(c):02x}' for c in sdp[:60]))
-# Look for: 0d 0a (CRLF) vs 0a (LF)
+### 2. Verify Data Channel Created Before Offer
+```javascript
+// CORRECT: Create channel BEFORE offer
+const dc = pc.createDataChannel('test');
+const offer = await pc.createOffer();
+
+// WRONG: Creating channel after offer
+const offer = await pc.createOffer();
+const dc = pc.createDataChannel('test');  // Too late!
 ```
 
-### 2. Verify ICE Candidates Present
+### 3. Check ICE Candidates Present
 ```python
-# Check offer contains candidates
 for line in sdp.split('\n'):
     if line.startswith('a=candidate:'):
-        print(f"Found candidate: {line[:50]}...")
+        print(f"Found: {line[:50]}...")
 ```
 
-### 3. Use Firefox about:webrtc
-- Open `about:webrtc` in Firefox
-- Look at Connection Log for errors
-- Check Raw Candidates sections (should NOT be empty)
-- Examine ICE State table
+### 4. Use Browser Tools
+- Firefox: `about:webrtc` for connection logs
+- Chrome: DevTools Console for SDP parsing errors
 
-### 4. Compare SDPs
-- Capture browser-generated SDP (from diagnostic test)
-- Compare against aiortc-generated SDP
-- Look for missing attributes or format differences
-
-### 5. Check Data Channel State
-```javascript
-console.log('Data channel state:', dc.readyState);
-// Should be: 'connecting' then 'open'
+### 5. Verify Line Endings
+```python
+print(' '.join(f'{ord(c):02x}' for c in sdp[:60]))
+# Should see: 0d 0a (CRLF)
 ```
 
 ---
@@ -301,47 +348,46 @@ console.log('Data channel state:', dc.readyState);
 
 | File | Purpose |
 |------|---------|
-| `/scripts/dice-link/tests/webrtc-diagnostic.html` | Browser-only diagnostic (two peers in same page) |
-| `/scripts/dice-link/tests/webrtc-test-dla.py` | Python DLA test server with aiortc |
-| `/scripts/dice-link/tests/webrtc-test-dlc.html` | Browser DLC test page for connecting to DLA |
+| `webrtc-test-dla.py` | Python DLA test server with both signaling flows |
+| `webrtc-test-dlc.html` | Browser test page with DLA-as-offerer and browser-as-offerer |
+| `webrtc-diagnostic.html` | Browser-only diagnostic (two peers in same page) |
 
 ---
 
-## Architecture
+## Integration Checklist for Main Apps
 
-```
-DLC (Browser)                    DLA (Python/aiortc)
-     |                                |
-     |-- 1. GET /api/offer ---------->|
-     |<-- 2. Offer SDP (with ----------|
-     |       ICE candidates)          |
-     |                                |
-     |-- 3. POST /api/answer -------->|
-     |       (browser's answer)       |
-     |                                |
-     |-- 4. POST /api/ice-candidate ->| (browser sends its candidates)
-     |                                |
-     |<== 5. Data channel opens =====>|
-     |<== 6. Bidirectional messages =>|
-```
+When integrating WebRTC into the full DLA/DLC apps:
 
-**Note:** ICE candidates flow browser -> DLA. The DLA's candidates are embedded in the offer SDP itself.
+### DLC (Browser/Companion App)
 
----
+- [ ] Add RTCPeerConnection creation with STUN servers
+- [ ] Create data channel before generating offer
+- [ ] Implement `createOffer()` and `setLocalDescription()`
+- [ ] Send offer to DLA via HTTP POST to `/api/receive-offer`
+- [ ] Receive answer and call `setRemoteDescription()`
+- [ ] Handle data channel `onopen`, `onmessage`, `onclose` events
+- [ ] Implement message protocol for dice rolls, game state, etc.
 
-## Next Steps (Chrome Testing)
+### DLA (Python Desktop App)
 
-1. Test the current working DLA with Chrome instead of Firefox
-2. If Chrome rejects the offer, examine the specific error:
-   - SDP parsing error? Check format differences
-   - ICE failure? Check candidate connectivity
-   - Security restriction? May need different approach
-3. Consider reversing flow (browser as offerer) if Chrome remains problematic
-4. Document Chrome-specific requirements in this file
+- [ ] Add `/api/receive-offer` endpoint (browser-as-offerer flow)
+- [ ] Handle incoming data channel via `pc.on("datachannel")`
+- [ ] Store active data channel reference for sending messages
+- [ ] Implement message protocol matching DLC
+- [ ] Handle connection cleanup on channel close
+
+### Testing
+
+- [ ] Test in Firefox (should work with either flow)
+- [ ] Test in Chrome (must use browser-as-offerer)
+- [ ] Test bidirectional messaging
+- [ ] Test reconnection after disconnect
+- [ ] Test in native app environment (Electron or similar)
 
 ---
 
 ## Version History
 
-- **April 2026 (v2):** Major update after successful Firefox connection. Corrected line ending requirements (CRLF not LF), documented ICE candidate inclusion bug, added Firefox debugging tools, documented data channel reference storage issue.
+- **April 2026 (v3):** Chrome solution found - browser-as-offerer flow works. Full bidirectional messaging verified in both Firefox and Chrome. Document restructured for implementation guidance.
+- **April 2026 (v2):** Firefox working with DLA-as-offerer. Documented CRLF requirements, ICE candidate inclusion bug, data channel reference storage.
 - **2024 (v1):** Initial documentation from browser diagnostic testing.
