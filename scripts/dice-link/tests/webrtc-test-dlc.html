@@ -42,6 +42,34 @@
             font-size: 14px;
         }
         
+        .diagnostic-section {
+            background: #f5f5f5;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .diagnostic-section h3 {
+            color: #ff9800;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .diagnostic-section button {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .diagnostic-section button:hover {
+            background: #e68900;
+        }
+        
         .section {
             margin-bottom: 30px;
             padding-bottom: 30px;
@@ -196,8 +224,17 @@
 </head>
 <body>
     <div class="container">
-        <h1>🧪 WebRTC Test App</h1>
+        <h1>🔧 WebRTC Test App</h1>
         <p class="subtitle">DLC Side - Tests if WebRTC bypasses PNA restrictions</p>
+        
+        <div class="diagnostic-section">
+            <h3>⚙️ DIAGNOSTIC: Test Local SDP Parsing (No HTTP/DLA)</h3>
+            <p style="font-size: 12px; margin-bottom: 10px; color: #666;">
+                Tests if hardcoded SDP from browser context can be parsed. If this works but DLA test fails, the issue is cross-origin/HTTP delivery, not SDP format.
+            </p>
+            <button onclick="testLocalSdpParsing()">Test Local SDP Parse</button>
+            <textarea id="diagnosticOutput" style="width: 100%; height: 60px; margin-top: 10px; font-size: 12px; font-family: monospace;"></textarea>
+        </div>
         
         <!-- Connection Status -->
         <div class="section">
@@ -311,7 +348,55 @@
             }
         }
 
-        async function generateAnswer() {
+        async function testLocalSdpParsing() {
+            const diagnosticOutput = document.getElementById('diagnosticOutput');
+            diagnosticOutput.value = '[Testing local SDP parsing...]\n';
+            
+            try {
+                // Create a fresh peer connection
+                const testPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+                
+                // The exact working SDP from the diagnostic test
+                const workingSdp = `v=0
+o=- 4098042193945182461 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE 0
+a=extmap-allow-mixed
+a=msid-semantic: WMS
+m=application 9 UDP/DTLS/SCTP webrtc-datachannel
+c=IN IP4 0.0.0.0
+a=ice-ufrag:YK/H
+a=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd
+a=ice-options:trickle
+a=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4
+a=setup:actpass
+a=mid:0
+a=sctp-port:5000
+a=max-message-size:262144`;
+                
+                diagnosticOutput.value += `[v0] SDP length: ${workingSdp.length}\n`;
+                diagnosticOutput.value += `[v0] Parsing SDP from local context (no HTTP)...\n`;
+                
+                const offer = new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: workingSdp
+                });
+                
+                diagnosticOutput.value += `[v0] Created RTCSessionDescription\n`;
+                
+                await testPc.setRemoteDescription(offer);
+                diagnosticOutput.value += `[SUCCESS] Local SDP parsed without error!\n`;
+                diagnosticOutput.value += `[IMPLICATION] If DLA test fails but this passes, issue is cross-origin/HTTP delivery.\n`;
+                
+                testPc.close();
+            } catch (error) {
+                diagnosticOutput.value += `[ERROR] ${error.message}\n`;
+                diagnosticOutput.value += `[IMPLICATION] SDP format itself is rejected by browser.\n`;
+            }
+        }
             try {
                 const offerSdp = document.getElementById('offerBox').value.trim();
                 
