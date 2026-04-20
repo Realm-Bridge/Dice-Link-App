@@ -21,6 +21,7 @@ from core.websocket_handler import (
 )
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
+from debug import log_dlc_connection, log_dlc_accepted, log_dlc_message, log_dlc_response, log_dlc_disconnect
 
 # Get the base directory (now app.py is at the root of dice-link/)
 BASE_DIR = Path(__file__).resolve().parent
@@ -58,6 +59,18 @@ async def get_status():
 async def get_dice_ranges():
     """Get valid dice value ranges"""
     return JSONResponse(DICE_RANGES)
+
+
+@app.get("/api/external-ip")
+async def get_external_ip_endpoint():
+    """Get external IP for DLC configuration"""
+    from upnp import get_external_ip
+    external_ip = get_external_ip()
+    return JSONResponse({
+        "externalIp": external_ip,
+        "port": 8765,
+        "wsUrl": f"ws://{external_ip}:8765/ws/dlc" if external_ip else None
+    })
 
 
 # ============== Camera Endpoints (Phase 3) ==============
@@ -314,31 +327,31 @@ async def handle_ui_message(message: dict):
 @app.websocket("/ws/dlc")
 async def websocket_dlc(websocket: WebSocket):
     """WebSocket endpoint for DLC connections"""
-    # Detailed logging for debugging
+    # Debug logging via centralized debug module
     client = websocket.client
-    print(f"[DLA DEBUG] /ws/dlc connection attempt received")
-    print(f"[DLA DEBUG] Client address: {client.host}:{client.port}" if client else "[DLA DEBUG] Client address: unknown")
-    print(f"[DLA DEBUG] Headers: {dict(websocket.headers)}")
-    print(f"[DLA DEBUG] Accepting WebSocket connection...")
+    if client:
+        log_dlc_connection(client.host, client.port, dict(websocket.headers))
+    else:
+        log_dlc_connection("unknown", 0, dict(websocket.headers))
     
     await websocket.accept()
-    print(f"[DLA DEBUG] WebSocket connection ACCEPTED for /ws/dlc")
+    log_dlc_accepted()
     
     try:
         while True:
             data = await websocket.receive_text()
-            print(f"[DLA DEBUG] Received message from DLC: {data[:200]}..." if len(data) > 200 else f"[DLA DEBUG] Received message from DLC: {data}")
+            log_dlc_message(data)
             message = json.loads(data)
             
             response = await handle_dlc_message(websocket, message)
             
             if response:
-                print(f"[DLA DEBUG] Sending response to DLC: {json.dumps(response)[:200]}...")
+                log_dlc_response(json.dumps(response))
                 await websocket.send_text(json.dumps(response))
     
     except WebSocketDisconnect:
-        print(f"[DLA DEBUG] WebSocket disconnected (clean disconnect)")
+        log_dlc_disconnect(clean=True)
         await handle_dlc_disconnect()
     except Exception as e:
-        print(f"[DLA DEBUG] WebSocket error: {type(e).__name__}: {e}")
+        log_dlc_disconnect(clean=False, error=f"{type(e).__name__}: {e}")
         await handle_dlc_disconnect()

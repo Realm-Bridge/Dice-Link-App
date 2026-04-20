@@ -19,6 +19,8 @@ sys.path.insert(0, str(DICE_LINK_DIR))
 os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
+from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
+from debug import log_startup
 
 
 class WindowController(QObject):
@@ -109,12 +111,24 @@ def main():
     print(f"  Physical dice rolling for Foundry VTT")
     print(f"{'='*50}\n")
     print(f"Starting Dice Link Desktop App...")
-    print(f"[DLA DEBUG] WEBSOCKET_HOST configured as: {WEBSOCKET_HOST}")
-    print(f"[DLA DEBUG] WEBSOCKET_PORT configured as: {WEBSOCKET_PORT}")
+    log_startup(WEBSOCKET_HOST, WEBSOCKET_PORT)
     print(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
     print(f"UI available at http://localhost:{WEBSOCKET_PORT}")
     print(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
-    print(f"[DLA DEBUG] Waiting for connections on /ws/dlc endpoint...")
+    
+    # Attempt UPnP port forwarding for remote connections
+    upnp_success, external_ip = setup_upnp_port_forward(WEBSOCKET_PORT)
+    if upnp_success:
+        print(f"\n[UPnP] Remote connections enabled!")
+        print(f"[UPnP] Players should configure DLC to connect to: {external_ip}")
+    else:
+        if external_ip:
+            print(f"\n[UPnP] Automatic port forwarding unavailable")
+            print(f"[UPnP] Your external IP is: {external_ip}")
+            print(f"[UPnP] For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
+        else:
+            print(f"\n[UPnP] Could not determine external IP or set up port forwarding")
+            print(f"[UPnP] Remote connections may require manual router configuration")
     
     # Start the FastAPI server in a background thread
     server_thread = threading.Thread(target=run_server, daemon=True)
@@ -163,7 +177,16 @@ def main():
     
     # Show the window and start the application
     browser.show()
-    sys.exit(app.exec_())
+    
+    # Run the application
+    exit_code = app.exec_()
+    
+    # Clean up UPnP port forwarding on exit
+    if upnp_success:
+        print("[UPnP] Cleaning up port forwarding...")
+        remove_upnp_port_forward(WEBSOCKET_PORT)
+    
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":
