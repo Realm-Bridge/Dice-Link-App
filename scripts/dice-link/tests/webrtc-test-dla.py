@@ -324,7 +324,7 @@ async def handle_send_message(request):
 
 async def handle_receive_offer(request):
     """Receive offer from browser (browser-as-offerer flow) and generate answer"""
-    global pc, test_channel
+    global pc, test_channel, active_data_channel
     
     try:
         data = await request.json()
@@ -339,13 +339,24 @@ async def handle_receive_offer(request):
         # Create new peer connection for this flow
         pc = RTCPeerConnection()
         test_channel = TestDataChannel()
-        pc.add_track(test_channel)
         
-        # Set up data channel handler
+        # Set up data channel handler (browser will create the data channel)
         @pc.on("datachannel")
         def on_datachannel(channel):
+            global active_data_channel
+            active_data_channel = channel
             print(f"[WebRTC Test] Browser data channel received: {channel.label}")
-            # Browser is creating the data channel this time
+            
+            @channel.on("message")
+            def on_message(message):
+                print(f"[WebRTC Test] Received from browser: {message}")
+                test_channel.messages.append({"from": "browser", "text": message})
+            
+            @channel.on("close")
+            def on_close():
+                global active_data_channel
+                active_data_channel = None
+                print("[WebRTC Test] Browser data channel closed")
         
         # Set remote description (browser's offer)
         browser_offer = RTCSessionDescription(
@@ -375,9 +386,6 @@ async def handle_receive_offer(request):
     
     except Exception as e:
         print(f"[WebRTC Test] Error in browser-as-offerer flow: {e}")
-        return web.json_response({"error": str(e)}, status=500)
-    except Exception as e:
-        print(f"[WebRTC Test] Error: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
 async def handle_status(request):
