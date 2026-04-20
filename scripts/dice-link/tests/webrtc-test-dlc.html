@@ -397,6 +397,8 @@ a=max-message-size:262144`;
                 diagnosticOutput.value += `[IMPLICATION] SDP format itself is rejected by browser.\n`;
             }
         }
+
+        async function generateAnswer() {
             try {
                 const offerSdp = document.getElementById('offerBox').value.trim();
                 
