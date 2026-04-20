@@ -205,25 +205,24 @@
             <div id="status" class="status disconnected">Disconnected</div>
         </div>
         
-        <!-- Step 1: Generate Offer -->
+        <!-- Step 1: Get Offer from DLA -->
         <div class="section">
-            <div class="section-title">Step 1: Generate Offer</div>
-            <button class="btn-primary" onclick="generateOffer()">Generate WebRTC Offer</button>
+            <div class="section-title">Step 1: Get Offer from DLA</div>
+            <button class="btn-primary" onclick="getOfferFromDLA()">Fetch Offer from DLA</button>
             <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                This creates a WebRTC offer. Copy the text below and paste it into the DLA test app.
+                This retrieves the offer from the DLA test app.
             </p>
-            <textarea id="offerBox" placeholder="Your offer will appear here..." readonly></textarea>
-            <button class="btn-secondary" onclick="copyToClipboard('offerBox')">Copy Offer</button>
+            <textarea id="offerBox" placeholder="Offer will appear here..." readonly></textarea>
         </div>
         
-        <!-- Step 2: Receive Answer -->
+        <!-- Step 2: Generate and Send Answer -->
         <div class="section">
-            <div class="section-title">Step 2: Receive Answer from DLA</div>
-            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                Paste the answer you received from the DLA test app:
+            <div class="section-title">Step 2: Generate Answer & Connect</div>
+            <button class="btn-primary" onclick="generateAnswer()">Generate Answer & Send to DLA</button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                This generates a WebRTC answer based on the DLA's offer and automatically sends it back.
             </p>
-            <textarea id="answerBox" placeholder="Paste the answer here..."></textarea>
-            <button class="btn-primary" onclick="acceptAnswer()">Accept Answer & Connect</button>
+            <textarea id="answerBox" placeholder="Your answer will appear here..." readonly></textarea>
         </div>
         
         <!-- Step 3: Send Test Messages -->
@@ -295,22 +294,76 @@
             });
         }
 
-        async function generateOffer() {
+        async function getOfferFromDLA() {
             try {
+                const response = await fetch('http://localhost:8080/api/offer');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error from DLA: ' + data.error);
+                    return;
+                }
+                
+                document.getElementById('offerBox').value = data.offer;
+                logMessage('system', 'Offer received from DLA.');
+            } catch (error) {
+                alert('Error fetching offer from DLA: ' + error);
+            }
+        }
+
+        async function generateAnswer() {
+            try {
+                const offerSdp = document.getElementById('offerBox').value.trim();
+                
+                if (!offerSdp) {
+                    alert('Please fetch the offer from DLA first');
+                    return;
+                }
+                
+                // Create peer connection and set remote description (the offer)
                 pc = new RTCPeerConnection({
                     iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
                 });
-
-                dataChannel = pc.createDataChannel('test-channel');
-                setupDataChannel();
-
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-
-                document.getElementById('offerBox').value = pc.localDescription.sdp;
-                logMessage('system', 'Offer generated. Copy and paste it into the DLA test app.');
+                
+                // Set up to receive data channels from DLA
+                @pc.on("datachannel")
+                pc.ondatachannel = (event) => {
+                    dataChannel = event.channel;
+                    setupDataChannel();
+                    updateStatus();
+                };
+                
+                const offer = new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: offerSdp
+                });
+                
+                await pc.setRemoteDescription(offer);
+                
+                // Create answer
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                
+                const answerSdp = pc.localDescription.sdp;
+                document.getElementById('answerBox').value = answerSdp;
+                
+                logMessage('system', 'Answer generated. Sending to DLA...');
+                
+                // Send answer back to DLA
+                const response = await fetch('http://localhost:8080/api/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answer: answerSdp })
+                });
+                
+                const result = await response.json();
+                if (result.error) {
+                    alert('Error sending answer to DLA: ' + result.error);
+                } else {
+                    logMessage('system', 'Answer sent to DLA successfully!');
+                }
             } catch (error) {
-                alert('Error generating offer: ' + error);
+                alert('Error generating answer: ' + error);
             }
         }
 
@@ -332,53 +385,6 @@
             dataChannel.onerror = (error) => {
                 logMessage('system', 'Error: ' + error);
             };
-        }
-
-        async function acceptAnswer() {
-            try {
-                const answerSdp = document.getElementById('answerBox').value.trim();
-                if (!answerSdp) {
-                    alert('Please paste the answer first');
-                    return;
-                }
-
-                if (!pc) {
-                    alert('Please generate an offer first');
-                    return;
-                }
-
-                // DEBUG: Print exactly what we're passing to the browser
-                console.log('=== ANSWER SDP RECEIVED ===');
-                console.log('Length:', answerSdp.length);
-                console.log('Hex (first 200 chars):', btoa(answerSdp.substring(0, 200)));
-                console.log('Repr (first 150 chars):', JSON.stringify(answerSdp.substring(0, 150)));
-                console.log('Lines (excluding final empty):');
-                const lines = answerSdp.split('\n');
-                lines.forEach((line, i) => {
-                    if (line || i < lines.length - 1) {
-                        console.log(`  ${i+1}: ${JSON.stringify(line)}`);
-                    }
-                });
-                console.log('=== END ANSWER SDP ===');
-
-                const answer = new RTCSessionDescription({
-                    type: 'answer',
-                    sdp: answerSdp
-                });
-
-                await pc.setRemoteDescription(answer);
-                logMessage('system', 'Answer accepted. Waiting for connection...');
-                
-                // Check connection status periodically
-                const checkConnection = setInterval(() => {
-                    updateStatus();
-                    if (dataChannel && dataChannel.readyState === 'open') {
-                        clearInterval(checkConnection);
-                    }
-                }, 500);
-            } catch (error) {
-                alert('Error accepting answer: ' + error);
-            }
         }
 
         async function sendMessage() {
