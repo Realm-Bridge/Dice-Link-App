@@ -145,6 +145,7 @@ async def handle_generate_offer(request):
         print(f"[WebRTC Test] IPv4-only candidates: {len(ipv4_candidates)}")
         
         # Build offer in correct order for browsers
+        fixed_lines = []
         
         # Session section
         fixed_lines.append(v_line or 'v=0')
