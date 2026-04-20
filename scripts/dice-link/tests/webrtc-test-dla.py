@@ -184,11 +184,10 @@ async def handle_generate_offer(request):
         constructed_offer_sdp = '\r\n'.join(fixed_lines) + '\r\n'
         
         # ============================================
-        # DIAGNOSTIC TEST: Use exact browser-generated SDP format
-        # This tests whether Chrome will accept a known-working SDP
-        # Must use \r\n line endings to match Chrome's output
+        # Use aiortc's actual generated offer with real ICE candidates
+        # This has the full candidate list that browsers need to connect
         # ============================================
-        USE_HARDCODED_SDP = True  # Set to False to use constructed SDP
+        USE_HARDCODED_SDP = False  # Set to False to use aiortc's actual offer
         
         if USE_HARDCODED_SDP:
             # This is the EXACT offer format that worked in the browser-to-browser diagnostic
