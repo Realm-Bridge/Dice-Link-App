@@ -233,7 +233,8 @@
                 Tests if hardcoded SDP from browser context can be parsed. If this works but DLA test fails, the issue is cross-origin/HTTP delivery, not SDP format.
             </p>
             <button onclick="testLocalSdpParsing()">Test Local SDP Parse</button>
-            <textarea id="diagnosticOutput" style="width: 100%; height: 60px; margin-top: 10px; font-size: 12px; font-family: monospace;"></textarea>
+            <button onclick="compareSdpHex()" style="margin-left: 10px;">Compare SDP Hex Dump</button>
+            <textarea id="diagnosticOutput" style="width: 100%; height: 150px; margin-top: 10px; font-size: 11px; font-family: monospace;"></textarea>
         </div>
         
         <!-- Connection Status -->
@@ -398,7 +399,88 @@ a=max-message-size:262144`;
             }
         }
 
-        async function generateAnswer() {
+        async function compareSdpHex() {
+            const diagnosticOutput = document.getElementById('diagnosticOutput');
+            diagnosticOutput.value = '[Comparing Chrome-generated SDP vs hardcoded SDP]\n';
+            
+            try {
+                // Create peer and generate a fresh offer from Chrome
+                const testPc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+                testPc.createDataChannel('test');
+                
+                const offer = await testPc.createOffer();
+                await testPc.setLocalDescription(offer);
+                
+                const chromeGeneratedSdp = testPc.localDescription.sdp;
+                
+                // The hardcoded SDP we've been trying
+                const hardcodedSdp = `v=0
+o=- 4098042193945182461 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE 0
+a=extmap-allow-mixed
+a=msid-semantic: WMS
+m=application 9 UDP/DTLS/SCTP webrtc-datachannel
+c=IN IP4 0.0.0.0
+a=ice-ufrag:YK/H
+a=ice-pwd:hQG2T0r8JtKpW3HsHBWk4TCd
+a=ice-options:trickle
+a=fingerprint:sha-256 C1:EA:EF:10:50:B7:A5:60:4F:94:75:85:82:DA:9E:F9:6F:66:34:6F:B2:BF:0F:84:62:F7:DC:11:27:F5:B7:E4
+a=setup:actpass
+a=mid:0
+a=sctp-port:5000
+a=max-message-size:262144`;
+                
+                diagnosticOutput.value += `\n--- CHROME GENERATED SDP ---\n`;
+                diagnosticOutput.value += `Length: ${chromeGeneratedSdp.length}\n`;
+                diagnosticOutput.value += `Hex (first 200 chars): ${toHex(chromeGeneratedSdp.substring(0, 200))}\n\n`;
+                
+                diagnosticOutput.value += `--- HARDCODED SDP ---\n`;
+                diagnosticOutput.value += `Length: ${hardcodedSdp.length}\n`;
+                diagnosticOutput.value += `Hex (first 200 chars): ${toHex(hardcodedSdp.substring(0, 200))}\n\n`;
+                
+                // Compare line by line
+                const chromeLines = chromeGeneratedSdp.split('\n');
+                const hardcodedLines = hardcodedSdp.split('\n');
+                
+                diagnosticOutput.value += `--- LINE BY LINE COMPARISON ---\n`;
+                diagnosticOutput.value += `Chrome lines: ${chromeLines.length}, Hardcoded lines: ${hardcodedLines.length}\n\n`;
+                
+                let firstDifference = -1;
+                for (let i = 0; i < Math.min(chromeLines.length, hardcodedLines.length); i++) {
+                    if (chromeLines[i] !== hardcodedLines[i]) {
+                        firstDifference = i;
+                        diagnosticOutput.value += `Line ${i + 1} DIFFERS:\n`;
+                        diagnosticOutput.value += `  Chrome:   ${JSON.stringify(chromeLines[i])}\n`;
+                        diagnosticOutput.value += `  Hardcoded: ${JSON.stringify(hardcodedLines[i])}\n`;
+                        diagnosticOutput.value += `  Chrome hex:    ${toHex(chromeLines[i])}\n`;
+                        diagnosticOutput.value += `  Hardcoded hex: ${toHex(hardcodedLines[i])}\n\n`;
+                    }
+                }
+                
+                if (firstDifference === -1) {
+                    diagnosticOutput.value += `All lines match perfectly!\n`;
+                } else {
+                    diagnosticOutput.value += `First difference at line ${firstDifference + 1}\n`;
+                }
+                
+                testPc.close();
+                
+            } catch (error) {
+                diagnosticOutput.value += `ERROR: ${error.message}\n`;
+            }
+        }
+        
+        function toHex(str) {
+            let hex = '';
+            for (let i = 0; i < str.length; i++) {
+                hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
             try {
                 const offerSdp = document.getElementById('offerBox').value.trim();
                 
