@@ -275,13 +275,13 @@ async def handle_ice_candidates(request):
             return web.json_response({"error": "No peer connection created"}, status=400)
         
         try:
-            from aiortc import RTCIceCandidate
-            candidate = RTCIceCandidate(
-                candidate=candidate_data,
-                sdpMid=sdp_mid,
-                sdpMLineIndex=sdp_mline_index
-            )
-            await pc.addIceCandidate(candidate)
+            # aiortc's addIceCandidate can accept a dict with candidate string
+            candidate_dict = {
+                "candidate": candidate_data,
+                "sdpMid": sdp_mid,
+                "sdpMLineIndex": sdp_mline_index
+            }
+            await pc.addIceCandidate(candidate_dict)
             print(f"[WebRTC Test] Added ICE candidate from browser: {candidate_data[:50]}...")
             ice_candidates_from_browser.append(candidate_data)
         except Exception as e:
