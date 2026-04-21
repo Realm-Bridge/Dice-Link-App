@@ -5,6 +5,7 @@ import base64
 import threading
 import time
 from typing import Optional
+from debug import log
 
 
 class CameraManager:
@@ -25,58 +26,56 @@ class CameraManager:
         Return list of available camera devices.
         Returns: List of dicts with {index, name}
         """
-        print(f"[Camera] Enumerating cameras using DirectShow backend...")
+        log("Camera", "Enumerating cameras using DirectShow backend...")
         cameras = []
         
         # Try to detect cameras (check indices 0-5)
         # Use CAP_DSHOW (DirectShow) on Windows for better compatibility
         for i in range(6):
-            print(f"[Camera] Testing camera index {i}...")
+            log("Camera", f"Testing camera index {i}...")
             cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
             
             # Set buffer size to 1
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
             if cap.isOpened():
-                print(f"[Camera] Camera {i} opened successfully!")
+                log("Camera", f"Camera {i} opened successfully!")
                 
                 # Try to read one frame to verify it works
                 ret, frame = cap.read()
                 if ret and frame is not None:
-                    print(f"[Camera] Camera {i} is readable (frame size: {frame.shape})")
+                    log("Camera", f"Camera {i} is readable (frame size: {frame.shape})")
                     cameras.append({
                         "index": i,
                         "name": f"Camera {i}"
                     })
                 else:
-                    print(f"[Camera] Camera {i} opened but cannot read frames")
+                    log("Camera", f"Camera {i} opened but cannot read frames")
                 
                 cap.release()
+                else:
+                    log("Camera", f"Camera {i} opened but cannot read frames")
+                cap.release()
             else:
-                print(f"[Camera] Camera {i} cannot be opened")
+                log("Camera", f"Camera {i} cannot be opened")
         
-        print(f"[Camera] Found {len(cameras)} usable cameras: {cameras}")
+        log("Camera", f"Found {len(cameras)} usable cameras: {cameras}")
         return cameras
     
     def select_camera(self, index: int) -> bool:
-        """
-        Select camera by index.
-        Returns True if camera was selected successfully.
-        """
-        print(f"[Camera] Selecting camera index {index}")
+        """Select a specific camera by index"""
+        log("Camera", f"Selecting camera index {index}")
         
-        # Stop any current capture
-        self.stop_capture()
+        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
-        # Try to open the new camera using DirectShow
-        test_cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-        if test_cap.isOpened():
-            test_cap.release()
+        if cap.isOpened():
+            cap.release()
             self.camera_index = index
-            print(f"[Camera] Successfully selected camera {index}")
+            log("Camera", f"Successfully selected camera {index}")
             return True
-        
-        print(f"[Camera] Failed to select camera {index}")
+        else:
+            log("Camera", f"Failed to select camera {index}")
         return False
     
     def start_capture(self, fps: int = 15) -> bool:
@@ -165,72 +164,64 @@ class CameraManager:
         return (640, 480)  # Default dimensions
     
     def capture_single_frame(self) -> Optional[str]:
-        """
-        Capture a single frame without starting continuous capture.
-        Useful for camera preview in settings.
-        Returns base64 data URI or None.
-        """
-        print(f"[Camera] Capturing single frame from camera {self.camera_index}")
-        
+        """Capture a single frame from the camera and return as data URI"""
         try:
-            # Use DirectShow backend on Windows for better reliability
+            log("Camera", f"Capturing single frame from camera {self.camera_index}")
+            
+            # Create a new VideoCapture for this operation
             cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
-            print(f"[Camera] VideoCapture created with DirectShow for index {self.camera_index}")
+            log("Camera", f"VideoCapture created with DirectShow for index {self.camera_index}")
             
             if not cap.isOpened():
-                print(f"[Camera] ERROR: Failed to open camera {self.camera_index}")
-                cap.release()
+                log("Camera", f"ERROR: Failed to open camera {self.camera_index}")
                 return None
             
-            print(f"[Camera] Camera opened successfully")
+            log("Camera", f"Camera opened successfully")
             
             # Set properties
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer to get fresh frames
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             
-            # Capture a few frames to let camera adjust
-            print(f"[Camera] Warming up camera...")
+            log("Camera", f"Warming up camera...")
             for i in range(5):
                 ret, frame = cap.read()
-                print(f"[Camera] Warmup {i+1}/5: ret={ret}, frame={'valid' if frame is not None else 'None'}")
+                log("Camera", f"Warmup {i+1}/5: ret={ret}, frame={'valid' if frame is not None else 'None'}")
             
-            print(f"[Camera] Reading final frame...")
+            log("Camera", f"Reading final frame...")
             ret, frame = cap.read()
             
             if not ret:
-                print(f"[Camera] ERROR: read() returned False")
+                log("Camera", f"ERROR: read() returned False")
                 cap.release()
                 return None
             
             if frame is None:
-                print(f"[Camera] ERROR: frame is None")
+                log("Camera", f"ERROR: frame is None")
                 cap.release()
                 return None
             
-            print(f"[Camera] Frame shape: {frame.shape}")
+            log("Camera", f"Frame shape: {frame.shape}")
             
-            # Encode as JPEG
+            # Encode to JPEG
             success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-            
             if not success:
-                print(f"[Camera] ERROR: imencode failed")
+                log("Camera", f"ERROR: imencode failed")
                 cap.release()
                 return None
             
-            print(f"[Camera] Encoded successfully, buffer size: {len(buffer)}")
+            log("Camera", f"Encoded successfully, buffer size: {len(buffer)}")
             
-            b64_frame = base64.b64encode(buffer.tobytes()).decode('utf-8')
-            result = f"data:image/jpeg;base64,{b64_frame}"
+            # Convert to base64 data URI
+            result = "data:image/jpeg;base64," + base64.b64encode(buffer).decode('utf-8')
+            log("Camera", f"Data URI created, length: {len(result)}")
             
-            print(f"[Camera] Data URI created, length: {len(result)}")
             cap.release()
-            print(f"[Camera] Camera released")
-            
+            log("Camera", f"Camera released")
             return result
-        
+            
         except Exception as e:
-            print(f"[Camera] EXCEPTION in capture_single_frame: {type(e).__name__}: {str(e)}")
+            log("Camera", f"EXCEPTION in capture_single_frame: {type(e).__name__}: {str(e)}")
             import traceback
             traceback.print_exc()
             return None

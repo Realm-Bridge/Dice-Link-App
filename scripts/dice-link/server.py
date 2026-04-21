@@ -21,7 +21,7 @@ from core.websocket_handler import (
 )
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
-from debug import log_dlc_connection, log_dlc_accepted, log_dlc_message, log_dlc_response, log_dlc_disconnect
+from debug import log_dlc_connection, log_dlc_accepted, log_dlc_message, log_dlc_response, log_dlc_disconnect, log_server
 
 # Get the base directory (now app.py is at the root of dice-link/)
 BASE_DIR = Path(__file__).resolve().parent
@@ -150,7 +150,7 @@ async def websocket_ui(websocket: WebSocket):
     except WebSocketDisconnect:
         app_state.remove_ui_websocket(websocket)
     except Exception as e:
-        print(f"UI WebSocket error: {e}")
+        log_server(f"UI WebSocket error: {e}")
         app_state.remove_ui_websocket(websocket)
 
 
@@ -215,14 +215,14 @@ async def handle_ui_message(message: dict):
     
     if msg_type == "debug":
         # Debug messages from JavaScript - print to command prompt
-        print(f"[JS] {message.get('message', '')}")
+        log_server(f"[JS] {message.get('message', '')}")
         return
     
     if msg_type == "diceTrayRoll":
         # Dice tray roll from UI - forward to DLC for evaluation
         formula = message.get("formula", "")
         flavor = message.get("flavor", "Manual Dice Roll")
-        print(f"[DLA] Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
+        log_server(f"Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
         
         success = await send_dice_tray_roll(formula, flavor)
         
@@ -235,12 +235,12 @@ async def handle_ui_message(message: dict):
     
     if msg_type == "diceResult":
         # User submitted dice results - forward to DLC
-        print(f"[DLA] Received diceResult from UI: {message}")
+        log_server(f"Received diceResult from UI: {message}")
         original_roll_id = message.get("originalRollId")
         results = message.get("results", [])
         
         success = await send_dice_result(original_roll_id, results)
-        print(f"[DLA] Forwarded diceResult to DLC, success={success}")
+        log_server(f"Forwarded diceResult to DLC, success={success}")
         
         await broadcast_to_ui({
             "type": "diceResultAck",
@@ -265,13 +265,13 @@ async def handle_ui_message(message: dict):
     
     elif msg_type == "submitDiceResult":
         # Phase B: User submitted dice results after diceRequest
-        print(f"[DLA] Received submitDiceResult from UI: {message}")
+        log_server(f"Received submitDiceResult from UI: {message}")
         original_roll_id = message.get("originalRollId")
         results = message.get("results", [])
         
-        print(f"[DLA] Calling send_dice_result with originalRollId={original_roll_id}, results={results}")
+        log_server(f"Calling send_dice_result with originalRollId={original_roll_id}, results={results}")
         success = await send_dice_result(original_roll_id, results)
-        print(f"[DLA] send_dice_result returned: {success}")
+        log_server(f"send_dice_result returned: {success}")
         
         await broadcast_to_ui({
             "type": "submitResultAck",

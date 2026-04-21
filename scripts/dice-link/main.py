@@ -20,7 +20,7 @@ os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
-from debug import log_startup
+from debug import log_startup, log_server
 
 
 class WindowController(QObject):
@@ -106,29 +106,31 @@ def run_server():
 
 def main():
     """Main entry point for Dice Link - launches desktop app with PyQt5"""
+    # Print startup banner
     print(f"\n{'='*50}")
     print(f"  {APP_NAME}")
     print(f"  Physical dice rolling for Foundry VTT")
     print(f"{'='*50}\n")
-    print(f"Starting Dice Link Desktop App...")
+    
+    log_server("Starting Dice Link Desktop App...")
     log_startup(WEBSOCKET_HOST, WEBSOCKET_PORT)
-    print(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
-    print(f"UI available at http://localhost:{WEBSOCKET_PORT}")
-    print(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
+    log_server(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
+    log_server(f"UI available at http://localhost:{WEBSOCKET_PORT}")
+    log_server(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
     
     # Attempt UPnP port forwarding for remote connections
     upnp_success, external_ip = setup_upnp_port_forward(WEBSOCKET_PORT)
     if upnp_success:
-        print(f"\n[UPnP] Remote connections enabled!")
-        print(f"[UPnP] Players should configure DLC to connect to: {external_ip}")
+        log_server("Remote connections enabled!")
+        log_server(f"Players should configure DLC to connect to: {external_ip}")
     else:
         if external_ip:
-            print(f"\n[UPnP] Automatic port forwarding unavailable")
-            print(f"[UPnP] Your external IP is: {external_ip}")
-            print(f"[UPnP] For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
+            log_server("Automatic port forwarding unavailable")
+            log_server(f"Your external IP is: {external_ip}")
+            log_server(f"For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
         else:
-            print(f"\n[UPnP] Could not determine external IP or set up port forwarding")
-            print(f"[UPnP] Remote connections may require manual router configuration")
+            log_server("Could not determine external IP or set up port forwarding")
+            log_server("Remote connections may require manual router configuration")
     
     # Start the FastAPI server in a background thread
     server_thread = threading.Thread(target=run_server, daemon=True)
@@ -183,7 +185,7 @@ def main():
     
     # Clean up UPnP port forwarding on exit
     if upnp_success:
-        print("[UPnP] Cleaning up port forwarding...")
+        log_server("Cleaning up port forwarding...")
         remove_upnp_port_forward(WEBSOCKET_PORT)
     
     sys.exit(exit_code)
