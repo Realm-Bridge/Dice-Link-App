@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from aiortc import RTCPeerConnection, RTCSessionDescription
 
 from state import app_state
@@ -52,7 +52,289 @@ async def index(request: Request):
     )
 
 
-@app.get("/api/status")
+@app.get("/test-webrtc")
+async def test_webrtc_page():
+    """Simple HTML page for testing WebRTC handshake manually"""
+    html_content = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Dice Link - WebRTC Test</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                color: #ffffff;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+            
+            .container {
+                background: #0f3460;
+                border: 2px solid #e94560;
+                border-radius: 12px;
+                padding: 40px;
+                max-width: 600px;
+                width: 100%;
+                box-shadow: 0 10px 40px rgba(233, 69, 96, 0.2);
+            }
+            
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+                color: #e94560;
+                font-size: 28px;
+            }
+            
+            .step {
+                margin-bottom: 30px;
+            }
+            
+            .step-number {
+                display: inline-block;
+                background: #e94560;
+                color: #0f3460;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                text-align: center;
+                line-height: 32px;
+                font-weight: bold;
+                margin-right: 10px;
+            }
+            
+            .step-title {
+                display: inline;
+                font-weight: 600;
+                font-size: 16px;
+            }
+            
+            label {
+                display: block;
+                margin-top: 15px;
+                margin-bottom: 8px;
+                font-weight: 500;
+                font-size: 14px;
+                color: #e0e0e0;
+            }
+            
+            textarea {
+                width: 100%;
+                padding: 12px;
+                border: 2px solid #533483;
+                border-radius: 6px;
+                background: #1a1a2e;
+                color: #ffffff;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.4;
+                resize: vertical;
+                min-height: 100px;
+            }
+            
+            textarea:focus {
+                outline: none;
+                border-color: #e94560;
+                box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+            }
+            
+            .button-group {
+                display: flex;
+                gap: 10px;
+                margin-top: 15px;
+                flex-wrap: wrap;
+            }
+            
+            button {
+                flex: 1;
+                min-width: 120px;
+                padding: 12px 20px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .btn-send {
+                background: #e94560;
+                color: #0f3460;
+            }
+            
+            .btn-send:hover {
+                background: #ff5a7e;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+            }
+            
+            .btn-copy {
+                background: #533483;
+                color: #ffffff;
+            }
+            
+            .btn-copy:hover {
+                background: #6b44a6;
+                transform: translateY(-2px);
+            }
+            
+            .btn-copy:disabled {
+                background: #333;
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+            
+            .status {
+                margin-top: 15px;
+                padding: 12px;
+                border-radius: 6px;
+                font-size: 14px;
+                text-align: center;
+                display: none;
+            }
+            
+            .status.show {
+                display: block;
+            }
+            
+            .status.success {
+                background: rgba(46, 204, 113, 0.2);
+                color: #2ecc71;
+                border: 1px solid #2ecc71;
+            }
+            
+            .status.error {
+                background: rgba(233, 69, 96, 0.2);
+                color: #ff6b7a;
+                border: 1px solid #ff6b7a;
+            }
+            
+            .status.loading {
+                background: rgba(83, 52, 131, 0.2);
+                color: #b19cd9;
+                border: 1px solid #b19cd9;
+            }
+            
+            .info {
+                background: rgba(83, 52, 131, 0.3);
+                border-left: 4px solid #e94560;
+                padding: 15px;
+                border-radius: 4px;
+                margin-bottom: 20px;
+                font-size: 13px;
+                line-height: 1.6;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎲 Dice Link WebRTC Test</h1>
+            
+            <div class="info">
+                <strong>Instructions:</strong><br>
+                1. Copy the offer from DLC<br>
+                2. Paste it below<br>
+                3. Click "Send to DLA"<br>
+                4. Copy the answer and paste it back into DLC
+            </div>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <span class="step-title">Paste the Offer from DLC</span>
+                <label for="offer">Offer (from DLC):</label>
+                <textarea id="offer" placeholder="Paste the connection offer here..."></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-send" onclick="sendOffer()">Send to DLA</button>
+            </div>
+            
+            <div id="status" class="status"></div>
+            
+            <div class="step" style="margin-top: 30px;">
+                <span class="step-number">2</span>
+                <span class="step-title">Copy the Answer from DLA</span>
+                <label for="answer">Answer (from DLA):</label>
+                <textarea id="answer" placeholder="The answer will appear here..." readonly></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-copy" id="copyBtn" onclick="copyAnswer()" disabled>Copy Answer</button>
+            </div>
+        </div>
+        
+        <script>
+            async function sendOffer() {
+                const offer = document.getElementById('offer').value;
+                const status = document.getElementById('status');
+                const answerField = document.getElementById('answer');
+                
+                if (!offer.trim()) {
+                    showStatus('Please paste an offer first', 'error');
+                    return;
+                }
+                
+                showStatus('Sending offer to DLA...', 'loading');
+                
+                try {
+                    const response = await fetch('http://localhost:8765/api/receive-offer', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ offer: offer })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        showStatus('Error: ' + (error.error || 'Failed to get answer'), 'error');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    answerField.value = data.answer;
+                    document.getElementById('copyBtn').disabled = false;
+                    showStatus('Success! Answer received. Click "Copy Answer" to copy it.', 'success');
+                } catch (error) {
+                    showStatus('Error: ' + error.message, 'error');
+                }
+            }
+            
+            function copyAnswer() {
+                const answerField = document.getElementById('answer');
+                answerField.select();
+                document.execCommand('copy');
+                showStatus('Answer copied to clipboard!', 'success');
+                setTimeout(() => showStatus('', 'success'), 3000);
+            }
+            
+            function showStatus(message, type) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = 'status show ' + type;
+            }
+            
+            // Allow Enter key to send
+            document.getElementById('offer').addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    sendOffer();
+                }
+            });
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
 async def get_status():
     """Get current application status"""
     return JSONResponse(app_state.get_status())
