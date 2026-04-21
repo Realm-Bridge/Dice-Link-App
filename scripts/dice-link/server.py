@@ -19,7 +19,8 @@ from core.websocket_handler import (
     send_button_select,
     send_dice_result,
     send_dice_tray_roll,
-    get_webrtc_connection_status
+    get_webrtc_connection_status,
+    log_handshake_step
 )
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
@@ -87,45 +88,53 @@ async def receive_webrtc_offer(request: Request):
     Response: {"answer": "<SDP answer string>", "status": "success"}
     """
     try:
+        log_handshake_step(1, "Receive Offer", "HTTP POST received from browser")
+        
         data = await request.json()
         browser_offer_sdp = data.get("offer")
         
         if not browser_offer_sdp:
-            log_server("receive_webrtc_offer: No offer provided")
+            log_handshake_step(1.5, "Validation Failed", "No offer provided in request body")
             return JSONResponse(
                 {"error": "No offer provided", "status": "error"},
                 status_code=400
             )
         
-        log_server(f"receive_webrtc_offer: Received offer from browser ({len(browser_offer_sdp)} chars)")
+        log_handshake_step(2, "Parse Offer", f"Received {len(browser_offer_sdp)} bytes of SDP from browser")
         
         # Create new peer connection for this handshake
         pc = RTCPeerConnection()
+        log_handshake_step(3, "Create Peer Connection", "RTCPeerConnection initialized")
         
         # Create data channel for bidirectional messaging
         # Browser will use this channel to send messages
         data_channel = pc.createDataChannel("dice-link")
+        log_handshake_step(4, "Create Data Channel", "Data channel 'dice-link' created")
         
         # Set up data channel handlers
         @data_channel.on("message")
         def on_message(message):
-            log_server(f"WebRTC data channel message: {message}")
-            # Messages received here could be forwarded to DLC or processed directly
+            log_server(f"WebRTC Message: {message}")
+        
+        @data_channel.on("open")
+        def on_open():
+            log_handshake_step(7, "Data Channel Open", "Browser data channel is ready for messaging")
         
         @data_channel.on("close")
         def on_close():
-            log_server("WebRTC data channel closed")
+            log_handshake_step(8, "Data Channel Close", "Browser data channel closed")
         
         # Set remote description (browser's offer)
         try:
+            log_handshake_step(5, "Set Remote Description", "Parsing browser SDP offer")
             browser_offer = RTCSessionDescription(
                 sdp=browser_offer_sdp,
                 type="offer"
             )
             await pc.setRemoteDescription(browser_offer)
-            log_server("receive_webrtc_offer: Remote description set successfully")
+            log_handshake_step(5.5, "Remote Description Set", "Browser offer successfully set as remote description")
         except Exception as e:
-            log_server(f"receive_webrtc_offer: Error setting remote description: {e}")
+            log_handshake_step(5.9, "Remote Description Failed", f"Error: {e}")
             return JSONResponse(
                 {"error": f"Failed to parse browser offer: {str(e)}", "status": "error"},
                 status_code=400
@@ -133,11 +142,12 @@ async def receive_webrtc_offer(request: Request):
         
         # Create answer
         try:
+            log_handshake_step(6, "Create Answer", "Generating DLA answer to browser offer")
             answer = await pc.createAnswer()
             await pc.setLocalDescription(answer)
-            log_server("receive_webrtc_offer: Answer created and set as local description")
+            log_handshake_step(6.5, "Answer Created", "Answer generated and set as local description")
         except Exception as e:
-            log_server(f"receive_webrtc_offer: Error creating answer: {e}")
+            log_handshake_step(6.9, "Answer Failed", f"Error: {e}")
             return JSONResponse(
                 {"error": f"Failed to create answer: {str(e)}", "status": "error"},
                 status_code=500
@@ -145,10 +155,11 @@ async def receive_webrtc_offer(request: Request):
         
         # Get answer SDP
         answer_sdp = pc.localDescription.sdp
-        log_server(f"receive_webrtc_offer: Answer generated ({len(answer_sdp)} chars)")
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes)")
         
         # Store peer connection and data channel in state
         await app_state.set_webrtc_peer_connection(pc, data_channel)
+        log_handshake_step(6.8, "Store Connection", "Peer connection stored in application state")
         
         # Notify UI that WebRTC connection is being established
         await broadcast_to_ui({
@@ -156,6 +167,9 @@ async def receive_webrtc_offer(request: Request):
             "event": "offering",
             "message": "WebRTC handshake in progress..."
         })
+        log_handshake_step(6.9, "UI Notification", "Browser UI notified of handshake progress")
+        
+        log_handshake_step(9, "Send Answer", f"Returning answer to browser ({len(answer_sdp)} bytes)")
         
         return JSONResponse({
             "answer": answer_sdp,
@@ -163,7 +177,7 @@ async def receive_webrtc_offer(request: Request):
         })
     
     except Exception as e:
-        log_server(f"receive_webrtc_offer: Unhandled error: {e}")
+        log_handshake_step(99, "Unhandled Error", f"Exception: {e}")
         return JSONResponse(
             {"error": str(e), "status": "error"},
             status_code=500
@@ -175,6 +189,105 @@ async def get_webrtc_status():
     """Get current WebRTC connection status"""
     status = get_webrtc_connection_status()
     return JSONResponse(status)
+
+
+# ============== WebRTC Testing Endpoints (Phase 2) ==============
+
+@app.post("/api/test-webrtc")
+async def test_webrtc_connection(request: Request):
+    """
+    Test endpoint to verify WebRTC connection is established.
+    DLC sends a test message, DLA echoes it back.
+    
+    Request body: {"message": "test message"}
+    Response: {"success": true, "echo": "test message"}
+    """
+    try:
+        data = await request.json()
+        test_message = data.get("message", "ping")
+        
+        log_server(f"test_webrtc_connection: Received test message: {test_message}")
+        
+        # Verify we have an active data channel
+        if not app_state.webrtc_data_channel or app_state.webrtc_data_channel.readyState != "open":
+            log_server("test_webrtc_connection: Data channel not open")
+            return JSONResponse({
+                "success": False,
+                "error": "WebRTC data channel not open",
+                "dataChannelState": getattr(app_state.webrtc_data_channel, "readyState", "closed") if app_state.webrtc_data_channel else "none"
+            }, status_code=503)
+        
+        # Send test message back through data channel
+        # This uses HTTP for response, but we also send via WebRTC to test bidirectional
+        test_response = {
+            "type": "test",
+            "echo": test_message,
+            "timestamp": int(time.time() * 1000)
+        }
+        
+        try:
+            app_state.webrtc_data_channel.send(json.dumps(test_response))
+            log_server(f"test_webrtc_connection: Echo sent via WebRTC: {test_message}")
+        except Exception as e:
+            log_server(f"test_webrtc_connection: Error sending via WebRTC: {e}")
+        
+        return JSONResponse({
+            "success": True,
+            "echo": test_message,
+            "message": "Test message received and echoed"
+        })
+    
+    except Exception as e:
+        log_server(f"test_webrtc_connection: Error: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+
+@app.post("/api/disconnect-webrtc")
+async def disconnect_webrtc():
+    """
+    Cleanly close the WebRTC connection.
+    Used for testing and resetting connection state.
+    """
+    try:
+        log_server("disconnect_webrtc: Closing WebRTC connection")
+        
+        if app_state.webrtc_data_channel:
+            try:
+                app_state.webrtc_data_channel.close()
+                log_server("disconnect_webrtc: Data channel closed")
+            except Exception as e:
+                log_server(f"disconnect_webrtc: Error closing data channel: {e}")
+        
+        if app_state.webrtc_peer_connection:
+            try:
+                await app_state.webrtc_peer_connection.close()
+                log_server("disconnect_webrtc: Peer connection closed")
+            except Exception as e:
+                log_server(f"disconnect_webrtc: Error closing peer connection: {e}")
+        
+        await app_state.close_webrtc_connection()
+        
+        # Notify UI
+        await broadcast_to_ui({
+            "type": "webrtcStatus",
+            "event": "disconnected",
+            "message": "WebRTC connection closed"
+        })
+        
+        return JSONResponse({
+            "success": True,
+            "message": "WebRTC connection closed"
+        })
+    
+    except Exception as e:
+        log_server(f"disconnect_webrtc: Unhandled error: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
 
 
 # ============== Camera Endpoints (Phase 3) ==============

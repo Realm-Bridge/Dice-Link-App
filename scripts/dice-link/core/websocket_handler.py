@@ -317,3 +317,14 @@ def get_webrtc_connection_status() -> dict:
         "dataChannelState": dc_state,
         "connected": dc_state == "open"
     }
+
+
+# ============== WebRTC Handshake Debug Logging ==============
+
+def log_handshake_step(step_num: int, step_name: str, details: str = ""):
+    """Log a step in the WebRTC handshake process for debugging"""
+    message = f"[WebRTC Handshake] Step {step_num}: {step_name}"
+    if details:
+        message += f" - {details}"
+    log_server(message)
+
