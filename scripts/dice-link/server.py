@@ -466,12 +466,9 @@ async def receive_webrtc_offer(request: Request):
         
         # Get answer SDP directly from aiortc without filtering
         # The working test showed that aiortc's raw SDP works correctly with browsers
+        # NO normalization - matching exactly what the working test does
         answer_sdp = pc.localDescription.sdp
-        
-        # Normalize line endings to CRLF as required by RFC 8866
-        # When SDP is copy/pasted through browser textareas, line endings can become LF only
-        answer_sdp = normalize_sdp_line_endings(answer_sdp)
-        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, CRLF normalized)")
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, raw aiortc SDP)")
         
         # Store peer connection and data channel in state
         await app_state.set_webrtc_peer_connection(pc, received_data_channel)
