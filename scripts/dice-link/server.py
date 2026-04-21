@@ -445,8 +445,9 @@ async def receive_webrtc_offer(request: Request):
                 status_code=500
             )
         
-        # Get answer SDP
-        answer_sdp = pc.localDescription.sdp
+        # Get answer SDP and strip trailing whitespace/newlines
+        # Trailing blank lines can cause "Invalid SDP line" errors in browsers
+        answer_sdp = pc.localDescription.sdp.strip()
         log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes)")
         
         # Store peer connection and data channel in state
