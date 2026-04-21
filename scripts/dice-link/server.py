@@ -371,126 +371,6 @@ async def get_external_ip_endpoint():
 # ============== WebRTC Signaling Endpoints ==============
 
 
-def reorder_sdp_attributes(sdp: str) -> str:
-    """
-    Reorder SDP attributes to match Chrome's expected format.
-    Chrome expects attributes in this order within media sections:
-    - ice-ufrag, ice-pwd, ice-options, fingerprint, setup, mid, sctp-port, max-message-size
-    Also ensures session-level attributes like extmap-allow-mixed and ice-options are present.
-    """
-    lines = sdp.split('\r\n')
-    session_lines = []
-    media_lines = []
-    media_index = -1
-    
-    # Separate session-level and media-level lines
-    for line in lines:
-        if line.startswith('m='):
-            media_index = len(media_lines)
-            media_lines.append(line)
-        elif media_index >= 0:
-            # We're in media section
-            media_lines.append(line)
-        else:
-            # Session level
-            session_lines.append(line)
-    
-    # Check if session has extmap-allow-mixed
-    has_extmap_allow_mixed = any('extmap-allow-mixed' in line for line in session_lines)
-    if not has_extmap_allow_mixed and any(line.startswith('a=msid-semantic') for line in session_lines):
-        # Insert extmap-allow-mixed after group:BUNDLE
-        for i, line in enumerate(session_lines):
-            if line.startswith('a=group:BUNDLE'):
-                session_lines.insert(i + 1, 'a=extmap-allow-mixed')
-                break
-    
-    # Reorder media section attributes
-    if media_lines:
-        media_start = media_lines[0]  # m= line
-        media_attrs = media_lines[1:]
-        
-        # Categorize attributes
-        connection_line = None
-        ice_ufrag = None
-        ice_pwd = None
-        ice_options = None
-        fingerprints = []
-        setup = None
-        mid = None
-        sctp_port = None
-        max_msg_size = None
-        candidates = []
-        # Attributes to skip (Chrome doesn't recognize these)
-        skip_attrs = ['a=end-of-candidates']
-        
-        for line in media_attrs:
-            # Skip attributes Chrome doesn't recognize
-            if any(line.startswith(skip) for skip in skip_attrs):
-                continue
-            elif line.startswith('c='):
-                connection_line = line
-            elif line.startswith('a=ice-ufrag'):
-                ice_ufrag = line
-            elif line.startswith('a=ice-pwd'):
-                ice_pwd = line
-            elif line.startswith('a=ice-options'):
-                ice_options = line
-            elif line.startswith('a=fingerprint'):
-                fingerprints.append(line)
-            elif line.startswith('a=setup'):
-                setup = line
-            elif line.startswith('a=mid'):
-                mid = line
-            elif line.startswith('a=sctp-port'):
-                sctp_port = line
-            elif line.startswith('a=max-message-size'):
-                max_msg_size = line
-            elif line.startswith('a=candidate'):
-                candidates.append(line)
-            # Silently drop other unrecognized attributes
-        
-        # Rebuild media section in Chrome's expected order
-        reordered = [media_start]
-        
-        # Connection line must come right after m= line
-        if connection_line:
-            reordered.append(connection_line)
-        
-        # Add attributes in Chrome's expected order
-        if ice_ufrag:
-            reordered.append(ice_ufrag)
-        if ice_pwd:
-            reordered.append(ice_pwd)
-        if ice_options:
-            reordered.append(ice_options)
-        if not ice_options:
-            # Add ice-options:trickle if missing (for Chrome compatibility)
-            reordered.append('a=ice-options:trickle')
-        
-        # Add fingerprints (only sha-256 for Chrome compatibility)
-        for fp in fingerprints:
-            if 'sha-256' in fp:
-                reordered.append(fp)
-                break  # Only include one fingerprint
-        
-        if setup:
-            reordered.append(setup)
-        if mid:
-            reordered.append(mid)
-        if sctp_port:
-            reordered.append(sctp_port)
-        if max_msg_size:
-            reordered.append(max_msg_size)
-        
-        # Add candidates at the end
-        reordered.extend(candidates)
-        
-        media_lines = reordered
-    
-    # Reconstruct SDP
-    result = session_lines + media_lines
-    return '\r\n'.join(result)
-
 
 @app.post("/api/receive-offer")
 async def receive_webrtc_offer(request: Request):
@@ -573,13 +453,9 @@ async def receive_webrtc_offer(request: Request):
         
         # Get answer SDP directly from aiortc without filtering
         # The working test showed that aiortc's raw SDP works correctly with browsers
+        # Firefox accepts this format, so it's valid per RFC standards
         answer_sdp = pc.localDescription.sdp
-        
-        # Reorder SDP attributes to match Chrome's expected format
-        # Chrome requires specific attribute ordering within media sections
-        answer_sdp = reorder_sdp_attributes(answer_sdp)
-        
-        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized and reordered ({len(answer_sdp)} bytes)")
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, raw aiortc SDP)")
 
         
         # Store peer connection and data channel in state
