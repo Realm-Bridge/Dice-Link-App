@@ -371,18 +371,115 @@ async def get_external_ip_endpoint():
 # ============== WebRTC Signaling Endpoints ==============
 
 
-def normalize_sdp_line_endings(sdp: str) -> str:
+def reorder_sdp_attributes(sdp: str) -> str:
     """
-    Ensure SDP uses proper CRLF line endings as required by RFC 8866.
-    When SDP is copy/pasted through browsers, line endings can become LF only.
-    This function normalizes all line endings to CRLF.
+    Reorder SDP attributes to match Chrome's expected format.
+    Chrome expects attributes in this order within media sections:
+    - ice-ufrag, ice-pwd, ice-options, fingerprint, setup, mid, sctp-port, max-message-size
+    Also ensures session-level attributes like extmap-allow-mixed and ice-options are present.
     """
-    # First normalize all line endings to LF
-    sdp = sdp.replace('\r\n', '\n')  # Convert CRLF to LF
-    sdp = sdp.replace('\r', '\n')    # Convert CR to LF
-    # Then convert all LF to CRLF
-    sdp = sdp.replace('\n', '\r\n')
-    return sdp
+    lines = sdp.split('\r\n')
+    session_lines = []
+    media_lines = []
+    media_index = -1
+    
+    # Separate session-level and media-level lines
+    for line in lines:
+        if line.startswith('m='):
+            media_index = len(media_lines)
+            media_lines.append(line)
+        elif media_index >= 0:
+            # We're in media section
+            media_lines.append(line)
+        else:
+            # Session level
+            session_lines.append(line)
+    
+    # Check if session has extmap-allow-mixed
+    has_extmap_allow_mixed = any('extmap-allow-mixed' in line for line in session_lines)
+    if not has_extmap_allow_mixed and any(line.startswith('a=msid-semantic') for line in session_lines):
+        # Insert extmap-allow-mixed after group:BUNDLE
+        for i, line in enumerate(session_lines):
+            if line.startswith('a=group:BUNDLE'):
+                session_lines.insert(i + 1, 'a=extmap-allow-mixed')
+                break
+    
+    # Reorder media section attributes
+    if media_lines:
+        media_start = media_lines[0]  # m= line
+        media_attrs = media_lines[1:]
+        
+        # Categorize attributes
+        ordered_attrs = []
+        ice_ufrag = None
+        ice_pwd = None
+        ice_options = None
+        fingerprints = []
+        setup = None
+        mid = None
+        sctp_port = None
+        max_msg_size = None
+        other_attrs = []
+        candidates = []
+        
+        for line in media_attrs:
+            if line.startswith('a=ice-ufrag'):
+                ice_ufrag = line
+            elif line.startswith('a=ice-pwd'):
+                ice_pwd = line
+            elif line.startswith('a=ice-options'):
+                ice_options = line
+            elif line.startswith('a=fingerprint'):
+                fingerprints.append(line)
+            elif line.startswith('a=setup'):
+                setup = line
+            elif line.startswith('a=mid'):
+                mid = line
+            elif line.startswith('a=sctp-port'):
+                sctp_port = line
+            elif line.startswith('a=max-message-size'):
+                max_msg_size = line
+            elif line.startswith('a=candidate'):
+                candidates.append(line)
+            elif line.strip():  # Non-empty line
+                other_attrs.append(line)
+        
+        # Rebuild media section in Chrome's expected order
+        reordered = [media_start]
+        
+        # Add attributes before candidates in Chrome's order
+        if ice_ufrag:
+            reordered.append(ice_ufrag)
+        if ice_pwd:
+            reordered.append(ice_pwd)
+        if ice_options:
+            reordered.append(ice_options)
+        if not ice_options:
+            # Add ice-options:trickle if missing (for Chrome compatibility)
+            reordered.append('a=ice-options:trickle')
+        
+        # Add fingerprints (keep all that were in original)
+        for fp in fingerprints:
+            reordered.append(fp)
+        
+        if setup:
+            reordered.append(setup)
+        if mid:
+            reordered.append(mid)
+        if sctp_port:
+            reordered.append(sctp_port)
+        if max_msg_size:
+            reordered.append(max_msg_size)
+        
+        # Add candidates and other attributes
+        reordered.extend(candidates)
+        reordered.extend(other_attrs)
+        
+        media_lines = reordered
+    
+    # Reconstruct SDP
+    result = session_lines + media_lines
+    return '\r\n'.join(result)
 
 
 @app.post("/api/receive-offer")
@@ -466,9 +563,14 @@ async def receive_webrtc_offer(request: Request):
         
         # Get answer SDP directly from aiortc without filtering
         # The working test showed that aiortc's raw SDP works correctly with browsers
-        # NO normalization - matching exactly what the working test does
         answer_sdp = pc.localDescription.sdp
-        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, raw aiortc SDP)")
+        
+        # Reorder SDP attributes to match Chrome's expected format
+        # Chrome requires specific attribute ordering within media sections
+        answer_sdp = reorder_sdp_attributes(answer_sdp)
+        
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized and reordered ({len(answer_sdp)} bytes)")
+
         
         # Store peer connection and data channel in state
         await app_state.set_webrtc_peer_connection(pc, received_data_channel)
