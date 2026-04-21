@@ -371,6 +371,20 @@ async def get_external_ip_endpoint():
 # ============== WebRTC Signaling Endpoints ==============
 
 
+def normalize_sdp_line_endings(sdp: str) -> str:
+    """
+    Ensure SDP uses proper CRLF line endings as required by RFC 8866.
+    When SDP is copy/pasted through browsers, line endings can become LF only.
+    This function normalizes all line endings to CRLF.
+    """
+    # First normalize all line endings to LF
+    sdp = sdp.replace('\r\n', '\n')  # Convert CRLF to LF
+    sdp = sdp.replace('\r', '\n')    # Convert CR to LF
+    # Then convert all LF to CRLF
+    sdp = sdp.replace('\n', '\r\n')
+    return sdp
+
+
 @app.post("/api/receive-offer")
 async def receive_webrtc_offer(request: Request):
     """
@@ -453,7 +467,11 @@ async def receive_webrtc_offer(request: Request):
         # Get answer SDP directly from aiortc without filtering
         # The working test showed that aiortc's raw SDP works correctly with browsers
         answer_sdp = pc.localDescription.sdp
-        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes)")
+        
+        # Normalize line endings to CRLF as required by RFC 8866
+        # When SDP is copy/pasted through browser textareas, line endings can become LF only
+        answer_sdp = normalize_sdp_line_endings(answer_sdp)
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, CRLF normalized)")
         
         # Store peer connection and data channel in state
         await app_state.set_webrtc_peer_connection(pc, received_data_channel)
