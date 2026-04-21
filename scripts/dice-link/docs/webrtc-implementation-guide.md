@@ -38,12 +38,13 @@ Same Computer (localhost):
 +-------------------------------------------+
 |                                           |
 |  DLC (Foundry Browser)  <-->  DLA (Python)|
-|      localhost:8080                       |
+|      localhost:8765                       |
 |                                           |
 +-------------------------------------------+
 ```
 
 - All communication is localhost (127.0.0.1)
+- DLA runs on port 8765 (matching existing WEBSOCKET_PORT configuration)
 - No NAT traversal, TURN servers, or port forwarding needed
 - 100% connection reliability expected
 
@@ -234,7 +235,7 @@ Add the `/api/receive-offer` endpoint that accepts browser offers and returns an
 ### Checkpoint 2
 
 - [ ] DLA starts without errors
-- [ ] `curl -X POST http://localhost:8080/api/receive-offer -H "Content-Type: application/json" -d "{\"offer\": \"test\"}"` returns an error response (expected - invalid SDP)
+- [ ] `curl -X POST http://localhost:8765/api/receive-offer -H "Content-Type: application/json" -d "{\"offer\": \"test\"}"` returns an error response (expected - invalid SDP)
 - [ ] No crashes, endpoint is reachable
 
 ---
@@ -256,7 +257,7 @@ Add WebRTC connection capability to DLC that generates an offer and connects to 
     */
    
    class DiceLinkWebRTC {
-       constructor(dlaHost = 'localhost', dlaPort = 8080) {
+       constructor(dlaHost = 'localhost', dlaPort = 8765) {
            this.dlaHost = dlaHost;
            this.dlaPort = dlaPort;
            this.peerConnection = null;
@@ -405,7 +406,7 @@ Verify WebRTC connection works end-to-end with manual testing before automating.
 4. **Manually trigger connection**:
    ```javascript
    // Create instance
-   const webrtc = new DiceLinkWebRTC('localhost', 8080);
+   const webrtc = new DiceLinkWebRTC('localhost', 8765);
    
    // Set up message handler
    webrtc.onMessage = (msg) => console.log('Received:', msg);
@@ -421,7 +422,7 @@ Verify WebRTC connection works end-to-end with manual testing before automating.
 7. **Verify in DLA console**: Should see the message
 8. **Test DLA to browser**: Use curl or DLA's send endpoint
    ```bash
-   curl -X POST http://localhost:8080/api/send-message -H "Content-Type: application/json" -d "{\"message\": \"Hello from DLA\"}"
+   curl -X POST http://localhost:8765/api/send-message -H "Content-Type: application/json" -d "{\"message\": \"Hello from DLA\"}"
    ```
 9. **Verify in browser console**: Should see the message
 
@@ -553,9 +554,9 @@ User clicks a single button in DLC to initiate and complete the entire WebRTC co
        updateUI('connecting');
        
        try {
-           // Get DLA address from settings (default: localhost:8080)
-           const host = game.settings.get('dice-link', 'dlaHost') || 'localhost';
-           const port = game.settings.get('dice-link', 'dlaPort') || 8080;
+// Get DLA address from settings (default: localhost:8765)
+const host = game.settings.get('dice-link', 'dlaHost') || 'localhost';
+const port = game.settings.get('dice-link', 'dlaPort') || 8765;
            
            // Create and connect
            window.diceLinkWebRTC = new DiceLinkWebRTC(host, port);
@@ -655,7 +656,7 @@ Complete end-to-end testing of all functionality.
 1. Is DLA running?
 2. Is DLA listening on correct port?
 3. Are there CORS errors in browser console?
-4. Try: `curl http://localhost:8080/api/receive-offer` - does it respond?
+4. Try: `curl http://localhost:8765/api/receive-offer` - does it respond?
 
 ### Connection Establishes But No Messages
 
@@ -725,3 +726,69 @@ These are documented for future reference but should NOT be implemented in the i
 - Use CRLF line endings in SDP (RFC requirement)
 - Include ICE candidates in SDP (connection won't work without them)
 - Test in Chrome first (strictest validation)
+
+---
+
+## Clarifications for DLC Chat
+
+### Question 1: Port Number - CONFIRMED
+Use **port 8765** throughout. This matches DLA's `config.py` (`WEBSOCKET_PORT = 8765`) and your `DICE_LINK_APP_PORT = 8765`.
+- HTTP endpoint URL: `http://127.0.0.1:8765/api/receive-offer`
+- Same port for both WebSocket (when re-enabled) and WebRTC (now)
+
+### Question 2: HTTP Endpoint Path - CONFIRMED
+The DLA endpoint for browser-as-offerer is:
+- **POST `/api/receive-offer`** - Browser sends offer, DLA returns answer
+- Full URL: `http://127.0.0.1:8765/api/receive-offer`
+- DLA serves HTTP on the same port (8765) as WebSocket uses
+
+### Question 3: Feature Flag Location - APPROVED
+Add to constants.js (or equivalent):
+```javascript
+export const CONNECTION_METHOD = "webrtc";  // or "websocket" to fallback
+```
+This mirrors DLA's `config.py` approach and maintains parity.
+
+### Concern 1: Debug Logging - AGREED
+Use your debug.js functions, not raw `console.log()`. The guide examples show raw console.log for clarity, but replace them with your actual debug functions (`debugWebSocket()`, etc.) in implementation.
+
+### Concern 2: Class vs Module Pattern - OPTION B PREFERRED
+Create `webrtc-client.js` as module-level functions (matching `websocket-client.js`), not as a class.
+
+**Exported API should be identical:**
+```javascript
+export async function connect();
+export async function disconnect();
+export async function sendMessage(message);
+export function getConnectionStatus();
+export function onConnectionChange(callback);
+```
+
+This maintains API consistency. The guide shows class-based code for conceptual clarity, but implement as module functions.
+
+### Concern 3: Message Queueing - YES, IMPLEMENT
+Your point is excellent. Messages sent during handshake should be queued and flushed once connection establishes:
+
+```javascript
+const messageQueue = [];
+
+async function sendMessage(message) {
+  if (dataChannel && dataChannel.readyState === 'open') {
+    dataChannel.send(JSON.stringify(message));
+  } else {
+    // Queue for later when connected
+    messageQueue.push(message);
+  }
+}
+
+// When data channel opens:
+dataChannel.onopen = () => {
+  // Flush queued messages
+  while (messageQueue.length > 0) {
+    const msg = messageQueue.shift();
+    dataChannel.send(JSON.stringify(msg));
+  }
+};
+```
+
+This prevents message loss during connection establishment.
