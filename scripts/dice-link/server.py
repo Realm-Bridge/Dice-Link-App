@@ -7,6 +7,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from aiortc import RTCPeerConnection, RTCSessionDescription
 
 from state import app_state
@@ -31,6 +32,15 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Create FastAPI app
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
+
+# Add CORS middleware to allow requests from localhost test page
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8765", "http://127.0.0.1:8765"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
