@@ -410,7 +410,7 @@ def reorder_sdp_attributes(sdp: str) -> str:
         media_attrs = media_lines[1:]
         
         # Categorize attributes
-        ordered_attrs = []
+        connection_line = None
         ice_ufrag = None
         ice_pwd = None
         ice_options = None
@@ -419,11 +419,17 @@ def reorder_sdp_attributes(sdp: str) -> str:
         mid = None
         sctp_port = None
         max_msg_size = None
-        other_attrs = []
         candidates = []
+        # Attributes to skip (Chrome doesn't recognize these)
+        skip_attrs = ['a=end-of-candidates']
         
         for line in media_attrs:
-            if line.startswith('a=ice-ufrag'):
+            # Skip attributes Chrome doesn't recognize
+            if any(line.startswith(skip) for skip in skip_attrs):
+                continue
+            elif line.startswith('c='):
+                connection_line = line
+            elif line.startswith('a=ice-ufrag'):
                 ice_ufrag = line
             elif line.startswith('a=ice-pwd'):
                 ice_pwd = line
@@ -441,13 +447,16 @@ def reorder_sdp_attributes(sdp: str) -> str:
                 max_msg_size = line
             elif line.startswith('a=candidate'):
                 candidates.append(line)
-            elif line.strip():  # Non-empty line
-                other_attrs.append(line)
+            # Silently drop other unrecognized attributes
         
         # Rebuild media section in Chrome's expected order
         reordered = [media_start]
         
-        # Add attributes before candidates in Chrome's order
+        # Connection line must come right after m= line
+        if connection_line:
+            reordered.append(connection_line)
+        
+        # Add attributes in Chrome's expected order
         if ice_ufrag:
             reordered.append(ice_ufrag)
         if ice_pwd:
@@ -458,9 +467,11 @@ def reorder_sdp_attributes(sdp: str) -> str:
             # Add ice-options:trickle if missing (for Chrome compatibility)
             reordered.append('a=ice-options:trickle')
         
-        # Add fingerprints (keep all that were in original)
+        # Add fingerprints (only sha-256 for Chrome compatibility)
         for fp in fingerprints:
-            reordered.append(fp)
+            if 'sha-256' in fp:
+                reordered.append(fp)
+                break  # Only include one fingerprint
         
         if setup:
             reordered.append(setup)
@@ -471,9 +482,8 @@ def reorder_sdp_attributes(sdp: str) -> str:
         if max_msg_size:
             reordered.append(max_msg_size)
         
-        # Add candidates and other attributes
+        # Add candidates at the end
         reordered.extend(candidates)
-        reordered.extend(other_attrs)
         
         media_lines = reordered
     
