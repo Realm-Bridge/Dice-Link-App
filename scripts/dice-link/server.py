@@ -378,6 +378,8 @@ def filter_answer_sdp(sdp: str) -> str:
     Removes:
     - a=end-of-candidates (aiortc-specific, browsers reject this)
     - Extra fingerprints (keep only sha-256, browsers only need one)
+    
+    RFC 8866 requires CRLF (\r\n) line endings for WebRTC SDP.
     """
     lines = sdp.split('\n')
     result = []
@@ -402,7 +404,8 @@ def filter_answer_sdp(sdp: str) -> str:
         
         result.append(line)
     
-    return '\n'.join(result)
+    # RFC 8866 requires CRLF line endings
+    return '\r\n'.join(result) + '\r\n'
 
 
 @app.post("/api/receive-offer")
