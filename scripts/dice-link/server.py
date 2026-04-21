@@ -371,6 +371,40 @@ async def get_external_ip_endpoint():
 # ============== WebRTC Signaling Endpoints ==============
 
 
+def filter_answer_sdp(sdp: str) -> str:
+    """
+    Filter aiortc's answer SDP to remove attributes browsers don't understand.
+    
+    Removes:
+    - a=end-of-candidates (aiortc-specific, browsers reject this)
+    - Extra fingerprints (keep only sha-256, browsers only need one)
+    """
+    lines = sdp.split('\n')
+    result = []
+    sha256_fingerprint_added = False
+    
+    for line in lines:
+        line = line.rstrip('\r')  # Handle CRLF
+        
+        # Skip end-of-candidates - browsers don't recognize this
+        if line.startswith('a=end-of-candidates'):
+            continue
+        
+        # Skip non-sha256 fingerprints (sha-384, sha-512)
+        if line.startswith('a=fingerprint:sha-384') or line.startswith('a=fingerprint:sha-512'):
+            continue
+        
+        # Keep only one sha-256 fingerprint
+        if line.startswith('a=fingerprint:sha-256'):
+            if sha256_fingerprint_added:
+                continue
+            sha256_fingerprint_added = True
+        
+        result.append(line)
+    
+    return '\n'.join(result)
+
+
 @app.post("/api/receive-offer")
 async def receive_webrtc_offer(request: Request):
     """
@@ -450,10 +484,10 @@ async def receive_webrtc_offer(request: Request):
                 status_code=500
             )
         
-        # Get answer SDP without normalization - use raw aiortc answer
-        # The browser's offer determines what should be in the answer
-        answer_sdp = pc.localDescription.sdp.strip()
-        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes)")
+        # Get answer SDP and filter out aiortc-specific attributes browsers don't understand
+        raw_answer_sdp = pc.localDescription.sdp.strip()
+        answer_sdp = filter_answer_sdp(raw_answer_sdp)
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, filtered from {len(raw_answer_sdp)})")
         
         # Store peer connection and data channel in state
         await app_state.set_webrtc_peer_connection(pc, received_data_channel)
