@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Test - server.py Port 8765</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            min-height: 100px;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #667eea;
+            color: white;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .status.disconnected {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+        
+        .status.connected {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        
+        .log {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .log-line {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC Automated Test</h1>
+        <p class="subtitle">Browser-as-Offerer - Automated Flow with server.py (port 8765)</p>
+        
+        <div class="section">
+            <div class="section-title">Connection Status</div>
+            <div id="status" class="status disconnected">Disconnected</div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Test Steps</div>
+            <button onclick="runAutomatedTest()">Start Automated WebRTC Test</button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                This will: generate offer in browser → send to server.py → get answer → establish connection
+            </p>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Test Log</div>
+            <div class="log" id="log">
+                <div style="color: #999; font-style: italic;">Test output will appear here...</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Generated Offer (for reference)</div>
+            <textarea id="offerBox" placeholder="Offer will appear here..." readonly></textarea>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Received Answer (for reference)</div>
+            <textarea id="answerBox" placeholder="Answer will appear here..." readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        let pc = null;
+        let dataChannel = null;
+
+        function addLog(message) {
+            const log = document.getElementById('log');
+            if (log.children.length === 1 && log.children[0].textContent.includes('will appear')) {
+                log.innerHTML = '';
+            }
+            
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.textContent = message;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusEl = document.getElementById('status');
+            if (connected) {
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'status connected';
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'status disconnected';
+            }
+        }
+
+        async function runAutomatedTest() {
+            try {
+                addLog('[1] Creating peer connection...');
+                pc = new RTCPeerConnection({
+                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+                });
+                
+                // Listen for incoming data channel
+                pc.ondatachannel = (event) => {
+                    addLog('[5] Data channel received from server');
+                    dataChannel = event.channel;
+                    setupDataChannel();
+                };
+                
+                addLog('[2] Generating offer in browser...');
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                const offerSdp = pc.localDescription.sdp;
+                document.getElementById('offerBox').value = offerSdp;
+                addLog(`[3] Offer generated (${offerSdp.length} bytes)`);
+                
+                addLog('[4] Sending offer to server.py on port 8765...');
+                const response = await fetch('http://localhost:8765/api/receive-offer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ offer: offerSdp })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(`Server error: ${data.error}`);
+                }
+                
+                const answerSdp = data.answer;
+                document.getElementById('answerBox').value = answerSdp;
+                addLog(`[5] Answer received from server (${answerSdp.length} bytes)`);
+                
+                addLog('[6] Normalizing answer line endings (CRLF)...');
+                const normalizedAnswer = answerSdp.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
+                addLog(`[7] Creating RTCSessionDescription from answer...`);
+                
+                const answer = new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: normalizedAnswer
+                });
+                
+                addLog('[8] Setting remote description (answer)...');
+                await pc.setRemoteDescription(answer);
+                addLog('[9] Remote description set successfully');
+                
+                addLog('[10] Waiting for connection to establish...');
+                // Wait up to 10 seconds for connection
+                let connected = false;
+                for (let i = 0; i < 20; i++) {
+                    await new Promise(r => setTimeout(r, 500));
+                    if (dataChannel && dataChannel.readyState === 'open') {
+                        addLog('SUCCESS: Connected! Data channel is open.');
+                        updateStatus(true);
+                        connected = true;
+                        break;
+                    }
+                }
+                
+                if (!connected) {
+                    addLog('TIMEOUT: Connection did not establish within 10 seconds');
+                    addLog(`Data channel state: ${dataChannel ? dataChannel.readyState : 'undefined'}`);
+                    addLog(`Connection state: ${pc.connectionState}`);
+                    addLog(`ICE connection state: ${pc.iceConnectionState}`);
+                    updateStatus(false);
+                }
+                
+            } catch (error) {
+                addLog(`ERROR: ${error.message}`);
+                addLog('Stack: ' + error.stack);
+                updateStatus(false);
+            }
+        }
+
+        function setupDataChannel() {
+            if (!dataChannel) return;
+            
+            dataChannel.onopen = () => {
+                addLog('Data channel opened');
+                updateStatus(true);
+            };
+            
+            dataChannel.onclose = () => {
+                addLog('Data channel closed');
+                updateStatus(false);
+            };
+            
+            dataChannel.onmessage = (event) => {
+                addLog(`Message from server: ${event.data}`);
+            };
+            
+            dataChannel.onerror = (error) => {
+                addLog(`Data channel error: ${error.message}`);
+            };
+        }
+    </script>
+</body>
+</html>
