@@ -18,7 +18,7 @@ DICE_LINK_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(DICE_LINK_DIR))
 os.chdir(DICE_LINK_DIR)
 
-from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
+from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
 from debug import log_startup, log_server
 
@@ -116,21 +116,35 @@ def main():
     log_startup(WEBSOCKET_HOST, WEBSOCKET_PORT)
     log_server(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
     log_server(f"UI available at http://localhost:{WEBSOCKET_PORT}")
-    log_server(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
     
-    # Attempt UPnP port forwarding for remote connections
-    upnp_success, external_ip = setup_upnp_port_forward(WEBSOCKET_PORT)
-    if upnp_success:
-        log_server("Remote connections enabled!")
-        log_server(f"Players should configure DLC to connect to: {external_ip}")
+    # Show connection method info
+    if CONNECTION_METHOD == "webrtc":
+        log_server(f"Connection method: WebRTC (bypasses browser security restrictions)")
+        log_server(f"DLC connects via WebRTC handshake at http://localhost:{WEBSOCKET_PORT}/api/receive-offer")
     else:
-        if external_ip:
-            log_server("Automatic port forwarding unavailable")
-            log_server(f"Your external IP is: {external_ip}")
-            log_server(f"For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
+        log_server(f"Connection method: WebSocket (fallback mode)")
+        log_server(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
+    
+    # UPnP is only relevant for WebSocket fallback mode (remote connections)
+    # For WebRTC on localhost, no port forwarding is needed
+    upnp_success = False
+    external_ip = None
+    if CONNECTION_METHOD == "websocket":
+        # Attempt UPnP port forwarding for remote connections
+        upnp_success, external_ip = setup_upnp_port_forward(WEBSOCKET_PORT)
+        if upnp_success:
+            log_server("Remote connections enabled!")
+            log_server(f"Players should configure DLC to connect to: {external_ip}")
         else:
-            log_server("Could not determine external IP or set up port forwarding")
-            log_server("Remote connections may require manual router configuration")
+            if external_ip:
+                log_server("Automatic port forwarding unavailable")
+                log_server(f"Your external IP is: {external_ip}")
+                log_server(f"For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
+            else:
+                log_server("Could not determine external IP or set up port forwarding")
+                log_server("Remote connections may require manual router configuration")
+    else:
+        log_server("UPnP skipped (not needed for localhost WebRTC connections)")
     
     # Start the FastAPI server in a background thread
     server_thread = threading.Thread(target=run_server, daemon=True)
