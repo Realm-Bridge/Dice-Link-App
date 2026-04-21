@@ -51,10 +51,6 @@ class CameraManager:
                     })
                 else:
                     log("Camera", f"Camera {i} opened but cannot read frames")
-                
-                cap.release()
-                else:
-                    log("Camera", f"Camera {i} opened but cannot read frames")
                 cap.release()
             else:
                 log("Camera", f"Camera {i} cannot be opened")
