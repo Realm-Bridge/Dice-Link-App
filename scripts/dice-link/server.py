@@ -23,7 +23,7 @@ from core.websocket_handler import (
     log_handshake_step
 )
 from core.camera import camera_manager
-from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
+from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS, CONNECTION_METHOD
 from debug import log_dlc_connection, log_dlc_accepted, log_dlc_message, log_dlc_response, log_dlc_disconnect, log_server
 
 # Get the base directory (now app.py is at the root of dice-link/)
@@ -543,7 +543,16 @@ async def handle_ui_message(message: dict):
 
 @app.websocket("/ws/dlc")
 async def websocket_dlc(websocket: WebSocket):
-    """WebSocket endpoint for DLC connections"""
+    """
+    WebSocket endpoint for DLC connections.
+    DISABLED when CONNECTION_METHOD = "webrtc" - kept as fallback only.
+    To re-enable: set CONNECTION_METHOD = "websocket" in config.py
+    """
+    if CONNECTION_METHOD == "webrtc":
+        log_server("ws/dlc: Connection attempt rejected - WebSocket is disabled (CONNECTION_METHOD=webrtc)")
+        await websocket.close(code=1013, reason="WebSocket disabled - use WebRTC connection method")
+        return
+    
     # Debug logging via centralized debug module
     client = websocket.client
     if client:
