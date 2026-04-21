@@ -33,10 +33,10 @@ BASE_DIR = Path(__file__).resolve().parent
 # Create FastAPI app
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
 
-# Add CORS middleware to allow requests from localhost test page
+# Add CORS middleware to allow requests from any origin (like the working test)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8765", "http://127.0.0.1:8765"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
