@@ -371,112 +371,6 @@ async def get_external_ip_endpoint():
 # ============== WebRTC Signaling Endpoints ==============
 
 
-def filter_answer_sdp(sdp: str) -> str:
-    """
-    Filter and reorder aiortc's answer SDP to match browser expectations.
-    
-    Removes:
-    - a=end-of-candidates (aiortc-specific, browsers reject this)
-    - Extra fingerprints (keep only sha-256, browsers only need one)
-    
-    Reorders m= section attributes to match expected format:
-    - c=, ice-ufrag, ice-pwd, fingerprint, setup BEFORE mid, sctp-port
-    
-    RFC 8866 requires CRLF (\r\n) line endings for WebRTC SDP.
-    """
-    lines = sdp.split('\n')
-    
-    # Session-level lines (before m=)
-    session_lines = []
-    # m= line itself
-    m_line = None
-    # m= section attributes to reorder
-    c_line = None
-    ice_ufrag = None
-    ice_pwd = None
-    fingerprint = None
-    setup_line = None
-    mid_line = None
-    sctp_port = None
-    max_message = None
-    candidates = []
-    other_m_lines = []
-    
-    in_m_section = False
-    
-    for line in lines:
-        line = line.rstrip('\r')  # Handle CRLF
-        if not line:
-            continue
-            
-        # Skip end-of-candidates - browsers don't recognize this
-        if line.startswith('a=end-of-candidates'):
-            continue
-        
-        # Skip non-sha256 fingerprints (sha-384, sha-512)
-        if line.startswith('a=fingerprint:sha-384') or line.startswith('a=fingerprint:sha-512'):
-            continue
-        
-        if line.startswith('m='):
-            in_m_section = True
-            m_line = line
-        elif not in_m_section:
-            session_lines.append(line)
-        else:
-            # In m= section - categorize for reordering
-            if line.startswith('c='):
-                c_line = line
-            elif line.startswith('a=ice-ufrag:'):
-                ice_ufrag = line
-            elif line.startswith('a=ice-pwd:'):
-                ice_pwd = line
-            elif line.startswith('a=fingerprint:sha-256'):
-                if fingerprint is None:  # Keep only first sha-256
-                    fingerprint = line
-            elif line.startswith('a=setup:'):
-                setup_line = line
-            elif line.startswith('a=mid:'):
-                mid_line = line
-            elif line.startswith('a=sctp-port:'):
-                sctp_port = line
-            elif line.startswith('a=max-message-size:'):
-                max_message = line
-            elif line.startswith('a=candidate:'):
-                candidates.append(line)
-            else:
-                other_m_lines.append(line)
-    
-    # Build result in correct order
-    result = session_lines[:]
-    
-    if m_line:
-        result.append(m_line)
-    if c_line:
-        result.append(c_line)
-    # ice-ufrag, ice-pwd, fingerprint, setup BEFORE mid, sctp-port
-    if ice_ufrag:
-        result.append(ice_ufrag)
-    if ice_pwd:
-        result.append(ice_pwd)
-    if fingerprint:
-        result.append(fingerprint)
-    if setup_line:
-        result.append(setup_line)
-    if mid_line:
-        result.append(mid_line)
-    if sctp_port:
-        result.append(sctp_port)
-    if max_message:
-        result.append(max_message)
-    for candidate in candidates:
-        result.append(candidate)
-    for other in other_m_lines:
-        result.append(other)
-    
-    # RFC 8866 requires CRLF line endings
-    return '\r\n'.join(result) + '\r\n'
-
-
 @app.post("/api/receive-offer")
 async def receive_webrtc_offer(request: Request):
     """
@@ -556,10 +450,10 @@ async def receive_webrtc_offer(request: Request):
                 status_code=500
             )
         
-        # Get answer SDP and filter out aiortc-specific attributes browsers don't understand
-        raw_answer_sdp = pc.localDescription.sdp.strip()
-        answer_sdp = filter_answer_sdp(raw_answer_sdp)
-        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, filtered from {len(raw_answer_sdp)})")
+        # Get answer SDP directly from aiortc without filtering
+        # The working test showed that aiortc's raw SDP works correctly with browsers
+        answer_sdp = pc.localDescription.sdp
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes)")
         
         # Store peer connection and data channel in state
         await app_state.set_webrtc_peer_connection(pc, received_data_channel)
