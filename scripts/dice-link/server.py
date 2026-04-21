@@ -370,6 +370,108 @@ async def get_external_ip_endpoint():
 
 # ============== WebRTC Signaling Endpoints ==============
 
+def normalize_answer_sdp(sdp: str) -> str:
+    """
+    Normalize aiortc's answer SDP to match browser expectations.
+    
+    aiortc generates SDP with:
+    - Multiple fingerprints (sha-256, sha-384, sha-512)
+    - Attributes in non-standard order (mid, sctp-port before fingerprint, setup)
+    
+    Browsers expect:
+    - Only sha-256 fingerprint
+    - fingerprint, setup BEFORE mid, sctp-port
+    
+    This function reorders the m= section attributes to match.
+    """
+    lines = sdp.split('\n')
+    result = []
+    m_section_lines = []
+    in_m_section = False
+    
+    for line in lines:
+        line = line.rstrip('\r')  # Handle CRLF
+        
+        if line.startswith('m='):
+            in_m_section = True
+            result.append(line)
+        elif in_m_section:
+            m_section_lines.append(line)
+        else:
+            result.append(line)
+    
+    # Now reorder the m= section lines
+    # Expected order: c=, ice-ufrag, ice-pwd, fingerprint:sha-256, setup, mid, sctp-port, max-message-size, candidates
+    
+    c_line = None
+    ice_ufrag = None
+    ice_pwd = None
+    fingerprint_sha256 = None
+    setup_line = None
+    mid_line = None
+    sctp_port = None
+    max_message = None
+    candidates = []
+    end_candidates = None
+    other_lines = []
+    
+    for line in m_section_lines:
+        if not line:
+            continue
+        elif line.startswith('c='):
+            c_line = line
+        elif line.startswith('a=ice-ufrag:'):
+            ice_ufrag = line
+        elif line.startswith('a=ice-pwd:'):
+            ice_pwd = line
+        elif line.startswith('a=fingerprint:sha-256'):
+            fingerprint_sha256 = line
+        elif line.startswith('a=fingerprint:'):
+            # Skip sha-384 and sha-512 fingerprints
+            continue
+        elif line.startswith('a=setup:'):
+            setup_line = line
+        elif line.startswith('a=mid:'):
+            mid_line = line
+        elif line.startswith('a=sctp-port:'):
+            sctp_port = line
+        elif line.startswith('a=max-message-size:'):
+            max_message = line
+        elif line.startswith('a=candidate:'):
+            candidates.append(line)
+        elif line.startswith('a=end-of-candidates'):
+            end_candidates = line
+        else:
+            other_lines.append(line)
+    
+    # Build the reordered m= section
+    # Order: c=, ice-ufrag, ice-pwd, fingerprint, setup, mid, sctp-port, max-message, candidates, end-candidates
+    if c_line:
+        result.append(c_line)
+    if ice_ufrag:
+        result.append(ice_ufrag)
+    if ice_pwd:
+        result.append(ice_pwd)
+    if fingerprint_sha256:
+        result.append(fingerprint_sha256)
+    if setup_line:
+        result.append(setup_line)
+    if mid_line:
+        result.append(mid_line)
+    if sctp_port:
+        result.append(sctp_port)
+    if max_message:
+        result.append(max_message)
+    for candidate in candidates:
+        result.append(candidate)
+    if end_candidates:
+        result.append(end_candidates)
+    for other in other_lines:
+        result.append(other)
+    
+    return '\r\n'.join(result)
+
+
 @app.post("/api/receive-offer")
 async def receive_webrtc_offer(request: Request):
     """
@@ -445,10 +547,15 @@ async def receive_webrtc_offer(request: Request):
                 status_code=500
             )
         
-        # Get answer SDP and strip trailing whitespace/newlines
-        # Trailing blank lines can cause "Invalid SDP line" errors in browsers
-        answer_sdp = pc.localDescription.sdp.strip()
-        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes)")
+        # Get answer SDP and normalize it to match browser expectations
+        # aiortc generates SDP with attributes in a different order and multiple fingerprints
+        # Browsers expect: fingerprint, setup BEFORE mid, sctp-port
+        # Also only sha-256 fingerprint should be present
+        raw_answer_sdp = pc.localDescription.sdp.strip()
+        
+        # Normalize the SDP to match expected format
+        answer_sdp = normalize_answer_sdp(raw_answer_sdp)
+        log_handshake_step(6.7, "Serialize Answer", f"Answer serialized ({len(answer_sdp)} bytes, normalized from {len(raw_answer_sdp)})")
         
         # Store peer connection and data channel in state
         await app_state.set_webrtc_peer_connection(pc, data_channel)
