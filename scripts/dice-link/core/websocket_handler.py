@@ -284,3 +284,36 @@ async def send_roll_cancelled(roll_id: str, reason: str = "User cancelled") -> b
     except Exception as e:
         log_websocket(f"Error sending roll cancelled: {e}")
         return False
+
+
+# ============== WebRTC Helper Functions ==============
+
+async def send_message_via_webrtc(message: dict) -> bool:
+    """Send a message via WebRTC data channel if connected"""
+    if not app_state.webrtc_data_channel or app_state.webrtc_data_channel.readyState != "open":
+        return False
+    
+    try:
+        app_state.webrtc_data_channel.send(json.dumps(message))
+        return True
+    except Exception as e:
+        log_server(f"Error sending message via WebRTC: {e}")
+        return False
+
+
+def get_webrtc_connection_status() -> dict:
+    """Get current WebRTC connection status"""
+    pc_state = "disconnected"
+    dc_state = "closed"
+    
+    if app_state.webrtc_peer_connection:
+        pc_state = getattr(app_state.webrtc_peer_connection, "connectionState", "unknown")
+    
+    if app_state.webrtc_data_channel:
+        dc_state = getattr(app_state.webrtc_data_channel, "readyState", "unknown")
+    
+    return {
+        "peerConnectionState": pc_state,
+        "dataChannelState": dc_state,
+        "connected": dc_state == "open"
+    }
