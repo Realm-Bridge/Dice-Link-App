@@ -5,7 +5,7 @@ import time
 from typing import Any
 from state import app_state
 from config import APP_NAME, APP_VERSION
-from debug import log_websocket
+from debug import log_websocket, log_server
 
 
 async def broadcast_to_ui(message: dict):
