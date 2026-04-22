@@ -153,13 +153,43 @@ Our simple `test-page.html` used standard CSS without `@layer` declarations. Qt 
 
 **Consequence:** This is not a temporary problem. CSS Cascade Layers are now core to Foundry's architecture and will likely remain so through future versions.
 
+**Foundry Rendering Pipeline & CSS Dependency:**
+
+From Foundry's "Load to Render" documentation, the rendering flow is:
+
+1. `Game.getData()` - Server loads data
+2. `Game#initialize` - Documents constructed from data
+3. `DataModel#_initialize` - Data fields prepared (IDs become pointers, etc.)
+4. `ClientDocument#prepareData` - Documents prepare for UI display
+5. `DocumentSheet#render()` - Application renders using Handlebars templates
+6. `_prepareContext()` - Data prepared for display
+7. `renderTemplate()` - **HTML generated from templates**
+8. **CSS Cascade Layers applied to rendered HTML** - Styling and layout
+
+**Critical Finding:** There is NO special CSS loading step. CSS Cascade Layers are part of core Foundry's stylesheet and load automatically. If the browser cannot parse `@layer` syntax, the ENTIRE render pipeline produces unstyled HTML that appears as broken/non-functional.
+
+**Why this matters:**
+- The rendering pipeline assumes CSS Cascade Layers will work
+- Every UI element (sheets, chat, canvas, forms, menus) depends on proper CSS layer priority
+- Without `@layer` support, the page loads but is completely non-functional (all styling ignored)
+- This is not a cosmetic issue - it's a fundamental architectural requirement
+
+**Modules and CSS:**
+- Modules can add stylesheets via `"styles"` array in module.json
+- Module stylesheets load AFTER core Foundry (higher `@layer` priority)
+- This system also depends on CSS Cascade Layers working
+
+**Conclusion:** CSS Cascade Layers are NON-NEGOTIABLE for Foundry v13+. Without Chromium 99+ support, Foundry will not render functionally.
+
 **Next Steps Required:**
 1. Determine Chromium version in PyQt6 - does it support CSS Cascade Layers (requires Chromium 99+)?
 2. Determine Chromium version in CEF Python - does it support CSS Cascade Layers?
 3. If neither supports Chromium 99+, embedded browser approach is NOT viable for any current Foundry version
 
-**Source:** 
+**Sources:** 
 - CSS Cascade Layers guide: https://foundryvtt.wiki/en/development/guides/css-cascade-layers
+- Load to Render Process: https://foundryvtt.wiki/en/development/guides/from-load-to-render
+- Module Development: https://foundryvtt.com/article/module-development
 - Foundry v13 release notes (v13.341): https://foundryvtt.com/article/release-13.341
 - Foundry v14 release notes (v14.360): https://foundryvtt.com/releases/14.360
 
