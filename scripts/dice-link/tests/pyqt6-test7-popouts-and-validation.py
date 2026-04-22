@@ -257,6 +257,10 @@ class TestWindow(QMainWindow):
         self.btn_window_ref.clicked.connect(self.test_window_reference)
         control_layout.addWidget(self.btn_window_ref)
         
+        self.btn_popout_workflow = QPushButton("Test 3c: Full Pop-out Workflow Test")
+        self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
+        control_layout.addWidget(self.btn_popout_workflow)
+        
         self.btn_external = QPushButton("Test 4: Try External Navigation (should block)")
         self.btn_external.clicked.connect(self.test_external_blocked)
         control_layout.addWidget(self.btn_external)
@@ -478,6 +482,25 @@ class TestWindow(QMainWindow):
                 self.log(f"Raw result: {result}")
         
         self.browser.page().runJavaScript(ref_test_script, on_result)
+        
+    def test_popout_workflow(self):
+        """Test 3c: Test the FULL pop-out workflow"""
+        self.log("\n--- TEST 3c: FULL Pop-out Workflow ---")
+        self.log("This tests the ACTUAL pop-out behavior from start to finish")
+        self.log("\nMANUAL STEPS REQUIRED:")
+        self.log("1. Open a character sheet in the Foundry window")
+        self.log("2. Click the pop-out icon on the sheet (should create new window)")
+        self.log("3. Verify the character sheet appears in the new window")
+        self.log("4. Look for a 'Pop In' button in the new window")
+        self.log("5. Click 'Pop In' to return the sheet to the main window")
+        self.log("6. Verify the sheet is back in the main window")
+        self.log("7. Verify you can open the sheet again in the main window")
+        self.log("\nOnce you've completed these steps, report PASS or FAIL")
+        self.log("\nExpected behavior:")
+        self.log("- Pop-out window opens with character sheet")
+        self.log("- Pop In button exists and works")
+        self.log("- Sheet can be re-opened in main window after pop in")
+        self.test_results['popout_workflow'] = 'MANUAL'
         
     def test_external_blocked(self):
         """Test 4: Verify external navigation is blocked"""
