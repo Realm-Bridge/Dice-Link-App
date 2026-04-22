@@ -206,6 +206,11 @@ class EmbeddedBrowserTest(QMainWindow):
         self.debug_btn.clicked.connect(self.run_debug_check)
         control_layout.addWidget(self.debug_btn)
         
+        # CSS Debug button - investigate CSS rendering
+        self.css_debug_btn = QPushButton("DEBUG: CSS Rendering")
+        self.css_debug_btn.clicked.connect(self.run_css_debug)
+        control_layout.addWidget(self.css_debug_btn)
+        
         # Log output
         control_layout.addWidget(QLabel("Log Output:"))
         self.log_output = QTextEdit()
@@ -653,6 +658,101 @@ class EmbeddedBrowserTest(QMainWindow):
         """Process debug result"""
         self.log("Debug results:")
         self.log(result if result else "No result returned")
+    
+    def run_css_debug(self):
+        """Debug: Deep CSS investigation"""
+        self.log("\n--- DEBUG: CSS Rendering Investigation ---")
+        
+        js_css_debug = """
+        (function() {
+            var results = {
+                test1_stylesheets_exist: false,
+                test2_stylesheets_accessible: false,
+                test3_css_rules_count: 0,
+                test4_computed_styles: {},
+                test5_body_background: '',
+                test6_css_disabled: false,
+                errors: []
+            };
+            
+            // Test 1: Do stylesheet elements exist in DOM?
+            var styleLinks = document.querySelectorAll('link[rel="stylesheet"]');
+            results.test1_stylesheets_exist = styleLinks.length > 0;
+            results.stylesheet_count = styleLinks.length;
+            
+            // Test 2: Can we access the stylesheet objects?
+            try {
+                results.test2_stylesheets_accessible = document.styleSheets.length > 0;
+                results.styleSheets_length = document.styleSheets.length;
+            } catch(e) {
+                results.errors.push('Cannot access styleSheets: ' + e.message);
+            }
+            
+            // Test 3: Count CSS rules (will fail if CORS blocks access)
+            var totalRules = 0;
+            for (var i = 0; i < document.styleSheets.length; i++) {
+                try {
+                    var sheet = document.styleSheets[i];
+                    if (sheet.cssRules) {
+                        totalRules += sheet.cssRules.length;
+                    }
+                } catch(e) {
+                    results.errors.push('Cannot read rules from sheet ' + i + ': ' + e.message);
+                }
+            }
+            results.test3_css_rules_count = totalRules;
+            
+            // Test 4: Check computed styles on body
+            try {
+                var bodyStyles = window.getComputedStyle(document.body);
+                results.test4_computed_styles = {
+                    backgroundColor: bodyStyles.backgroundColor,
+                    color: bodyStyles.color,
+                    fontFamily: bodyStyles.fontFamily,
+                    display: bodyStyles.display
+                };
+                results.test5_body_background = bodyStyles.backgroundColor;
+            } catch(e) {
+                results.errors.push('Cannot get computed styles: ' + e.message);
+            }
+            
+            // Test 6: Check if CSS is explicitly disabled
+            results.test6_css_disabled = !document.styleSheets;
+            
+            // Additional: Check what background color SHOULD be
+            // Foundry uses dark theme, so if background is white/transparent, CSS isn't applying
+            var bgColor = results.test5_body_background;
+            if (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent' || bgColor === 'rgb(255, 255, 255)') {
+                results.css_applying = false;
+                results.diagnosis = 'CSS NOT APPLYING - background is default (white/transparent)';
+            } else {
+                results.css_applying = true;
+                results.diagnosis = 'CSS appears to be applying - background: ' + bgColor;
+            }
+            
+            return JSON.stringify(results, null, 2);
+        })();
+        """
+        self.browser.page().runJavaScript(js_css_debug, self.on_css_debug_complete)
+    
+    def on_css_debug_complete(self, result):
+        """Process CSS debug result"""
+        self.log("CSS Debug results:")
+        self.log(result if result else "No result returned")
+        
+        # Parse and provide diagnosis
+        if result:
+            try:
+                import json
+                data = json.loads(result)
+                self.log("\n--- DIAGNOSIS ---")
+                if data.get('errors') and len(data['errors']) > 0:
+                    self.log("ERRORS FOUND:")
+                    for err in data['errors']:
+                        self.log("  - " + err)
+                self.log("Conclusion: " + data.get('diagnosis', 'Unknown'))
+            except:
+                pass
 
 
 def main():
