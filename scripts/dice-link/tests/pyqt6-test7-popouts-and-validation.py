@@ -93,140 +93,56 @@ class FoundryValidator:
 
 
 class FoundryWebPage(QWebEnginePage):
-    """Custom web page that handles pop-outs and navigation"""
+    """Custom web page that only blocks EXTERNAL navigation - lets Foundry handle pop-outs natively"""
     
     def __init__(self, profile, allowed_origin, log_callback, main_window=None, parent=None):
         super().__init__(profile, parent)
         self.allowed_origin = allowed_origin
         self.log = log_callback
         self.main_window = main_window
-        self.popup_windows = []
         
-        # Connect new window requests to proper handler
+        # Only block external popups - let same-origin work naturally
         self.newWindowRequested.connect(self.handle_new_window)
         
-    def is_same_origin(self, url: QUrl) -> bool:
+    def is_same_origin(self, url_str: str) -> bool:
         """Check if URL is same origin as allowed Foundry server"""
-        url_str = url.toString() if isinstance(url, QUrl) else url
+        if not url_str or url_str == 'about:blank':
+            return True  # Allow blank URLs (used by Foundry popouts)
+        
         parsed_new = urlparse(url_str)
         parsed_allowed = urlparse(self.allowed_origin)
         
-        same = (parsed_new.scheme == parsed_allowed.scheme and 
-                parsed_new.netloc == parsed_allowed.netloc)
-        
-        return same
-    
-    def handle_new_window(self, request):
-        """Handle new window requests using Qt6's openIn() method"""
-        requested_url = request.requestedUrl().toString()
-        self.log(f"\n--- POPUP REQUEST ---")
-        self.log(f"URL: {requested_url}")
-        self.log(f"User initiated: {request.isUserInitiated()}")
-
-        # Allow same-origin AND about:blank (Foundry uses about:blank as
-        # the initial URL before loading actual sheet content into the popup)
-        is_allowed = (
-            self.is_same_origin(requested_url)
-            or requested_url == 'about:blank'
-            or requested_url == ''
-        )
-
-        if is_allowed:
-            self.log("ALLOWED: Foundry pop-out")
-
-            # Create new popup page with same navigation restrictions
-            popup_page = FoundryPopupPage(self.profile(), self.allowed_origin, self.log)
-
-            # Create popup window
-            popup_window = PopupWindow(popup_page, self.log)
-
-            # Use Qt6's proper openIn() method - this hands the page to Qt
-            request.openIn(popup_page)
-
-            # Show window
-            popup_window.show()
-
-            # Keep reference to prevent garbage collection
-            self.popup_windows.append(popup_window)
-            self.log("Pop-out window created and shown")
-        else:
-            self.log("BLOCKED: External origin pop-out")
-    
-    def acceptNavigationRequest(self, url, nav_type, is_main_frame):
-        """Intercept navigation requests"""
-        self.log(f"\n--- NAVIGATION REQUEST ---")
-        self.log(f"URL: {url.toString()}")
-        
-        if self.is_same_origin(url):
-            self.log("ALLOWED: Same origin navigation")
-            return True
-        
-        url_str = url.toString()
-        if url_str in ('about:blank',) or url_str.startswith('javascript:'):
-            return True
-        
-        self.log("BLOCKED: External navigation")
-        return False
-
-
-class FoundryPopupPage(QWebEnginePage):
-    """Page for popup windows with same navigation restrictions"""
-    
-    def __init__(self, profile, allowed_origin, log_callback, parent=None):
-        super().__init__(profile, parent)
-        self.allowed_origin = allowed_origin
-        self.log = log_callback
-        
-    def is_same_origin(self, url: QUrl) -> bool:
-        url_str = url.toString()
-        parsed_new = urlparse(url_str)
-        parsed_allowed = urlparse(self.allowed_origin)
         return (parsed_new.scheme == parsed_allowed.scheme and 
                 parsed_new.netloc == parsed_allowed.netloc)
     
+    def handle_new_window(self, request):
+        """Only BLOCK external popups - let Foundry handle same-origin popups natively"""
+        requested_url = request.requestedUrl().toString()
+        self.log(f"\n--- POPUP REQUEST ---")
+        self.log(f"URL: {requested_url}")
+        
+        if self.is_same_origin(requested_url):
+            # DON'T intercept - let Qt/Foundry handle it natively
+            self.log("ALLOWED: Same-origin popup (handled by Foundry)")
+            # Don't call request.openIn() - just let it proceed naturally
+        else:
+            # Block external popups
+            self.log("BLOCKED: External origin popup")
+            request.reject()
+    
     def acceptNavigationRequest(self, url, nav_type, is_main_frame):
-        self.log(f"[POPUP] Navigation: {url.toString()}")
-        
-        if self.is_same_origin(url):
-            self.log("[POPUP] ALLOWED: Same origin")
-            return True
-        
+        """Only block external navigation"""
         url_str = url.toString()
-        if url_str == 'about:blank' or url_str.startswith('javascript:'):
+        
+        if self.is_same_origin(url_str):
+            self.log(f"Navigation: {url_str[:60]}... ALLOWED")
             return True
-            
-        self.log("[POPUP] BLOCKED: External URL")
+        
+        if url_str.startswith('javascript:'):
+            return True
+        
+        self.log(f"\nBLOCKED: External navigation to {url_str}")
         return False
-
-
-class PopupWindow(QMainWindow):
-    """Window container for Foundry pop-outs"""
-    
-    def __init__(self, page, log_callback):
-        super().__init__()
-        self.log = log_callback
-        self._page = page  # Keep strong reference
-        
-        self.setWindowTitle("Foundry Pop-out")
-        self.resize(600, 700)
-        
-        # Create view with self as parent FIRST
-        self.browser = QWebEngineView(self)
-        
-        # Set as central widget BEFORE setting page
-        self.setCentralWidget(self.browser)
-        
-        # NOW set the page (after view is properly parented)
-        self.browser.setPage(page)
-        
-        # Update window title when page title changes
-        page.titleChanged.connect(self.on_title_changed)
-        
-        self.log("[POPUP WINDOW] Pop-out window created")
-    
-    def on_title_changed(self, title):
-        if title and title != "about:blank":
-            self.setWindowTitle(title)
 
 
 class TestWindow(QMainWindow):
