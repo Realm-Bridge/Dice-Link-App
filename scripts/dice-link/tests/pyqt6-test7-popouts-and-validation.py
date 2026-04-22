@@ -276,7 +276,11 @@ class TestWindow(QMainWindow):
         self.btn_window_ref.clicked.connect(self.test_window_reference)
         control_layout.addWidget(self.btn_window_ref)
         
-        self.btn_popout_workflow = QPushButton("Test 3c: Full Pop-out Workflow Test")
+        self.btn_popout_ops = QPushButton("Test 3c: Test PopOut Operations")
+        self.btn_popout_ops.clicked.connect(self.test_popout_operations)
+        control_layout.addWidget(self.btn_popout_ops)
+        
+        self.btn_popout_workflow = QPushButton("Test 3d: Full Pop-out Workflow Test")
         self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
         control_layout.addWidget(self.btn_popout_workflow)
         
@@ -499,6 +503,113 @@ class TestWindow(QMainWindow):
                 self.log(f"Raw result: {result}")
         
         self.browser.page().runJavaScript(ref_test_script, on_result)
+        
+    def test_popout_operations(self):
+        """Test 3c: Test if PopOut module's critical operations work"""
+        self.log("\n--- TEST 3c: PopOut Module Operations ---")
+        self.log("This tests the EXACT operations Foundry's PopOut module needs:")
+        self.log("1. window.open() returns a reference")
+        self.log("2. popout.document.open() works")
+        self.log("3. popout.document.write() works")
+        self.log("4. adoptNode() can move DOM between windows")
+        
+        ops_test_script = """
+        (function() {
+            var results = {
+                windowOpenWorks: false,
+                documentOpenWorks: false,
+                documentWriteWorks: false,
+                adoptNodeWorks: false,
+                errors: []
+            };
+            
+            try {
+                // Test 1: window.open() returns reference
+                var popupWin = window.open('about:blank', 'popout_ops_test_' + Date.now());
+                
+                if (popupWin === null) {
+                    results.errors.push('window.open() returned null');
+                    return JSON.stringify(results);
+                }
+                
+                results.windowOpenWorks = true;
+                
+                // Test 2 & 3: document.open() and document.write()
+                try {
+                    popupWin.document.open();
+                    results.documentOpenWorks = true;
+                    
+                    // Try to write HTML
+                    popupWin.document.write('<html><body>Test Content</body></html>');
+                    results.documentWriteWorks = true;
+                    
+                    popupWin.document.close();
+                } catch(e) {
+                    results.errors.push('document operations failed: ' + e.message);
+                }
+                
+                // Test 4: adoptNode() - move DOM from main to popup
+                try {
+                    var testElement = document.createElement('div');
+                    testElement.textContent = 'Adopted Element';
+                    
+                    // This is what PopOut module does
+                    var adoptedElement = popupWin.document.adoptNode(testElement);
+                    if (adoptedElement !== null) {
+                        results.adoptNodeWorks = true;
+                        popupWin.document.body.appendChild(adoptedElement);
+                    }
+                } catch(e) {
+                    results.errors.push('adoptNode failed: ' + e.message);
+                }
+                
+                popupWin.close();
+                
+            } catch(e) {
+                results.errors.push('Unexpected error: ' + e.message);
+            }
+            
+            return JSON.stringify(results);
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                import json
+                data = json.loads(result)
+                
+                self.log(f"\nPopOut Module Operations Test Results:")
+                self.log(f"  window.open() returns reference: {data.get('windowOpenWorks', False)}")
+                self.log(f"  popout.document.open() works: {data.get('documentOpenWorks', False)}")
+                self.log(f"  popout.document.write() works: {data.get('documentWriteWorks', False)}")
+                self.log(f"  adoptNode() works: {data.get('adoptNodeWorks', False)}")
+                
+                errors = data.get('errors', [])
+                if errors:
+                    self.log(f"\nErrors encountered:")
+                    for error in errors:
+                        self.log(f"  - {error}")
+                
+                # Check if all critical operations work
+                all_work = (data.get('windowOpenWorks') and 
+                           data.get('documentOpenWorks') and 
+                           data.get('documentWriteWorks') and
+                           data.get('adoptNodeWorks'))
+                
+                if all_work:
+                    self.log(f"\nPASS: All PopOut module operations work!")
+                    self.log(f"Foundry's PopOut module SHOULD work correctly")
+                    self.test_results['popout_ops'] = True
+                else:
+                    self.log(f"\nFAIL: Some PopOut operations don't work")
+                    self.log(f"This explains why pop-outs fail in the embedded browser")
+                    self.test_results['popout_ops'] = False
+                    
+            except Exception as e:
+                self.log(f"Error parsing result: {e}")
+                self.log(f"Raw result: {result}")
+        
+        self.browser.page().runJavaScript(ops_test_script, on_result)
         
     def test_popout_workflow(self):
         """Test 3c: Test the FULL pop-out workflow"""
