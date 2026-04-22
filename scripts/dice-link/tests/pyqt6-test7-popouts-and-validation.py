@@ -201,14 +201,18 @@ class FoundryWebPage(QWebEnginePage):
     
     def javaScriptConsoleMessage(self, level, message, line, source):
         """Capture ALL JavaScript console output and display in our log"""
-        # Level: 0=Info, 1=Warning, 2=Error
-        level_str = {0: "INFO", 1: "WARN", 2: "ERROR"}.get(level, "LOG")
-        
-        # Only log messages that seem relevant (errors, our debug, or PopOut related)
-        if level >= 1 or "DLA" in message or "POPOUT" in message or "SIMULATE" in message or "error" in message.lower() or "Error" in message:
-            self.log(f"[JS {level_str}] {message}")
-            if level >= 2:  # For errors, also show source info
-                self.log(f"  Source: {source}, Line: {line}")
+        try:
+            # level is a JavaScriptConsoleMessageLevel enum, convert to int
+            level_int = int(level)
+            level_str = {0: "INFO", 1: "WARN", 2: "ERROR"}.get(level_int, "LOG")
+            
+            # Only log messages that seem relevant (errors, our debug, or PopOut related)
+            if level_int >= 1 or "DLA" in message or "POPOUT" in message or "SIMULATE" in message or "error" in message.lower() or "Error" in message:
+                self.log(f"[JS {level_str}] {message}")
+                if level_int >= 2:  # For errors, also show source info
+                    self.log(f"  Source: {source}, Line: {line}")
+        except Exception as e:
+            self.log(f"[Console Error] {message}")
         
     def is_same_origin(self, url_str: str) -> bool:
         """Check if URL is same origin as allowed Foundry server"""
