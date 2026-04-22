@@ -853,6 +853,26 @@ class TestWindow(QMainWindow):
                     console.log('[DLA DEBUG] createWindow method hooked');
                 }
                 
+                // Track document.write calls in detail
+                var writeCounter = 0;
+                var originalDocWrite = Document.prototype.write;
+                window.__dla_doc_writes_detailed = [];
+                Document.prototype.write = function(content) {
+                    writeCounter++;
+                    var isPopup = (this !== document);
+                    var entry = {
+                        num: writeCounter,
+                        len: content ? content.length : 0,
+                        isPopup: isPopup,
+                        snippet: content ? content.substring(0, 200) : ''
+                    };
+                    window.__dla_doc_writes_detailed.push(entry);
+                    console.log('[DLA DEBUG] document.write #' + writeCounter + (isPopup ? ' [POPUP]' : ' [MAIN]') + ' - ' + entry.len + ' chars');
+                    return originalDocWrite.call(this, content);
+                };
+                debugInfo.documentWriteTrackingInstalled = true;
+                console.log('[DLA DEBUG] document.write tracking installed');
+                
                 console.log('[DLA DEBUG] All hooks installed');
                 console.log('[DLA DEBUG] PopoutModule exists:', debugInfo.popoutModuleClassExists);
                 console.log('[DLA DEBUG] Singleton exists:', debugInfo.popoutSingletonExists);
@@ -908,8 +928,10 @@ class TestWindow(QMainWindow):
             return JSON.stringify({
                 windowOpenCalls: window.__popout_window_open_calls || [],
                 documentWriteCalls: window.__popout_document_writes || [],
+                detailedWrites: window.__dla_doc_writes_detailed || [],
                 totalWindowOpens: (window.__popout_window_open_calls || []).length,
-                totalDocumentWrites: (window.__popout_document_writes || []).length
+                totalDocumentWrites: (window.__popout_document_writes || []).length,
+                totalDetailedWrites: (window.__dla_doc_writes_detailed || []).length
             });
         })();
         """
@@ -922,14 +944,15 @@ class TestWindow(QMainWindow):
                 self.log(f"  window.open() calls: {data.get('totalWindowOpens', 0)}")
                 
                 if data.get('windowOpenCalls'):
-                    for i, call in enumerate(data['windowOpenCalls'][:5]):  # Show first 5
+                    for i, call in enumerate(data['windowOpenCalls'][:5]):
                         self.log(f"    [{i}] URL: {call.get('url')}, Name: {call.get('name')}")
                 
-                self.log(f"  document.write() calls: {data.get('totalDocumentWrites', 0)}")
+                self.log(f"  document.write() calls (detailed): {data.get('totalDetailedWrites', 0)}")
                 
-                if data.get('documentWriteCalls'):
-                    for i, call in enumerate(data['documentWriteCalls'][:5]):  # Show first 5
-                        self.log(f"    [{i}] {call.get('htmlLength')} chars, at {call.get('timestamp')}")
+                if data.get('detailedWrites'):
+                    for i, call in enumerate(data['detailedWrites'][:10]):
+                        popup_marker = '[POPUP]' if call.get('isPopup') else '[MAIN]'
+                        self.log(f"    [{call.get('num')}] {popup_marker} {call.get('len')} chars: {call.get('snippet')[:80]}...")
                         
             except Exception as e:
                 self.log(f"Error checking calls: {e}")
