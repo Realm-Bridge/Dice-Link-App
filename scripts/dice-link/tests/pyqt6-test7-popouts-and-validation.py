@@ -205,20 +205,28 @@ class PopupWindow(QMainWindow):
     def __init__(self, page, log_callback):
         super().__init__()
         self.log = log_callback
+        self._page = page  # Keep strong reference
+        
         self.setWindowTitle("Foundry Pop-out")
         self.resize(600, 700)
         
-        self.browser = QWebEngineView()
+        # Create view with self as parent FIRST
+        self.browser = QWebEngineView(self)
+        
+        # Set as central widget BEFORE setting page
+        self.setCentralWidget(self.browser)
+        
+        # NOW set the page (after view is properly parented)
         self.browser.setPage(page)
         
-        # Configure settings for popup
-        settings = page.settings()
-        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
+        # Update window title when page title changes
+        page.titleChanged.connect(self.on_title_changed)
         
-        self.setCentralWidget(self.browser)
         self.log("[POPUP WINDOW] Pop-out window created")
+    
+    def on_title_changed(self, title):
+        if title and title != "about:blank":
+            self.setWindowTitle(title)
 
 
 class TestWindow(QMainWindow):
