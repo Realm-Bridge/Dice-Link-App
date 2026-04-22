@@ -149,7 +149,8 @@ class FoundryWebView(QWebEngineView):
         popup_view = QWebEngineView()
         
         # Use the SAME profile from our page - this shares cookies, storage, etc.
-        popup_page = QWebEnginePage(self.page().profile(), popup_view)
+        # Use our custom page class to capture console messages
+        popup_page = FoundryWebPage(self.page().profile(), self.allowed_origin, self.log, popup_view)
         popup_view.setPage(popup_page)
         
         # Create window container
@@ -197,6 +198,17 @@ class FoundryWebPage(QWebEnginePage):
         super().__init__(profile, parent)
         self.allowed_origin = allowed_origin
         self.log = log_callback
+    
+    def javaScriptConsoleMessage(self, level, message, line, source):
+        """Capture ALL JavaScript console output and display in our log"""
+        # Level: 0=Info, 1=Warning, 2=Error
+        level_str = {0: "INFO", 1: "WARN", 2: "ERROR"}.get(level, "LOG")
+        
+        # Only log messages that seem relevant (errors, our debug, or PopOut related)
+        if level >= 1 or "DLA" in message or "POPOUT" in message or "SIMULATE" in message or "error" in message.lower() or "Error" in message:
+            self.log(f"[JS {level_str}] {message}")
+            if level >= 2:  # For errors, also show source info
+                self.log(f"  Source: {source}, Line: {line}")
         
     def is_same_origin(self, url_str: str) -> bool:
         """Check if URL is same origin as allowed Foundry server"""
