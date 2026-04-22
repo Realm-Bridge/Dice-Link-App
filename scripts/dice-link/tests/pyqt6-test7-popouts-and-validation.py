@@ -138,26 +138,30 @@ class FoundryWebView(QWebEngineView):
         """
         Override createWindow - called when JavaScript uses window.open().
         
-        The returned QWebEngineView's page becomes the popup window that
-        JavaScript can interact with. This gives Foundry's PopOut module
-        the window reference it needs to write to popout.document, etc.
+        SIMPLIFIED: Create a basic QWebEngineView with same profile as parent.
+        This should preserve the JavaScript context better.
         """
         self.log(f"\n--- createWindow() called ---")
         self.log(f"Window type: {window_type}")
         
-        # Create a new view for the popup (this will be returned to JavaScript)
-        popup_view = FoundryPopupView(self.allowed_origin, self.log)
+        # Create popup view that shares the SAME profile as the main page
+        # This is critical for JavaScript context sharing
+        popup_view = QWebEngineView()
         
-        # Create window container and show it
+        # Use the SAME profile from our page - this shares cookies, storage, etc.
+        popup_page = QWebEnginePage(self.page().profile(), popup_view)
+        popup_view.setPage(popup_page)
+        
+        # Create window container
         popup_window = PopupWindow(popup_view, self.log)
         popup_window.show()
         
-        # Keep reference to prevent garbage collection
+        # Keep references
         self.popup_windows.append(popup_window)
         
-        self.log("Popup view created and returned to JavaScript")
+        self.log("Popup view created with shared profile")
         
-        # Return the view - JavaScript's window.open() gets this as the popup window
+        # Return the view - JavaScript's window.open() should get a valid reference
         return popup_view
 
 
