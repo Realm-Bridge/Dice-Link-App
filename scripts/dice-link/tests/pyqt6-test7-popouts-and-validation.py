@@ -117,7 +117,23 @@ class PopupWindow(QMainWindow):
         # Update title when page title changes - this indicates content
         web_view.page().titleChanged.connect(self.on_title_changed)
         
+        # Watch for page load finished - if it finishes after having content, 
+        # it means the sheet was returned and page went blank
+        web_view.page().loadFinished.connect(self.on_load_finished)
+        
         self.log("[POPUP] Window created")
+    
+    def on_load_finished(self, ok):
+        """Detect when page finishes loading - if it's blank after having content, close window"""
+        if self.has_had_content:
+            # Check what the page title is now
+            title = self.web_view.page().title()
+            self.log(f"[POPUP] Load finished, title now: {title}")
+            
+            # If title went back to default or blank, the content was removed
+            if not title or title == "about:blank" or title == "Foundry Virtual Tabletop":
+                self.log("[POPUP] Page went blank - sheet returned, closing window")
+                self.close()
     
     def on_title_changed(self, title):
         """Track when content is loaded by watching title changes"""
