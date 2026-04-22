@@ -417,8 +417,119 @@ Once approach is chosen:
 
 ---
 
-## Open Questions for DLC Chat
+---
 
-1. What is the preference for user experience: custom DLA window or keeping normal browser?
-2. What are the constraints on application size for DLA?
-3. Should we prioritize Foundry-only launch, or design for Roll20 from the start?
+## Browser Engine Compatibility & Licensing Analysis
+
+**Critical Requirement:** Any embedded browser solution must use **Chromium 99 or later** to support CSS Cascade Layers.
+
+### Chromium Version Requirements by Engine
+
+| Browser Engine | Latest Version | Chromium Version | CSS Cascade Layers | Notes |
+|---|---|---|---|---|
+| PyQt5 Qt WebEngine | 5.15.x | 83 (May 2020) | ✗ NO | **DISQUALIFIED - Cannot render Foundry v13+** |
+| PyQt6 Qt WebEngine | 6.10.0 | 122 (Oct 2025) | ✓ YES | ✓ Viable for Foundry |
+| Qt WebEngine | 6.7.x | 127 (latest) | ✓ YES | ✓ Viable for Foundry |
+| CEF Python (latest) | 123.0.7 | 123 (Feb 2025) | ✓ YES | ✓ Viable for Foundry |
+| CEF Python (pip default) | Old | 66 | ✗ NO | Must use latest manually |
+
+**Finding:** Both PyQt6 and CEF Python (latest) support CSS Cascade Layers. PyQt5 is disqualified.
+
+---
+
+### Licensing Costs for Commercial Product
+
+**This is critical for a commercial project:**
+
+#### PyQt6 Commercial License
+
+| Term | Cost | Details |
+|------|------|---------|
+| Initial Purchase | $670 USD (~£530) | Perpetual license - you keep it forever |
+| Includes | 1 year of updates | Access to new features during year 1 |
+| Optional Annual Renewal | $402 USD (~£320/year) | Only needed if you want updates after year 1 |
+| Per Developer | Per seat | In your case (single developer), you need 1 license |
+
+**Your situation:** $670 one-time purchase + optional $320/year for updates
+
+**Licensing restrictions:** 
+- Commercial license is required (GPL would require your code to be open source)
+- Additionally, Qt itself (which PyQt6 uses) may have separate licensing considerations
+
+---
+
+#### CEF Python (Latest) License
+
+| Term | Cost | Details |
+|------|------|---------|
+| License | FREE | BSD 3-clause license |
+| Restrictions | None for commercial use | Can keep code proprietary, closed source |
+| Requirements | BSD notice in distribution | Just include license text in release notes |
+| Per Developer | N/A | Unlimited developers |
+
+**Your situation:** $0 cost, no annual fees, unlimited developers
+
+---
+
+### Cost Comparison for Commercial Use
+
+| Option | Initial Cost | Annual Cost | Total (5 years) | License Type |
+|--------|--------------|------------|-----------------|--------------|
+| PyQt6 | $670 | $320 (optional) | $2,270 - $2,270 | Commercial (can be proprietary) |
+| CEF Python | $0 | $0 | $0 | BSD (can be proprietary) |
+
+**CEF Python saves $2,270+ over 5 years with zero restrictions.**
+
+---
+
+### Recommendation: CEF Python as Primary
+
+**Advantages for commercial product:**
+1. ✓ No licensing costs
+2. ✓ No GPL restrictions
+3. ✓ Can keep code fully proprietary
+4. ✓ Chromium 123 supports CSS Cascade Layers
+5. ✓ Free updates available
+6. ✓ No vendor lock-in
+
+**PyQt6 as secondary backup:**
+1. ✓ Also supports CSS Cascade Layers (Chromium 122+)
+2. ✓ Integrates well with Python ecosystem
+3. ✗ Requires $670 commercial license
+4. ✗ Optional annual renewal fees for updates
+
+**Decision:** Test CEF Python first. If CEF doesn't work for any reason, PyQt6 is the fallback (despite licensing costs).
+
+---
+
+## Testing Plan: Chromium 99+ Support
+
+### Priority Order
+
+**Phase 1 - Primary Approach:**
+1. Create CEF Python embedded browser test (similar to Qt WebEngine test)
+2. Load Foundry at `localhost:30000`
+3. Run CSS debug test
+4. Verify CSS Cascade Layers render correctly
+5. **If successful:** CEF Python is our solution ✓
+
+**Phase 2 - Fallback (if CEF fails):**
+1. Create PyQt6 embedded browser test
+2. Repeat same tests as CEF
+3. **If successful:** PyQt6 is viable (despite licensing costs)
+
+**Phase 3 - Escalation (if both fail):**
+1. Pivot to bridge extension approach
+2. Restart architecture evaluation with new constraints
+
+**Expected outcome:** At least one of CEF or PyQt6 will render Foundry correctly since both use Chromium 99+.
+
+---
+
+### Sources
+
+- PyQt6 Commercial Licensing: https://riverbankcomputing.com/commercial/buy
+- Qt WebEngine Chromium Versions: https://wiki.qt.io/QtWebEngine/ChromiumVersions
+- CEF Python License: https://github.com/cztomczak/cefpython (BSD 3-clause)
+- Chromium CSS Cascade Layers Support: https://chromestatus.com/feature/6474432263925760 (supported from Chromium 99)
+- Foundry CSS Architecture: https://foundryvtt.wiki/en/development/guides/css-cascade-layers
