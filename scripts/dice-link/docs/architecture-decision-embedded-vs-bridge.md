@@ -69,11 +69,28 @@ This means GMs hosting Foundry over HTTP (most common) cannot use WebRTC for vid
 - Users view VTT through DLA window, not their normal browser
 - Need to handle browser UI (navigation, etc.)
 - Foundry: Still requires minimal DLC module for player syncing
+- **Browser updates lag** - Qt WebEngine updates lag behind Chrome; security patches may come later
+- **Login/session persistence** - Cookies and login sessions may not persist between DLA restarts; users may need to log in repeatedly
+- **Saved passwords/autofill missing** - Users lose browser convenience features they're used to
+- **No browser extensions** - Accessibility tools, screen readers, translators won't work (not critical; workaround: use normal browser for these)
+- **File downloads require implementation** - Need to write custom download handler (not difficult but requires code)
+- **Audio/video chat in Foundry** - Unknown if this works in embedded Chromium (needs testing)
+- **Running Foundry Desktop App** - Embedded browser doesn't help users running Foundry's own Electron app instead of browser
+
+**Assessment of Cons:**
+Most cons are **internal and addressable:**
+- Session persistence can be implemented
+- Download handling is solvable code
+- User trust can be built through good design/marketing
+- Missing autofill is a minor inconvenience, not a blocker
+
+The challenge of Foundry Desktop App users exists for BOTH approaches (extension doesn't help them either).
 
 **Remaining Questions:**
 1. Can Qt WebEngine or CEF properly render Foundry (WebGL, audio, complex UI)?
 2. Will command-line switches work reliably or could they be deprecated?
 3. How would Foundry's pop-out windows (v14 feature) interact with embedded browser?
+4. Does audio/video chat in Foundry work in embedded Chromium?
 
 ---
 
@@ -128,11 +145,32 @@ This means GMs hosting Foundry over HTTP (most common) cannot use WebRTC for vid
 - Extension distribution/maintenance overhead
 - Need to develop in JavaScript (separate from Python DLA codebase)
 - May not fully bypass all Chrome security restrictions
+- **Service worker lifecycle** - Manifest V3 service workers can be terminated by Chrome when idle; need reconnection logic
+- **Multiple browser support** - Would need separate extensions for Chrome, Firefox, Edge with different APIs and review processes
+- **Extension conflicts** - Other extensions could interfere with ours
+- **Corporate/school policies** - Some organizations block extension installation (negligible issue: end users unlikely to use VTT at work/school)
+- **Incognito mode** - Extension may be disabled in private browsing mode
+- **Review process delays** - Extension store updates require approval; bug fixes slow to reach users
+- **Browser update fragility** - Chrome frequently changes extension capabilities; updates could break compatibility
+- **Privacy perception** - Extensions often perceived as potential spyware; users may be wary of installing
+- **Running Foundry Desktop App** - Extension doesn't work in Foundry's own Electron app either
+
+**Assessment of Cons:**
+Most cons are **external dependencies beyond our control:**
+- Chrome's Manifest V3 decisions
+- Extension store review timelines
+- Service worker lifecycle rules
+- Multiple browser API differences
+- Chrome's deprecation/change decisions
+
+The critical issue: **we depend on Chrome's decisions**, not just our own implementation.
+
+**Similar to embedded browser:** Foundry Desktop App users can't use extensions either.
 
 **Remaining Questions:**
 1. Does extension's security context fully bypass Chrome's secure origin requirements?
 2. Can content scripts detect clicks on injected links reliably?
-3. How maintainable is an extension long-term as Chrome updates?
+3. How maintainable is an extension long-term as Chrome continues changing extension APIs?
 
 ---
 
@@ -182,6 +220,47 @@ This means GMs hosting Foundry over HTTP (most common) cannot use WebRTC for vid
 - Does Roll20 sanitize/remove embedded links?
 
 **Important:** These Roll20 questions apply equally to BOTH approaches. They're not blocking factors for choosing between embedded browser vs bridge - they're deferred until Roll20 support is actually built.
+
+---
+
+## Comparative Analysis: Nature of Challenges
+
+### Embedded Browser Cons: Internally Addressable
+
+- Session persistence → Can implement caching/storage
+- Download handling → Can write code to handle it
+- User trust → Can build through design and marketing
+- Missing autofill → Minor convenience, not functional blocker
+- Audio/video chat → Can test and potentially solve via configuration
+
+**Key insight:** We control the solution. Challenges are solvable through our own development effort.
+
+### Bridge Extension Cons: External Dependencies
+
+- Manifest V3 decisions → Out of our control
+- Extension store review → Out of our control
+- Service worker lifecycle → Chrome's design choice
+- Multiple browser APIs → Different implementations by different vendors
+- Browser update compatibility → Vendors' release cycles
+
+**Key insight:** We depend on other parties' decisions. Challenges could prevent us from delivering if requirements change externally.
+
+---
+
+## Recommendation
+
+**Embedded Browser approach is lower risk** because:
+1. Challenges are internally addressable through our own development
+2. We have complete control over the Chromium instance and its configuration
+3. Security bypass is proven and reliable (command-line switches we control)
+4. Simpler long-term maintenance (one rendering engine, one codebase)
+5. Better integration with Python ML/vision pipeline
+
+**Bridge Extension carries higher long-term risk** because:
+1. Depends on Chrome's continued support for native messaging and extensions
+2. Multiple browser support multiplies complexity and maintenance
+3. Service worker lifecycle issues could cause reliability problems
+4. Extension store review processes can delay critical updates
 
 ---
 
