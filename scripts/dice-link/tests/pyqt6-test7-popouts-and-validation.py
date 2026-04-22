@@ -284,7 +284,11 @@ class TestWindow(QMainWindow):
         self.btn_write_persist.clicked.connect(self.test_popout_write_persistence)
         control_layout.addWidget(self.btn_write_persist)
         
-        self.btn_popout_workflow = QPushButton("Test 3e: Full Pop-out Workflow Test")
+        self.btn_debug_popout = QPushButton("Test 3e: Debug PopOut Module")
+        self.btn_debug_popout.clicked.connect(self.test_debug_popout_module)
+        control_layout.addWidget(self.btn_debug_popout)
+        
+        self.btn_popout_workflow = QPushButton("Test 3f: Full Pop-out Workflow Test")
         self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
         control_layout.addWidget(self.btn_popout_workflow)
         
@@ -693,6 +697,158 @@ class TestWindow(QMainWindow):
                 self.log(f"Raw result: {result}")
         
         self.browser.page().runJavaScript(persistence_test, on_result)
+        
+    def test_debug_popout_module(self):
+        """Test 3e: Debug the PopOut module to see what's happening"""
+        self.log("\n--- TEST 3e: Debug PopOut Module ---")
+        self.log("Injecting debug hooks into Foundry's PopOut module...")
+        
+        debug_script = """
+        (function() {
+            var debugInfo = {
+                popoutModuleLoaded: false,
+                applicationReady: false,
+                popoutClassExists: false,
+                addPopoutMethod: null,
+                renderPopoutMethod: null,
+                errors: []
+            };
+            
+            try {
+                // Check if Foundry is loaded
+                if (typeof foundry === 'undefined') {
+                    debugInfo.errors.push('foundry object not defined');
+                } else {
+                    debugInfo.applicationReady = true;
+                }
+                
+                // Check if PopOut module exists
+                if (typeof ui === 'undefined' || typeof ui.windows === 'undefined') {
+                    debugInfo.errors.push('ui.windows not defined');
+                } else {
+                    // Check if we can access window management
+                    if (typeof ui.windows.addPopout === 'function') {
+                        debugInfo.addPopoutMethod = 'ui.windows.addPopout exists';
+                        debugInfo.popoutModuleLoaded = true;
+                    }
+                }
+                
+                // Try to find PopOut class
+                if (typeof PopOut !== 'undefined') {
+                    debugInfo.popoutClassExists = true;
+                    if (typeof PopOut.prototype.renderPopout === 'function') {
+                        debugInfo.renderPopoutMethod = 'PopOut.renderPopout exists';
+                    }
+                }
+                
+                // Hook into window.open to trace calls
+                var originalOpen = window.open;
+                window.__popout_window_open_calls = [];
+                
+                window.open = function(url, name, features) {
+                    window.__popout_window_open_calls.push({
+                        url: url,
+                        name: name,
+                        features: features,
+                        timestamp: new Date().toISOString()
+                    });
+                    console.log('[POPOUT DEBUG] window.open called:', {url, name, features});
+                    return originalOpen.call(window, url, name, features);
+                };
+                
+                debugInfo.windowOpenHooked = true;
+                
+                // Hook into document.write to trace it
+                var originalWrite = Document.prototype.write;
+                window.__popout_document_writes = [];
+                
+                Document.prototype.write = function(html) {
+                    window.__popout_document_writes.push({
+                        htmlLength: html.length,
+                        timestamp: new Date().toISOString(),
+                        snippet: html.substring(0, 100)
+                    });
+                    console.log('[POPOUT DEBUG] document.write called with', html.length, 'chars');
+                    return originalWrite.call(this, html);
+                };
+                
+                debugInfo.documentWriteHooked = true;
+                
+                // Log to help us trace
+                console.log('[POPOUT DEBUG] Debug hooks installed. Foundry ready:', debugInfo.applicationReady);
+                console.log('[POPOUT DEBUG] PopOut loaded:', debugInfo.popoutModuleLoaded);
+                
+            } catch(e) {
+                debugInfo.errors.push('Exception: ' + e.message + ' at ' + e.stack);
+            }
+            
+            return JSON.stringify(debugInfo);
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                data = json.loads(result)
+                
+                self.log(f"\nPopOut Module Debug Information:")
+                self.log(f"  Foundry application ready: {data.get('applicationReady', False)}")
+                self.log(f"  PopOut module loaded: {data.get('popoutModuleLoaded', False)}")
+                self.log(f"  PopOut class exists: {data.get('popoutClassExists', False)}")
+                self.log(f"  addPopout method: {data.get('addPopoutMethod', 'Not found')}")
+                self.log(f"  renderPopout method: {data.get('renderPopoutMethod', 'Not found')}")
+                self.log(f"  window.open hooked: {data.get('windowOpenHooked', False)}")
+                self.log(f"  document.write hooked: {data.get('documentWriteHooked', False)}")
+                
+                if data.get('errors'):
+                    self.log(f"\n  Errors:")
+                    for err in data['errors']:
+                        self.log(f"    - {err}")
+                
+                self.log(f"\nDebug hooks installed. Now try to pop out a sheet.")
+                self.log(f"The hooks will capture window.open() and document.write() calls.")
+                
+            except Exception as e:
+                self.log(f"Error parsing debug result: {e}")
+                self.log(f"Raw result: {result}")
+        
+        self.browser.page().runJavaScript(debug_script, on_result)
+        
+    def test_check_popout_calls(self):
+        """Check what PopOut calls were captured"""
+        self.log("\n--- Checking captured PopOut calls ---")
+        
+        check_script = """
+        (function() {
+            return JSON.stringify({
+                windowOpenCalls: window.__popout_window_open_calls || [],
+                documentWriteCalls: window.__popout_document_writes || [],
+                totalWindowOpens: (window.__popout_window_open_calls || []).length,
+                totalDocumentWrites: (window.__popout_document_writes || []).length
+            });
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                data = json.loads(result)
+                
+                self.log(f"\nCaptured PopOut Calls:")
+                self.log(f"  window.open() calls: {data.get('totalWindowOpens', 0)}")
+                
+                if data.get('windowOpenCalls'):
+                    for i, call in enumerate(data['windowOpenCalls'][:5]):  # Show first 5
+                        self.log(f"    [{i}] URL: {call.get('url')}, Name: {call.get('name')}")
+                
+                self.log(f"  document.write() calls: {data.get('totalDocumentWrites', 0)}")
+                
+                if data.get('documentWriteCalls'):
+                    for i, call in enumerate(data['documentWriteCalls'][:5]):  # Show first 5
+                        self.log(f"    [{i}] {call.get('htmlLength')} chars, at {call.get('timestamp')}")
+                        
+            except Exception as e:
+                self.log(f"Error checking calls: {e}")
+        
+        self.browser.page().runJavaScript(check_script, on_result)
         
     def test_popout_workflow(self):
         """Test 3c: Test the FULL pop-out workflow"""
