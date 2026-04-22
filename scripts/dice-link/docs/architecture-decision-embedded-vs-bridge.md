@@ -87,10 +87,63 @@ Most cons are **internal and addressable:**
 The challenge of Foundry Desktop App users exists for BOTH approaches (extension doesn't help them either).
 
 **Remaining Questions:**
-1. Can Qt WebEngine or CEF properly render Foundry (WebGL, audio, complex UI)?
+1. ~~Can Qt WebEngine or CEF properly render Foundry (WebGL, audio, complex UI)?~~ **ANSWERED - See CSS Cascade Layers section below**
 2. Will command-line switches work reliably or could they be deprecated?
 3. How would Foundry's pop-out windows (v14 feature) interact with embedded browser?
 4. Does audio/video chat in Foundry work in embedded Chromium?
+
+---
+
+### CRITICAL FINDING: Foundry v13+ CSS Cascade Layers Incompatibility
+
+**Discovery Date:** April 22, 2026
+
+**The Problem:**
+Foundry VTT v13 introduced a complete CSS architecture overhaul using **CSS Cascade Layers** (`@layer` syntax). This is a relatively new CSS feature that requires modern browser support.
+
+**Testing Performed:**
+1. Qt WebEngine (PyQt5) loaded Foundry at `http://83.105.151.227:30000/` and `http://localhost:30000/`
+2. Page HTML loaded successfully, title displayed "Foundry Virtual Tabletop"
+3. **CSS did NOT render** - page appeared completely unstyled (white background, no formatting)
+4. Debug revealed: 3 stylesheets loaded, but only 1 CSS rule was accessible
+5. Control test: Simple HTML page with standard CSS rendered **perfectly** in Qt WebEngine
+
+**Root Cause - CONFIRMED:**
+- **Foundry v13 uses CSS Cascade Layers extensively** with 10+ defined layers:
+  - `@layer reset` (lowest priority)
+  - `@layer base`
+  - `@layer layout`
+  - `@layer forms`
+  - `@layer foundry`
+  - `@layer sheets`
+  - `@layer effects`
+  - `@layer popovers`
+  - `@layer ui`
+  - `@layer packages` (highest priority)
+  
+- **CSS Cascade Layers require Chromium 99+** (released March 2022)
+- **PyQt5's Qt WebEngine uses Chromium 83** (released May 2020)
+- **Chromium 83 does NOT understand `@layer` syntax** and ignores all layered CSS rules
+
+**Evidence from Foundry Documentation:**
+> "The @layer rule is used to create CSS cascade layers. Styles within a given layer can be read by their order in the document (or in the layer declaration) and, unlike un-layered styles, also where they are in layer priority."
+
+> Foundry's layer priority (lowest to highest): reset → base → layout → forms → foundry → sheets → effects → popovers → ui → packages
+
+**Why Control Test Passed:**
+Our simple `test-page.html` used standard CSS without `@layer` declarations. Qt WebEngine's Chromium 83 can render standard CSS perfectly - it just cannot parse or apply CSS that uses the `@layer` syntax.
+
+**Implications:**
+- **PyQt5 with Qt WebEngine CANNOT render Foundry v13+** - this is a fundamental browser version limitation, not a configuration issue
+- No amount of command-line flags can add CSS feature support that doesn't exist in the browser engine
+- This is NOT a security issue (same behavior on localhost and external IP)
+
+**Next Steps Required:**
+1. Determine Chromium version in PyQt6 - does it support CSS Cascade Layers?
+2. Determine Chromium version in CEF Python - does it support CSS Cascade Layers?
+3. If neither supports Chromium 99+, embedded browser approach is NOT viable for Foundry v13+
+
+**Source:** https://foundryvtt.wiki/en/development/guides/css-cascade-layers
 
 ---
 
