@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QTextEdit, QLabel, QLineEdit, QSplitter
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
@@ -95,83 +95,70 @@ class FoundryValidator:
 class FoundryWebPage(QWebEnginePage):
     """Custom web page that handles pop-outs and navigation"""
     
-    def __init__(self, profile, allowed_origin, log_callback, parent=None):
+    def __init__(self, profile, allowed_origin, log_callback, main_window=None, parent=None):
         super().__init__(profile, parent)
-        self.allowed_origin = allowed_origin  # e.g., "http://83.105.151.227:30000"
+        self.allowed_origin = allowed_origin
         self.log = log_callback
-        self.popup_windows = []  # Keep references to prevent garbage collection
+        self.main_window = main_window
+        self.popup_windows = []
+        
+        # Connect new window requests to proper handler
+        self.newWindowRequested.connect(self.handle_new_window)
         
     def is_same_origin(self, url: QUrl) -> bool:
         """Check if URL is same origin as allowed Foundry server"""
-        url_str = url.toString()
+        url_str = url.toString() if isinstance(url, QUrl) else url
         parsed_new = urlparse(url_str)
         parsed_allowed = urlparse(self.allowed_origin)
         
-        # Same origin = same scheme + host + port
         same = (parsed_new.scheme == parsed_allowed.scheme and 
                 parsed_new.netloc == parsed_allowed.netloc)
         
-        self.log(f"Origin check: {url_str}")
-        self.log(f"  Allowed: {self.allowed_origin}")
-        self.log(f"  Same origin: {same}")
-        
         return same
     
-    def createWindow(self, window_type):
-        """
-        Handle requests to open new windows (pop-outs).
-        
-        This is called when:
-        - JavaScript uses window.open()
-        - User clicks a link with target="_blank"
-        - Foundry's pop-out feature is used
-        """
+    def handle_new_window(self, request):
+        """Handle new window requests using Qt6's openIn() method"""
+        requested_url = request.requestedUrl().toString()
         self.log(f"\n--- POPUP REQUEST ---")
-        self.log(f"Window type: {window_type}")
+        self.log(f"URL: {requested_url}")
+        self.log(f"User initiated: {request.isUserInitiated()}")
         
-        # Create a new window for same-origin requests
-        # We'll check the URL in acceptNavigationRequest
-        popup_page = FoundryPopupPage(self.profile(), self.allowed_origin, self.log)
-        
-        # Create a window to hold the popup
-        popup_window = PopupWindow(popup_page, self.log)
-        self.popup_windows.append(popup_window)  # Keep reference
-        
-        self.log("Popup window created - waiting for navigation request")
-        return popup_page
+        if self.is_same_origin(requested_url):
+            self.log("ALLOWED: Same origin pop-out")
+            
+            # Create new popup page
+            popup_page = FoundryPopupPage(self.profile(), self.allowed_origin, self.log)
+            
+            # Create popup window
+            popup_window = PopupWindow(popup_page, self.log)
+            
+            # Use Qt6's proper openIn() method
+            request.openIn(popup_page)
+            
+            # Show window
+            popup_window.show()
+            
+            # Keep reference
+            self.popup_windows.append(popup_window)
+            self.log("Pop-out window created and shown")
+        else:
+            self.log("BLOCKED: External origin pop-out")
     
     def acceptNavigationRequest(self, url, nav_type, is_main_frame):
-        """
-        Intercept navigation requests.
-        
-        Allow: Same-origin Foundry URLs
-        Block: External URLs
-        """
+        """Intercept navigation requests"""
         self.log(f"\n--- NAVIGATION REQUEST ---")
         self.log(f"URL: {url.toString()}")
-        self.log(f"Type: {nav_type}")
-        self.log(f"Main frame: {is_main_frame}")
         
         if self.is_same_origin(url):
-            self.log("ALLOWED: Same origin")
+            self.log("ALLOWED: Same origin navigation")
             return True
-        else:
-            # Check if it's a special URL we should allow
-            url_str = url.toString()
-            
-            # Allow about:blank (used for some popups initially)
-            if url_str == 'about:blank':
-                self.log("ALLOWED: about:blank")
-                return True
-            
-            # Allow javascript: URLs (used by Foundry)
-            if url_str.startswith('javascript:'):
-                self.log("ALLOWED: javascript: URL")
-                return True
-            
-            # Block external navigation
-            self.log("BLOCKED: External URL")
-            return False
+        
+        url_str = url.toString()
+        if url_str in ('about:blank',) or url_str.startswith('javascript:'):
+            return True
+        
+        self.log("BLOCKED: External navigation")
+        return False
 
 
 class FoundryPopupPage(QWebEnginePage):
@@ -210,23 +197,20 @@ class PopupWindow(QMainWindow):
     def __init__(self, page, log_callback):
         super().__init__()
         self.log = log_callback
-        
         self.setWindowTitle("Foundry Pop-out")
-        self.resize(600, 400)
+        self.resize(600, 700)
         
         self.browser = QWebEngineView()
         self.browser.setPage(page)
+        
+        # Configure settings for popup
+        settings = page.settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
+        
         self.setCentralWidget(self.browser)
-        
-        # Connect to show when content loads
-        page.loadFinished.connect(self.on_load_finished)
-        
-    def on_load_finished(self, ok):
-        if ok:
-            self.log("[POPUP] Content loaded - showing window")
-            self.show()
-        else:
-            self.log("[POPUP] Load failed")
+        self.log("[POPUP WINDOW] Pop-out window created")
 
 
 class TestWindow(QMainWindow):
@@ -314,8 +298,15 @@ class TestWindow(QMainWindow):
         profile = QWebEngineProfile.defaultProfile()
         
         self.browser = QWebEngineView()
-        self.custom_page = FoundryWebPage(profile, self.allowed_origin, self.log, self.browser)
+        self.custom_page = FoundryWebPage(profile, self.allowed_origin, self.log, self)
         self.browser.setPage(self.custom_page)
+        
+        # Configure settings
+        settings = self.custom_page.settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
         
     def log(self, message: str):
         self.log_output.append(message)
