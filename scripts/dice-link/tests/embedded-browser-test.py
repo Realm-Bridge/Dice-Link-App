@@ -24,6 +24,21 @@ import sys
 import os
 from pathlib import Path
 
+# CRITICAL: Set Chromium command-line arguments BEFORE QApplication is created
+# These bypass various security restrictions
+os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = ' '.join([
+    '--disable-web-security',
+    '--disable-features=CrossOriginOpenerPolicy',
+    '--disable-features=CrossOriginEmbedderPolicy', 
+    '--allow-running-insecure-content',
+    '--disable-site-isolation-trials',
+    '--disable-features=IsolateOrigins',
+    '--disable-features=site-per-process',
+    '--ignore-certificate-errors',
+    '--allow-insecure-localhost',
+    '--reduce-security-for-testing',
+])
+
 # Add parent directory to path for imports
 SCRIPT_DIR = Path(__file__).resolve().parent
 DICE_LINK_DIR = SCRIPT_DIR.parent
@@ -248,8 +263,22 @@ class EmbeddedBrowserTest(QMainWindow):
         settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
         settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
         
+        # Additional settings to try for CSS/resource loading
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+        settings.setAttribute(QWebEngineSettings.XSSAuditingEnabled, False)
+        settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, False)
+        
+        # Try to enable all media/content types
+        settings.setAttribute(QWebEngineSettings.PlaybackRequiresUserGesture, False)
+        settings.setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
+        settings.setAttribute(QWebEngineSettings.AllowWindowActivationFromJavaScript, True)
+        
         self.log("Browser configured with WebGL and local storage enabled")
         self.log("Secure origin bypass: AllowRunningInsecureContent enabled")
+        self.log("Additional settings: LocalContentCanAccessRemoteUrls, XSSAuditingEnabled=False")
+        self.log("Chromium flags: --disable-web-security, --allow-running-insecure-content, etc.")
+        self.log("NOTE: These flags disable security - for testing only!")
     
     def log(self, message):
         """Add message to log output"""
