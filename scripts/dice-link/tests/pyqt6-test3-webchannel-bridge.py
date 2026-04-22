@@ -106,6 +106,14 @@ class WebChannelTestWindow(QMainWindow):
         self.btn_echo.clicked.connect(self.test_echo)
         control_layout.addWidget(self.btn_echo)
         
+        self.btn_latency = QPushButton("Test 5: Latency Measurement")
+        self.btn_latency.clicked.connect(self.test_latency)
+        control_layout.addWidget(self.btn_latency)
+        
+        self.btn_throughput = QPushButton("Test 6: Throughput (100 messages)")
+        self.btn_throughput.clicked.connect(self.test_throughput)
+        control_layout.addWidget(self.btn_throughput)
+        
         self.btn_all = QPushButton("Run All Tests")
         self.btn_all.clicked.connect(self.run_all_tests)
         self.btn_all.setStyleSheet("font-weight: bold;")
@@ -324,6 +332,140 @@ class WebChannelTestWindow(QMainWindow):
     def check_echo_response(self):
         check_script = "window.lastEchoResponse || 'No response yet';"
         self.browser.page().runJavaScript(check_script, lambda r: self.log(f"Echo response in JS: {r}"))
+    
+    def test_latency(self):
+        """Test 5: Measure round-trip latency"""
+        self.log("\n--- TEST 5: Latency Measurement ---")
+        
+        # We'll measure 10 round trips and average them
+        latency_script = """
+        (function() {
+            if (!window.pythonBridge) {
+                return JSON.stringify({error: 'pythonBridge not available - run Test 1 first'});
+            }
+            
+            return new Promise(function(resolve) {
+                var latencies = [];
+                var count = 0;
+                var total = 10;
+                
+                function measureOnce() {
+                    var start = performance.now();
+                    window.pythonBridge.echo('latency-test-' + count, function(response) {
+                        var end = performance.now();
+                        var latency = end - start;
+                        latencies.push(latency);
+                        count++;
+                        
+                        if (count < total) {
+                            measureOnce();
+                        } else {
+                            var avg = latencies.reduce(function(a,b){return a+b;}, 0) / latencies.length;
+                            var min = Math.min.apply(null, latencies);
+                            var max = Math.max.apply(null, latencies);
+                            resolve(JSON.stringify({
+                                samples: total,
+                                avgLatencyMs: avg.toFixed(2),
+                                minLatencyMs: min.toFixed(2),
+                                maxLatencyMs: max.toFixed(2),
+                                allLatencies: latencies.map(function(l){return l.toFixed(2);})
+                            }));
+                        }
+                    });
+                }
+                
+                measureOnce();
+            });
+        })();
+        """
+        
+        def on_latency_result(result):
+            self.log(f"Latency results: {result}")
+            try:
+                import json
+                data = json.loads(result)
+                if 'avgLatencyMs' in data:
+                    self.log(f"\nLATENCY SUMMARY:")
+                    self.log(f"  Samples: {data['samples']}")
+                    self.log(f"  Average: {data['avgLatencyMs']} ms")
+                    self.log(f"  Min: {data['minLatencyMs']} ms")
+                    self.log(f"  Max: {data['maxLatencyMs']} ms")
+                    
+                    avg = float(data['avgLatencyMs'])
+                    if avg < 5:
+                        self.log(f"\nEXCELLENT: Sub-5ms latency!")
+                    elif avg < 20:
+                        self.log(f"\nGOOD: Under 20ms latency")
+                    elif avg < 100:
+                        self.log(f"\nACCEPTABLE: Under 100ms latency")
+                    else:
+                        self.log(f"\nWARNING: High latency detected")
+            except:
+                pass
+        
+        self.browser.page().runJavaScript(latency_script, on_latency_result)
+    
+    def test_throughput(self):
+        """Test 6: Measure throughput with 100 messages"""
+        self.log("\n--- TEST 6: Throughput Test (100 messages) ---")
+        
+        throughput_script = """
+        (function() {
+            if (!window.pythonBridge) {
+                return JSON.stringify({error: 'pythonBridge not available - run Test 1 first'});
+            }
+            
+            return new Promise(function(resolve) {
+                var messageCount = 100;
+                var received = 0;
+                var start = performance.now();
+                
+                // Send 100 messages as fast as possible
+                for (var i = 0; i < messageCount; i++) {
+                    window.pythonBridge.echo('throughput-msg-' + i, function(response) {
+                        received++;
+                        if (received === messageCount) {
+                            var end = performance.now();
+                            var totalTime = end - start;
+                            var msgsPerSec = (messageCount / totalTime) * 1000;
+                            resolve(JSON.stringify({
+                                messageCount: messageCount,
+                                totalTimeMs: totalTime.toFixed(2),
+                                messagesPerSecond: msgsPerSec.toFixed(0),
+                                avgTimePerMsg: (totalTime / messageCount).toFixed(2)
+                            }));
+                        }
+                    });
+                }
+            });
+        })();
+        """
+        
+        def on_throughput_result(result):
+            self.log(f"Throughput results: {result}")
+            try:
+                import json
+                data = json.loads(result)
+                if 'messagesPerSecond' in data:
+                    self.log(f"\nTHROUGHPUT SUMMARY:")
+                    self.log(f"  Messages sent: {data['messageCount']}")
+                    self.log(f"  Total time: {data['totalTimeMs']} ms")
+                    self.log(f"  Messages/second: {data['messagesPerSecond']}")
+                    self.log(f"  Avg per message: {data['avgTimePerMsg']} ms")
+                    
+                    mps = int(data['messagesPerSecond'])
+                    if mps > 1000:
+                        self.log(f"\nEXCELLENT: Over 1000 msg/sec!")
+                    elif mps > 100:
+                        self.log(f"\nGOOD: Over 100 msg/sec")
+                    elif mps > 10:
+                        self.log(f"\nACCEPTABLE: Over 10 msg/sec")
+                    else:
+                        self.log(f"\nWARNING: Low throughput")
+            except:
+                pass
+        
+        self.browser.page().runJavaScript(throughput_script, on_throughput_result)
     
     def run_all_tests(self):
         """Run all tests in sequence"""
