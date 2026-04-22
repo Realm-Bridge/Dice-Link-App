@@ -284,9 +284,13 @@ class TestWindow(QMainWindow):
         self.btn_write_persist.clicked.connect(self.test_popout_write_persistence)
         control_layout.addWidget(self.btn_write_persist)
         
-        self.btn_debug_popout = QPushButton("Test 3e: Debug PopOut Module")
+        self.btn_debug_popout = QPushButton("Test 3e: Debug PopOut Module (install hooks)")
         self.btn_debug_popout.clicked.connect(self.test_debug_popout_module)
         control_layout.addWidget(self.btn_debug_popout)
+        
+        self.btn_check_calls = QPushButton("Test 3e-ii: Check Captured Calls (after pop-out)")
+        self.btn_check_calls.clicked.connect(self.test_check_popout_calls)
+        control_layout.addWidget(self.btn_check_calls)
         
         self.btn_popout_workflow = QPushButton("Test 3f: Full Pop-out Workflow Test")
         self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
@@ -706,80 +710,99 @@ class TestWindow(QMainWindow):
         debug_script = """
         (function() {
             var debugInfo = {
-                popoutModuleLoaded: false,
-                applicationReady: false,
-                popoutClassExists: false,
-                addPopoutMethod: null,
-                renderPopoutMethod: null,
+                foundryReady: false,
+                popoutModuleClassExists: false,
+                popoutSingletonExists: false,
+                popoutModuleInGame: false,
+                popoutModuleActive: false,
+                poppedOutCount: 0,
+                singletonMethods: [],
+                windowOpenHooked: false,
+                documentWriteHooked: false,
+                adoptNodeHooked: false,
                 errors: []
             };
             
             try {
-                // Check if Foundry is loaded
-                if (typeof foundry === 'undefined') {
-                    debugInfo.errors.push('foundry object not defined');
+                // Check Foundry is ready
+                debugInfo.foundryReady = typeof foundry !== 'undefined';
+                
+                // Check for PopoutModule - the ACTUAL class name from the source code
+                if (typeof PopoutModule !== 'undefined') {
+                    debugInfo.popoutModuleClassExists = true;
+                    
+                    if (PopoutModule.singleton) {
+                        debugInfo.popoutSingletonExists = true;
+                        
+                        // List available methods on the singleton
+                        var proto = Object.getPrototypeOf(PopoutModule.singleton);
+                        debugInfo.singletonMethods = Object.getOwnPropertyNames(proto);
+                        
+                        // How many sheets are currently popped out
+                        if (PopoutModule.singleton.poppedOut) {
+                            debugInfo.poppedOutCount = PopoutModule.singleton.poppedOut.size;
+                        }
+                    } else {
+                        debugInfo.errors.push('PopoutModule exists but singleton is null');
+                    }
                 } else {
-                    debugInfo.applicationReady = true;
+                    debugInfo.errors.push('PopoutModule class is not defined in window scope');
                 }
                 
-                // Check if PopOut module exists
-                if (typeof ui === 'undefined' || typeof ui.windows === 'undefined') {
-                    debugInfo.errors.push('ui.windows not defined');
-                } else {
-                    // Check if we can access window management
-                    if (typeof ui.windows.addPopout === 'function') {
-                        debugInfo.addPopoutMethod = 'ui.windows.addPopout exists';
-                        debugInfo.popoutModuleLoaded = true;
+                // Check game.modules for the module registration
+                if (typeof game !== 'undefined' && game.modules) {
+                    var popoutMod = game.modules.get('popout');
+                    if (popoutMod) {
+                        debugInfo.popoutModuleInGame = true;
+                        debugInfo.popoutModuleActive = popoutMod.active;
+                    } else {
+                        debugInfo.errors.push('popout not found in game.modules');
                     }
                 }
                 
-                // Try to find PopOut class
-                if (typeof PopOut !== 'undefined') {
-                    debugInfo.popoutClassExists = true;
-                    if (typeof PopOut.prototype.renderPopout === 'function') {
-                        debugInfo.renderPopoutMethod = 'PopOut.renderPopout exists';
-                    }
-                }
-                
-                // Hook into window.open to trace calls
+                // Hook window.open to trace every call
                 var originalOpen = window.open;
-                window.__popout_window_open_calls = [];
-                
+                window.__dla_window_open_calls = [];
                 window.open = function(url, name, features) {
-                    window.__popout_window_open_calls.push({
-                        url: url,
-                        name: name,
-                        features: features,
-                        timestamp: new Date().toISOString()
-                    });
-                    console.log('[POPOUT DEBUG] window.open called:', {url, name, features});
-                    return originalOpen.call(window, url, name, features);
+                    var callInfo = { url: url, name: name, features: features, time: Date.now() };
+                    window.__dla_window_open_calls.push(callInfo);
+                    console.log('[DLA DEBUG] window.open called:', JSON.stringify(callInfo));
+                    var result = originalOpen.call(window, url, name, features);
+                    console.log('[DLA DEBUG] window.open returned:', result ? 'valid object' : 'NULL');
+                    return result;
                 };
-                
                 debugInfo.windowOpenHooked = true;
                 
-                // Hook into document.write to trace it
+                // Hook document.write to trace what gets written to popup
                 var originalWrite = Document.prototype.write;
-                window.__popout_document_writes = [];
-                
+                window.__dla_document_writes = [];
                 Document.prototype.write = function(html) {
-                    window.__popout_document_writes.push({
-                        htmlLength: html.length,
-                        timestamp: new Date().toISOString(),
-                        snippet: html.substring(0, 100)
-                    });
-                    console.log('[POPOUT DEBUG] document.write called with', html.length, 'chars');
+                    var entry = { len: html ? html.length : 0, snippet: html ? html.substring(0, 200) : '' };
+                    window.__dla_document_writes.push(entry);
+                    console.log('[DLA DEBUG] document.write called, length:', entry.len, 'snippet:', entry.snippet);
                     return originalWrite.call(this, html);
                 };
-                
                 debugInfo.documentWriteHooked = true;
                 
-                // Log to help us trace
-                console.log('[POPOUT DEBUG] Debug hooks installed. Foundry ready:', debugInfo.applicationReady);
-                console.log('[POPOUT DEBUG] PopOut loaded:', debugInfo.popoutModuleLoaded);
+                // Hook adoptNode to trace DOM moves between windows
+                var originalAdopt = Document.prototype.adoptNode;
+                window.__dla_adopt_calls = [];
+                Document.prototype.adoptNode = function(node) {
+                    var info = { nodeType: node ? node.nodeType : null, nodeName: node ? node.nodeName : null };
+                    window.__dla_adopt_calls.push(info);
+                    console.log('[DLA DEBUG] adoptNode called:', JSON.stringify(info));
+                    return originalAdopt.call(this, node);
+                };
+                debugInfo.adoptNodeHooked = true;
+                
+                console.log('[DLA DEBUG] All hooks installed');
+                console.log('[DLA DEBUG] PopoutModule exists:', debugInfo.popoutModuleClassExists);
+                console.log('[DLA DEBUG] Singleton exists:', debugInfo.popoutSingletonExists);
+                console.log('[DLA DEBUG] Module active:', debugInfo.popoutModuleActive);
                 
             } catch(e) {
-                debugInfo.errors.push('Exception: ' + e.message + ' at ' + e.stack);
+                debugInfo.errors.push('Exception: ' + e.message);
+                console.log('[DLA DEBUG] Exception:', e.message, e.stack);
             }
             
             return JSON.stringify(debugInfo);
@@ -791,21 +814,26 @@ class TestWindow(QMainWindow):
                 data = json.loads(result)
                 
                 self.log(f"\nPopOut Module Debug Information:")
-                self.log(f"  Foundry application ready: {data.get('applicationReady', False)}")
-                self.log(f"  PopOut module loaded: {data.get('popoutModuleLoaded', False)}")
-                self.log(f"  PopOut class exists: {data.get('popoutClassExists', False)}")
-                self.log(f"  addPopout method: {data.get('addPopoutMethod', 'Not found')}")
-                self.log(f"  renderPopout method: {data.get('renderPopoutMethod', 'Not found')}")
+                self.log(f"  Foundry ready: {data.get('foundryReady', False)}")
+                self.log(f"  PopoutModule class exists: {data.get('popoutModuleClassExists', False)}")
+                self.log(f"  PopoutModule.singleton exists: {data.get('popoutSingletonExists', False)}")
+                self.log(f"  Module in game.modules: {data.get('popoutModuleInGame', False)}")
+                self.log(f"  Module active: {data.get('popoutModuleActive', False)}")
+                self.log(f"  Currently popped out: {data.get('poppedOutCount', 0)}")
                 self.log(f"  window.open hooked: {data.get('windowOpenHooked', False)}")
                 self.log(f"  document.write hooked: {data.get('documentWriteHooked', False)}")
+                self.log(f"  adoptNode hooked: {data.get('adoptNodeHooked', False)}")
+                
+                methods = data.get('singletonMethods', [])
+                if methods:
+                    self.log(f"  Singleton methods: {', '.join(methods)}")
                 
                 if data.get('errors'):
                     self.log(f"\n  Errors:")
                     for err in data['errors']:
                         self.log(f"    - {err}")
                 
-                self.log(f"\nDebug hooks installed. Now try to pop out a sheet.")
-                self.log(f"The hooks will capture window.open() and document.write() calls.")
+                self.log(f"\nHooks installed. Now pop out a sheet then click 'Check PopOut Calls'.")
                 
             except Exception as e:
                 self.log(f"Error parsing debug result: {e}")
