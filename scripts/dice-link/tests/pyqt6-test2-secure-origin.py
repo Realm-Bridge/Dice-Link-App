@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 # IMPORTANT: Set this BEFORE QApplication creation if you want to test WITH flags
-USE_SECURITY_BYPASS = False  # Change to True to test with bypass flags
+USE_SECURITY_BYPASS = True  # Changed to True to test with bypass flags
 
 if USE_SECURITY_BYPASS:
     os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = ' '.join([
