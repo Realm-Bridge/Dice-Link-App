@@ -543,25 +543,150 @@ Once approach is chosen:
   - Commercial license: $670 one-time purchase from Riverbank Computing
   - https://riverbankcomputing.com/commercial/buy
 
-### Priority Order
+---
 
-**Phase 1 - Primary Approach:**
-1. Create CEF Python embedded browser test (similar to Qt WebEngine test)
-2. Load Foundry at `localhost:30000`
-3. Run CSS debug test
-4. Verify CSS Cascade Layers render correctly
-5. **If successful:** CEF Python is our solution ✓
+## COMPLETE TESTING PLAN: Embedded Browser Viability
 
-**Phase 2 - Fallback (if CEF fails):**
-1. Create PyQt6 embedded browser test
-2. Repeat same tests as CEF
-3. **If successful:** PyQt6 is viable (despite licensing costs)
+### Background: Original Problem
 
-**Phase 3 - Escalation (if both fail):**
-1. Pivot to bridge extension approach
-2. Restart architecture evaluation with new constraints
+The original issue that led to this architecture decision was:
+- **WebSocket communication failed** between DLA and DLC over external HTTP
+- **WebRTC also failed** due to Chromium secure origin requirements
+- Chrome blocks these APIs on HTTP origins (non-localhost)
+- The embedded browser approach aims to bypass these restrictions
 
-**Expected outcome:** At least one of CEF or PyQt6 will render Foundry correctly since both use Chromium 99+.
+### Core Functionality Tests (5 Tests Required)
+
+| Test # | Test Name | Purpose | Status |
+|--------|-----------|---------|--------|
+| 1 | Load and Render VTT | Can PyQt6 load Foundry with full CSS/JavaScript? | **PASSED** |
+| 2 | Secure Origin Bypass | Do command-line switches bypass HTTP restrictions? | NOT TESTED |
+| 3 | JavaScript Injection | Can we inject JS into Foundry page from Python? | NOT TESTED |
+| 4 | JS-to-Python Bridge | Can injected JS communicate back to Python (DLA)? | NOT TESTED |
+| 5 | Locked Window | Can we create a locked-down VTT-only window? | NOT TESTED |
+
+---
+
+### Test 1: Load and Render VTT - COMPLETED
+
+**Date:** April 22, 2026  
+**Result:** PASSED
+
+**What was tested:**
+- PyQt6 loading Foundry from external IP (http://83.105.151.227:30000)
+- CSS Cascade Layers rendering correctly
+- Foundry game object initialization
+
+**Evidence:**
+- Page title: "Foundry Virtual Tabletop" ✓
+- CSS rules accessible: 17 ✓
+- Body background: rgb(0, 0, 0) (correct dark theme) ✓
+- Full visual rendering confirmed via screenshot
+
+---
+
+### Test 2: Secure Origin Bypass - PENDING
+
+**Purpose:** Verify that PyQt6 embedded browser bypasses Chrome's secure origin restrictions that blocked WebSocket/WebRTC in the standalone DLA.
+
+**What to test:**
+1. Can JavaScript in the embedded browser access `navigator.mediaDevices`?
+2. Can WebSocket connections be established from HTTP origin?
+3. Are there any console errors related to secure context requirements?
+
+**Why this matters:**
+- This was the ORIGINAL PROBLEM - WebSocket/WebRTC failed on HTTP
+- If this doesn't work, the embedded browser approach doesn't solve our problem
+- We need the browser to treat HTTP as a secure context OR bypass restrictions entirely
+
+**Test method:**
+- Run JavaScript in embedded browser checking `window.isSecureContext`
+- Attempt WebSocket connection from embedded page
+- Check for mediaDevices API availability
+
+---
+
+### Test 3: JavaScript Injection - PENDING
+
+**Purpose:** Verify that Python (DLA) can inject JavaScript code into the running Foundry page.
+
+**What to test:**
+1. Can we run arbitrary JavaScript via `page.runJavaScript()`?
+2. Can injected JS access Foundry's `game` object?
+3. Can we add event listeners to Foundry UI elements?
+
+**Why this matters:**
+- DLA needs to inject dice link functionality into Foundry
+- We need to intercept dice rolls and other game events
+- This is how DLA will integrate with Foundry without requiring DLC module changes
+
+**Test method:**
+- Inject JS that modifies DOM (add visible marker)
+- Inject JS that reads `game.user.name` or similar Foundry data
+- Verify results are returned to Python
+
+---
+
+### Test 4: JS-to-Python Bridge - PENDING
+
+**Purpose:** Verify two-way communication between injected JavaScript and Python code.
+
+**What to test:**
+1. Can JavaScript call back to Python with data?
+2. Is QWebChannel working for bidirectional communication?
+3. Can we pass complex objects (dice roll data) from JS to Python?
+
+**Why this matters:**
+- This is THE CRITICAL TEST for the entire architecture
+- Dice rolls happen in JavaScript (Foundry)
+- ML processing happens in Python (DLA)
+- We MUST have reliable JS→Python communication
+
+**Test method:**
+- Set up QWebChannel bridge
+- Inject JS that calls Python function with test data
+- Verify Python receives the data correctly
+- Test with realistic dice roll payload
+
+---
+
+### Test 5: Locked Window - PENDING
+
+**Purpose:** Verify we can create a secure, locked-down VTT window.
+
+**What to test:**
+1. Can we hide/remove the URL bar?
+2. Can we prevent navigation away from Foundry?
+3. Can we disable right-click context menu?
+4. Can we prevent opening new windows/tabs?
+
+**Why this matters:**
+- Users shouldn't accidentally navigate away from VTT
+- Security: prevent malicious links from opening external sites
+- Professional appearance for commercial product
+
+**Test method:**
+- Verify URL bar is not visible
+- Attempt to navigate via JavaScript (should be blocked)
+- Test right-click behavior
+- Test link clicking behavior
+
+---
+
+### Testing Priority Order
+
+**Phase 1 - COMPLETED:**
+- Test 1 (Load and Render): PASSED
+
+**Phase 2 - CRITICAL (Next):**
+- Test 2 (Secure Origin Bypass): This determines if we've actually solved the original problem
+- Test 4 (JS-to-Python Bridge): This determines if DLA-DLC communication is possible
+
+**Phase 3 - Integration:**
+- Test 3 (JavaScript Injection): Required for Foundry integration
+- Test 5 (Locked Window): Required for production release
+
+**If Test 2 or Test 4 fails:** The embedded browser approach may not solve our original problem, and we may need to reconsider the bridge extension approach.
 
 ---
 
@@ -569,6 +694,5 @@ Once approach is chosen:
 
 - PyQt6 Commercial Licensing: https://riverbankcomputing.com/commercial/buy
 - Qt WebEngine Chromium Versions: https://wiki.qt.io/QtWebEngine/ChromiumVersions
-- CEF Python License: https://github.com/cztomczak/cefpython (BSD 3-clause)
 - Chromium CSS Cascade Layers Support: https://chromestatus.com/feature/6474432263925760 (supported from Chromium 99)
 - Foundry CSS Architecture: https://foundryvtt.wiki/en/development/guides/css-cascade-layers
