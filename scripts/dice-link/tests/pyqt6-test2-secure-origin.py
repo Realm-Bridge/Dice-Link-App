@@ -17,12 +17,17 @@ USE_SECURITY_BYPASS = True  # Changed to True to test with bypass flags
 # Get URL from command line for the unsafely-treat flag
 TARGET_URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:30000"
 
+# Build the arguments to pass to QApplication
+# These Chromium flags MUST be passed via sys.argv, NOT environment variable!
+QT_ARGS = [sys.argv[0]]  # Start with program name
+
 if USE_SECURITY_BYPASS:
     # Extract origin from URL for the unsafely-treat flag
     parsed = urlparse(TARGET_URL)
     origin = f"{parsed.scheme}://{parsed.netloc}"
     
-    os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = ' '.join([
+    # Add all Chromium flags to the argument list
+    chromium_flags = [
         # THE KEY FLAG - tells Chromium to treat this specific HTTP origin as secure
         f'--unsafely-treat-insecure-origin-as-secure={origin}',
         # Additional flags for good measure
@@ -36,8 +41,11 @@ if USE_SECURITY_BYPASS:
         # Force treat as secure context
         '--test-type',
         '--ignore-certificate-errors',
-    ])
+    ]
+    
+    QT_ARGS.extend(chromium_flags)
     print(f"[BYPASS] Setting origin as secure: {origin}")
+    print(f"[BYPASS] Passing {len(chromium_flags)} Chromium flags via sys.argv")
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QTextEdit, QLabel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -281,7 +289,10 @@ def main():
     
     url = sys.argv[1]
     
-    app = QApplication(sys.argv)
+    # CRITICAL: Pass Chromium flags via QApplication arguments
+    # This is how Qt WebEngine receives Chromium command-line switches
+    print(f"[DEBUG] Passing args to QApplication: {QT_ARGS}")
+    app = QApplication(QT_ARGS)
     test = SecureOriginTest(url)
     test.show()
     sys.exit(app.exec())
