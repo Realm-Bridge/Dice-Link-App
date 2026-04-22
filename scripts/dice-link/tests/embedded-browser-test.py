@@ -787,16 +787,28 @@ class EmbeddedBrowserTest(QMainWindow):
 def main():
     """Main entry point"""
     if len(sys.argv) < 2:
-        print("Usage: python embedded-browser-test.py <foundry-url>")
-        print("Example: python embedded-browser-test.py http://192.168.1.55:30000")
+        print("Usage: python embedded-browser-test.py <URL_or_file>")
+        print("Examples:")
+        print("  python embedded-browser-test.py http://192.168.1.55:30000")
+        print("  python embedded-browser-test.py http://localhost:30000")
+        print("  python embedded-browser-test.py test-page.html")
+        print("  python embedded-browser-test.py file:///C:/path/to/file.html")
         sys.exit(1)
     
     vtt_url = sys.argv[1]
     
-    # Validate URL format
-    if not vtt_url.startswith("http://") and not vtt_url.startswith("https://"):
-        print("Error: URL must start with http:// or https://")
-        sys.exit(1)
+    # Handle local file paths
+    if not vtt_url.startswith("http://") and not vtt_url.startswith("https://") and not vtt_url.startswith("file://"):
+        # Assume it's a local file path
+        local_path = Path(vtt_url)
+        if not local_path.is_absolute():
+            local_path = SCRIPT_DIR / vtt_url
+        if local_path.exists():
+            vtt_url = local_path.as_uri()  # Converts to file:///...
+            print(f"Loading local file: {vtt_url}")
+        else:
+            print(f"Error: File not found: {local_path}")
+            sys.exit(1)
     
     print(f"\n{'='*60}")
     print("  Embedded Browser Feasibility Test")
