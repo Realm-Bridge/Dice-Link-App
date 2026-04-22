@@ -92,62 +92,107 @@ class FoundryValidator:
             callback(False, f"Validation error: {str(e)}", None)
 
 
-class PopupWebPage(QWebEnginePage):
-    """Page for popup windows - inherits same security restrictions"""
+class PopupWindow(QMainWindow):
+    """Window container for Foundry pop-outs"""
+    
+    def __init__(self, web_view, log_callback):
+        super().__init__()
+        self.log = log_callback
+        self.web_view = web_view
+        
+        self.setWindowTitle("Foundry Pop-out")
+        self.resize(600, 700)
+        
+        self.setCentralWidget(web_view)
+        
+        # Update title when page title changes
+        web_view.page().titleChanged.connect(self.on_title_changed)
+        
+        self.log("[POPUP] Window created")
+    
+    def on_title_changed(self, title):
+        if title and title != "about:blank":
+            self.setWindowTitle(title)
+
+
+class FoundryWebView(QWebEngineView):
+    """
+    Custom WebEngineView that properly handles window.open() by overriding createWindow().
+    
+    This is the KEY fix: when JavaScript calls window.open(), Qt calls createWindow()
+    and the RETURNED view becomes the popup. JavaScript gets a reference to this window,
+    which is what Foundry's PopOut module needs.
+    """
+    
+    def __init__(self, allowed_origin, log_callback, parent=None):
+        super().__init__(parent)
+        self.allowed_origin = allowed_origin
+        self.log = log_callback
+        self.popup_windows = []  # Keep references to prevent garbage collection
+        
+        # Set custom page for navigation blocking
+        self.custom_page = FoundryWebPage(self.page().profile(), allowed_origin, log_callback)
+        self.setPage(self.custom_page)
+    
+    def createWindow(self, window_type):
+        """
+        Override createWindow - called when JavaScript uses window.open().
+        
+        The returned QWebEngineView's page becomes the popup window that
+        JavaScript can interact with. This gives Foundry's PopOut module
+        the window reference it needs to write to popout.document, etc.
+        """
+        self.log(f"\n--- createWindow() called ---")
+        self.log(f"Window type: {window_type}")
+        
+        # Create a new view for the popup (this will be returned to JavaScript)
+        popup_view = FoundryPopupView(self.allowed_origin, self.log)
+        
+        # Create window container and show it
+        popup_window = PopupWindow(popup_view, self.log)
+        popup_window.show()
+        
+        # Keep reference to prevent garbage collection
+        self.popup_windows.append(popup_window)
+        
+        self.log("Popup view created and returned to JavaScript")
+        
+        # Return the view - JavaScript's window.open() gets this as the popup window
+        return popup_view
+
+
+class FoundryPopupView(QWebEngineView):
+    """WebEngineView for popup windows - can create nested popups if needed"""
+    
+    def __init__(self, allowed_origin, log_callback, parent=None):
+        super().__init__(parent)
+        self.allowed_origin = allowed_origin
+        self.log = log_callback
+        self.popup_windows = []
+        
+        # Set custom page with navigation restrictions
+        self.custom_page = FoundryWebPage(self.page().profile(), allowed_origin, log_callback)
+        self.setPage(self.custom_page)
+    
+    def createWindow(self, window_type):
+        """Allow nested popups with same restrictions"""
+        self.log(f"[POPUP] Nested createWindow() called")
+        
+        popup_view = FoundryPopupView(self.allowed_origin, self.log)
+        popup_window = PopupWindow(popup_view, self.log)
+        popup_window.show()
+        self.popup_windows.append(popup_window)
+        
+        return popup_view
+
+
+class FoundryWebPage(QWebEnginePage):
+    """Custom web page - only blocks external navigation"""
     
     def __init__(self, profile, allowed_origin, log_callback, parent=None):
         super().__init__(profile, parent)
         self.allowed_origin = allowed_origin
         self.log = log_callback
-        
-    def is_same_origin(self, url_str: str) -> bool:
-        if not url_str or url_str == 'about:blank':
-            return True
-        parsed_new = urlparse(url_str)
-        parsed_allowed = urlparse(self.allowed_origin)
-        return (parsed_new.scheme == parsed_allowed.scheme and 
-                parsed_new.netloc == parsed_allowed.netloc)
-    
-    def acceptNavigationRequest(self, url, nav_type, is_main_frame):
-        url_str = url.toString()
-        if self.is_same_origin(url_str) or url_str.startswith('javascript:'):
-            return True
-        self.log(f"[POPUP] BLOCKED: External navigation to {url_str}")
-        return False
-
-
-class PopupWindow(QMainWindow):
-    """Native popup window for Foundry pop-outs"""
-    
-    def __init__(self, page, log_callback):
-        super().__init__()
-        self.log = log_callback
-        self._page = page
-        
-        self.setWindowTitle("Foundry Pop-out")
-        self.resize(600, 700)
-        
-        self.browser = QWebEngineView(self)
-        self.setCentralWidget(self.browser)
-        self.browser.setPage(page)
-        
-        # Update title from page
-        page.titleChanged.connect(lambda t: self.setWindowTitle(t) if t else None)
-        
-        self.log("[POPUP] Window created")
-
-
-class FoundryWebPage(QWebEnginePage):
-    """Custom web page - creates popup windows for same-origin, blocks external"""
-    
-    def __init__(self, profile, allowed_origin, log_callback, main_window=None, parent=None):
-        super().__init__(profile, parent)
-        self.allowed_origin = allowed_origin
-        self.log = log_callback
-        self.main_window = main_window
-        self.popup_windows = []
-        
-        self.newWindowRequested.connect(self.handle_new_window)
         
     def is_same_origin(self, url_str: str) -> bool:
         """Check if URL is same origin as allowed Foundry server"""
@@ -160,37 +205,11 @@ class FoundryWebPage(QWebEnginePage):
         return (parsed_new.scheme == parsed_allowed.scheme and 
                 parsed_new.netloc == parsed_allowed.netloc)
     
-    def handle_new_window(self, request):
-        """Create popup window for same-origin, block external"""
-        requested_url = request.requestedUrl().toString()
-        self.log(f"\n--- POPUP REQUEST ---")
-        self.log(f"URL: {requested_url}")
-        
-        if self.is_same_origin(requested_url):
-            self.log("ALLOWED: Creating popup window")
-            
-            # Create popup page with same restrictions
-            popup_page = PopupWebPage(self.profile(), self.allowed_origin, self.log)
-            
-            # Create window
-            popup_window = PopupWindow(popup_page, self.log)
-            
-            # CRITICAL: Use openIn to hand the request to the new page
-            request.openIn(popup_page)
-            
-            # Show and keep reference
-            popup_window.show()
-            self.popup_windows.append(popup_window)
-        else:
-            self.log("BLOCKED: External origin popup")
-            request.reject()
-    
     def acceptNavigationRequest(self, url, nav_type, is_main_frame):
         """Only block external navigation"""
         url_str = url.toString()
         
         if self.is_same_origin(url_str):
-            self.log(f"Navigation: {url_str[:60]}... ALLOWED")
             return True
         
         if url_str.startswith('javascript:'):
@@ -289,15 +308,13 @@ class TestWindow(QMainWindow):
         self.log("Ready for testing.\n")
         
     def setup_browser(self):
-        """Set up browser with custom page that handles popups"""
-        profile = QWebEngineProfile.defaultProfile()
-        
-        self.browser = QWebEngineView()
-        self.custom_page = FoundryWebPage(profile, self.allowed_origin, self.log, self)
-        self.browser.setPage(self.custom_page)
+        """Set up browser with custom view that properly handles window.open()"""
+        # Use custom FoundryWebView that overrides createWindow()
+        # This is the KEY to making Foundry's PopOut module work
+        self.browser = FoundryWebView(self.allowed_origin, self.log)
         
         # Configure settings
-        settings = self.custom_page.settings()
+        settings = self.browser.page().settings()
         settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
