@@ -336,118 +336,151 @@ class WebChannelTestWindow(QMainWindow):
     def test_latency(self):
         """Test 5: Measure round-trip latency"""
         self.log("\n--- TEST 5: Latency Measurement ---")
+        self.log("Measuring 10 round-trips...")
         
-        # We'll measure 10 round trips and average them
+        # Start the latency test - stores results in window.latencyResults
         latency_script = """
         (function() {
             if (!window.pythonBridge) {
-                return JSON.stringify({error: 'pythonBridge not available - run Test 1 first'});
+                window.latencyResults = {error: 'pythonBridge not available - run Test 1 first'};
+                return 'ERROR: Run Test 1 first';
             }
             
-            return new Promise(function(resolve) {
-                var latencies = [];
-                var count = 0;
-                var total = 10;
-                
-                function measureOnce() {
-                    var start = performance.now();
-                    window.pythonBridge.echo('latency-test-' + count, function(response) {
-                        var end = performance.now();
-                        var latency = end - start;
-                        latencies.push(latency);
-                        count++;
-                        
-                        if (count < total) {
-                            measureOnce();
-                        } else {
-                            var avg = latencies.reduce(function(a,b){return a+b;}, 0) / latencies.length;
-                            var min = Math.min.apply(null, latencies);
-                            var max = Math.max.apply(null, latencies);
-                            resolve(JSON.stringify({
-                                samples: total,
-                                avgLatencyMs: avg.toFixed(2),
-                                minLatencyMs: min.toFixed(2),
-                                maxLatencyMs: max.toFixed(2),
-                                allLatencies: latencies.map(function(l){return l.toFixed(2);})
-                            }));
-                        }
-                    });
-                }
-                
-                measureOnce();
-            });
+            window.latencyResults = null;
+            var latencies = [];
+            var count = 0;
+            var total = 10;
+            
+            function measureOnce() {
+                var start = performance.now();
+                window.pythonBridge.echo('latency-test-' + count, function(response) {
+                    var end = performance.now();
+                    var latency = end - start;
+                    latencies.push(latency);
+                    count++;
+                    
+                    if (count < total) {
+                        measureOnce();
+                    } else {
+                        var avg = latencies.reduce(function(a,b){return a+b;}, 0) / latencies.length;
+                        var min = Math.min.apply(null, latencies);
+                        var max = Math.max.apply(null, latencies);
+                        window.latencyResults = {
+                            samples: total,
+                            avgLatencyMs: avg.toFixed(2),
+                            minLatencyMs: min.toFixed(2),
+                            maxLatencyMs: max.toFixed(2),
+                            allLatencies: latencies.map(function(l){return l.toFixed(2);})
+                        };
+                        console.log('Latency test complete:', window.latencyResults);
+                    }
+                });
+            }
+            
+            measureOnce();
+            return 'Latency test started...';
         })();
         """
         
-        def on_latency_result(result):
-            self.log(f"Latency results: {result}")
+        self.browser.page().runJavaScript(latency_script, lambda r: self.log(f"Status: {r}"))
+        
+        # Retrieve results after a delay
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(2000, self.get_latency_results)
+    
+    def get_latency_results(self):
+        """Retrieve latency test results"""
+        get_results = "JSON.stringify(window.latencyResults || {waiting: true});"
+        
+        def on_result(result):
+            self.log(f"Raw latency results: {result}")
             try:
                 import json
                 data = json.loads(result)
                 if 'avgLatencyMs' in data:
-                    self.log(f"\nLATENCY SUMMARY:")
+                    self.log(f"\n*** LATENCY SUMMARY ***")
                     self.log(f"  Samples: {data['samples']}")
                     self.log(f"  Average: {data['avgLatencyMs']} ms")
                     self.log(f"  Min: {data['minLatencyMs']} ms")
                     self.log(f"  Max: {data['maxLatencyMs']} ms")
+                    self.log(f"  All: {data['allLatencies']}")
                     
                     avg = float(data['avgLatencyMs'])
                     if avg < 5:
-                        self.log(f"\nEXCELLENT: Sub-5ms latency!")
+                        self.log(f"\n  EXCELLENT: Sub-5ms latency!")
                     elif avg < 20:
-                        self.log(f"\nGOOD: Under 20ms latency")
+                        self.log(f"\n  GOOD: Under 20ms latency")
                     elif avg < 100:
-                        self.log(f"\nACCEPTABLE: Under 100ms latency")
+                        self.log(f"\n  ACCEPTABLE: Under 100ms latency")
                     else:
-                        self.log(f"\nWARNING: High latency detected")
-            except:
-                pass
+                        self.log(f"\n  WARNING: High latency detected")
+                elif 'error' in data:
+                    self.log(f"ERROR: {data['error']}")
+                elif 'waiting' in data:
+                    self.log("Still waiting for results... trying again in 1 second")
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(1000, self.get_latency_results)
+            except Exception as e:
+                self.log(f"Parse error: {e}")
         
-        self.browser.page().runJavaScript(latency_script, on_latency_result)
+        self.browser.page().runJavaScript(get_results, on_result)
     
     def test_throughput(self):
         """Test 6: Measure throughput with 100 messages"""
         self.log("\n--- TEST 6: Throughput Test (100 messages) ---")
+        self.log("Sending 100 round-trip messages...")
         
         throughput_script = """
         (function() {
             if (!window.pythonBridge) {
-                return JSON.stringify({error: 'pythonBridge not available - run Test 1 first'});
+                window.throughputResults = {error: 'pythonBridge not available - run Test 1 first'};
+                return 'ERROR: Run Test 1 first';
             }
             
-            return new Promise(function(resolve) {
-                var messageCount = 100;
-                var received = 0;
-                var start = performance.now();
-                
-                // Send 100 messages as fast as possible
-                for (var i = 0; i < messageCount; i++) {
-                    window.pythonBridge.echo('throughput-msg-' + i, function(response) {
-                        received++;
-                        if (received === messageCount) {
-                            var end = performance.now();
-                            var totalTime = end - start;
-                            var msgsPerSec = (messageCount / totalTime) * 1000;
-                            resolve(JSON.stringify({
-                                messageCount: messageCount,
-                                totalTimeMs: totalTime.toFixed(2),
-                                messagesPerSecond: msgsPerSec.toFixed(0),
-                                avgTimePerMsg: (totalTime / messageCount).toFixed(2)
-                            }));
-                        }
-                    });
-                }
-            });
+            window.throughputResults = null;
+            var messageCount = 100;
+            var received = 0;
+            var start = performance.now();
+            
+            // Send 100 messages as fast as possible
+            for (var i = 0; i < messageCount; i++) {
+                window.pythonBridge.echo('throughput-msg-' + i, function(response) {
+                    received++;
+                    if (received === messageCount) {
+                        var end = performance.now();
+                        var totalTime = end - start;
+                        var msgsPerSec = (messageCount / totalTime) * 1000;
+                        window.throughputResults = {
+                            messageCount: messageCount,
+                            totalTimeMs: totalTime.toFixed(2),
+                            messagesPerSecond: msgsPerSec.toFixed(0),
+                            avgTimePerMsg: (totalTime / messageCount).toFixed(2)
+                        };
+                        console.log('Throughput test complete:', window.throughputResults);
+                    }
+                });
+            }
+            return 'Throughput test started...';
         })();
         """
         
-        def on_throughput_result(result):
-            self.log(f"Throughput results: {result}")
+        self.browser.page().runJavaScript(throughput_script, lambda r: self.log(f"Status: {r}"))
+        
+        # Retrieve results after a delay
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(3000, self.get_throughput_results)
+    
+    def get_throughput_results(self):
+        """Retrieve throughput test results"""
+        get_results = "JSON.stringify(window.throughputResults || {waiting: true});"
+        
+        def on_result(result):
+            self.log(f"Raw throughput results: {result}")
             try:
                 import json
                 data = json.loads(result)
                 if 'messagesPerSecond' in data:
-                    self.log(f"\nTHROUGHPUT SUMMARY:")
+                    self.log(f"\n*** THROUGHPUT SUMMARY ***")
                     self.log(f"  Messages sent: {data['messageCount']}")
                     self.log(f"  Total time: {data['totalTimeMs']} ms")
                     self.log(f"  Messages/second: {data['messagesPerSecond']}")
@@ -455,17 +488,23 @@ class WebChannelTestWindow(QMainWindow):
                     
                     mps = int(data['messagesPerSecond'])
                     if mps > 1000:
-                        self.log(f"\nEXCELLENT: Over 1000 msg/sec!")
+                        self.log(f"\n  EXCELLENT: Over 1000 msg/sec!")
                     elif mps > 100:
-                        self.log(f"\nGOOD: Over 100 msg/sec")
+                        self.log(f"\n  GOOD: Over 100 msg/sec")
                     elif mps > 10:
-                        self.log(f"\nACCEPTABLE: Over 10 msg/sec")
+                        self.log(f"\n  ACCEPTABLE: Over 10 msg/sec")
                     else:
-                        self.log(f"\nWARNING: Low throughput")
-            except:
-                pass
+                        self.log(f"\n  WARNING: Low throughput")
+                elif 'error' in data:
+                    self.log(f"ERROR: {data['error']}")
+                elif 'waiting' in data:
+                    self.log("Still waiting for results... trying again in 1 second")
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(1000, self.get_throughput_results)
+            except Exception as e:
+                self.log(f"Parse error: {e}")
         
-        self.browser.page().runJavaScript(throughput_script, on_throughput_result)
+        self.browser.page().runJavaScript(get_results, on_result)
     
     def run_all_tests(self):
         """Run all tests in sequence"""
