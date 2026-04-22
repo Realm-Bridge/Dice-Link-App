@@ -296,6 +296,10 @@ class TestWindow(QMainWindow):
         self.btn_check_calls.clicked.connect(self.test_check_popout_calls)
         control_layout.addWidget(self.btn_check_calls)
         
+        self.btn_simulate_popout = QPushButton("Test 3f: Simulate PopOut Module (exact)")
+        self.btn_simulate_popout.clicked.connect(self.test_simulate_popout_exact)
+        control_layout.addWidget(self.btn_simulate_popout)
+        
         self.btn_popout_workflow = QPushButton("Test 3f: Full Pop-out Workflow Test")
         self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
         control_layout.addWidget(self.btn_popout_workflow)
@@ -916,6 +920,122 @@ class TestWindow(QMainWindow):
         
         self.browser.page().runJavaScript(check_script, on_result)
         
+    def test_simulate_popout_exact(self):
+        """Test 3f: Simulate EXACTLY what PopOut module does"""
+        self.log("\n--- TEST 3f: Exact PopOut Module Simulation ---")
+        self.log("This simulates the exact code path of the PopOut module")
+        
+        simulate_script = """
+        (function() {
+            var results = {
+                step1_windowOpen: null,
+                step2_gotReference: false,
+                step3_documentOpen: false,
+                step4_documentWrite: false,
+                step5_documentClose: false,
+                step6_popupHasContent: false,
+                errors: []
+            };
+            
+            try {
+                // STEP 1: Call window.open exactly like PopOut module does (line 1159)
+                var features = "toolbar=0, location=0, menubar=0, titlebar=0, scrollbars=1, innerWidth=600, innerHeight=700, left=100, top=100";
+                console.log('[SIMULATE] Calling window.open with features:', features);
+                
+                var popout = window.open("about:blank", "_blank", features);
+                
+                results.step1_windowOpen = popout ? 'returned object' : 'returned NULL';
+                console.log('[SIMULATE] window.open returned:', results.step1_windowOpen);
+                
+                if (!popout) {
+                    results.errors.push('window.open returned null - this is why PopOut fails!');
+                    return JSON.stringify(results);
+                }
+                
+                results.step2_gotReference = true;
+                
+                // STEP 2: Try document.open() like PopOut does (line 1308)
+                try {
+                    popout.document.open();
+                    results.step3_documentOpen = true;
+                    console.log('[SIMULATE] document.open() succeeded');
+                } catch(e) {
+                    results.errors.push('document.open() failed: ' + e.message);
+                    return JSON.stringify(results);
+                }
+                
+                // STEP 3: Try document.write() with HTML (lines 1309-1310)
+                try {
+                    var testHtml = '<!DOCTYPE html><html><head><title>PopOut Test</title></head><body><h1>PopOut Simulation</h1><p>If you see this, document.write works!</p><button onclick="window.close()">Close</button></body></html>';
+                    popout.document.write(testHtml);
+                    results.step4_documentWrite = true;
+                    console.log('[SIMULATE] document.write() succeeded');
+                } catch(e) {
+                    results.errors.push('document.write() failed: ' + e.message);
+                    return JSON.stringify(results);
+                }
+                
+                // STEP 4: Try document.close() (line 1311)
+                try {
+                    popout.document.close();
+                    results.step5_documentClose = true;
+                    console.log('[SIMULATE] document.close() succeeded');
+                } catch(e) {
+                    results.errors.push('document.close() failed: ' + e.message);
+                }
+                
+                // STEP 5: Verify content was written
+                try {
+                    var content = popout.document.body.innerHTML;
+                    results.step6_popupHasContent = content.includes('PopOut Simulation');
+                    console.log('[SIMULATE] Popup content check:', results.step6_popupHasContent);
+                } catch(e) {
+                    results.errors.push('Could not read popup content: ' + e.message);
+                }
+                
+                // Leave popup open so user can see it
+                console.log('[SIMULATE] Popup should now be visible with test content');
+                
+            } catch(e) {
+                results.errors.push('Exception: ' + e.message);
+                console.log('[SIMULATE] Exception:', e.message, e.stack);
+            }
+            
+            return JSON.stringify(results);
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                data = json.loads(result)
+                
+                self.log(f"\nPopOut Module Simulation Results:")
+                self.log(f"  Step 1 - window.open(): {data.get('step1_windowOpen', 'N/A')}")
+                self.log(f"  Step 2 - Got reference: {data.get('step2_gotReference', False)}")
+                self.log(f"  Step 3 - document.open(): {data.get('step3_documentOpen', False)}")
+                self.log(f"  Step 4 - document.write(): {data.get('step4_documentWrite', False)}")
+                self.log(f"  Step 5 - document.close(): {data.get('step5_documentClose', False)}")
+                self.log(f"  Step 6 - Content visible: {data.get('step6_popupHasContent', False)}")
+                
+                if data.get('errors'):
+                    self.log(f"\n  Errors:")
+                    for err in data['errors']:
+                        self.log(f"    - {err}")
+                
+                if data.get('step6_popupHasContent'):
+                    self.log(f"\nSUCCESS: All PopOut operations work!")
+                    self.log(f"A popup should be visible with 'PopOut Simulation' text")
+                else:
+                    self.log(f"\nFAILED: PopOut operations did not complete")
+                    if data.get('step1_windowOpen') == 'returned NULL':
+                        self.log(f"ROOT CAUSE: window.open() returns null")
+                    
+            except Exception as e:
+                self.log(f"Error parsing result: {e}")
+                self.log(f"Raw result: {result}")
+        
+        self.browser.page().runJavaScript(simulate_script, on_result)
+
     def test_popout_workflow(self):
         """Test 3c: Test the FULL pop-out workflow"""
         self.log("\n--- TEST 3c: FULL Pop-out Workflow ---")
