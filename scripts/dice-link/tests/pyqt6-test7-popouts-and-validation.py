@@ -324,7 +324,11 @@ class TestWindow(QMainWindow):
         self.btn_simulate_popout.clicked.connect(self.test_simulate_popout_exact)
         control_layout.addWidget(self.btn_simulate_popout)
         
-        self.btn_popout_workflow = QPushButton("Test 3g: Full Pop-out Workflow Test")
+        self.btn_patch_location = QPushButton("Test 3g: Patch window.open() for .location.hash (BEFORE popout)")
+        self.btn_patch_location.clicked.connect(self.test_patch_location_hash)
+        control_layout.addWidget(self.btn_patch_location)
+        
+        self.btn_popout_workflow = QPushButton("Test 3h: Full Pop-out Workflow Test")
         self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
         control_layout.addWidget(self.btn_popout_workflow)
         
@@ -1082,6 +1086,114 @@ class TestWindow(QMainWindow):
                 self.log(f"Raw result: {result}")
         
         self.browser.page().runJavaScript(simulate_script, on_result)
+
+    def test_patch_location_hash(self):
+        """Test 3g: Patch window.open() to add .location.hash property"""
+        self.log("\n--- TEST 3g: Patching window.open() for .location.hash ---")
+        self.log("PopOut module needs popout.location.hash to work")
+        self.log("Qt's popup lacks .location, so we add it")
+        
+        patch_script = """
+        (function() {
+            console.log('[PATCH] Installing window.open() patch...');
+            
+            // Store original
+            var originalWindowOpen = window.open;
+            window.__dla_patch_applied = false;
+            window.__dla_patched_popups = [];
+            
+            // Replace window.open
+            window.open = function(url, name, features) {
+                console.log('[PATCH] window.open() called');
+                console.log('[PATCH]   URL:', url);
+                console.log('[PATCH]   Name:', name);
+                
+                // Call original
+                var popup = originalWindowOpen.call(window, url, name, features);
+                console.log('[PATCH] Original window.open returned:', popup ? 'object' : 'NULL');
+                
+                if (!popup) {
+                    console.log('[PATCH] ERROR: popup is null, returning null');
+                    return null;
+                }
+                
+                // Check if location exists
+                console.log('[PATCH] popup.location exists:', typeof popup.location);
+                
+                // Add location object if missing
+                if (!popup.location) {
+                    console.log('[PATCH] Adding location object to popup');
+                    popup.location = {
+                        hash: "",
+                        href: url || "about:blank",
+                        pathname: "/",
+                        search: "",
+                        protocol: "about:"
+                    };
+                    console.log('[PATCH] location object added');
+                } else {
+                    console.log('[PATCH] location already exists');
+                }
+                
+                // Test setting hash
+                try {
+                    popup.location.hash = "popout";
+                    console.log('[PATCH] Successfully set location.hash = "popout"');
+                } catch(e) {
+                    console.log('[PATCH] ERROR setting location.hash:', e.message);
+                }
+                
+                // Track this popup
+                window.__dla_patched_popups.push({
+                    url: url,
+                    name: name,
+                    hasLocation: !!popup.location,
+                    timestamp: Date.now()
+                });
+                
+                console.log('[PATCH] Returning patched popup');
+                return popup;
+            };
+            
+            window.__dla_patch_applied = true;
+            console.log('[PATCH] Patch installed successfully');
+            console.log('[PATCH] Now pop out a character sheet to test');
+            
+            return JSON.stringify({
+                success: true,
+                message: 'window.open() patch installed'
+            });
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                data = json.loads(result)
+                self.log(f"\nPatch Installation Result:")
+                self.log(f"  Success: {data.get('success', False)}")
+                self.log(f"  Message: {data.get('message', 'N/A')}")
+                
+                if data.get('success'):
+                    self.log(f"\n✓ Patch installed. Now:")
+                    self.log(f"  1. Open a character sheet")
+                    self.log(f"  2. Click the pop-out button")
+                    self.log(f"  3. Watch logs for [PATCH] messages")
+                    self.log(f"  4. Check if popup shows sheet content")
+                    self.log(f"  5. Check if Pop In button appears")
+                    self.log(f"  6. Try closing popup")
+                    self.log(f"\nExpected:")
+                    self.log(f"  - [PATCH] window.open called")
+                    self.log(f"  - [PATCH] location object added")
+                    self.log(f"  - [PATCH] Successfully set location.hash")
+                    self.log(f"  - document.write() calls should appear")
+                else:
+                    self.log(f"\n✗ Failed to install patch")
+                    
+            except Exception as e:
+                self.log(f"Error parsing result: {e}")
+                self.log(f"Raw result: {result}")
+        
+        self.browser.page().runJavaScript(patch_script, on_result)
 
     def test_popout_workflow(self):
         """Test 3c: Test the FULL pop-out workflow"""
