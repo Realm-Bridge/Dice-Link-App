@@ -122,23 +122,31 @@ class FoundryWebPage(QWebEnginePage):
         self.log(f"\n--- POPUP REQUEST ---")
         self.log(f"URL: {requested_url}")
         self.log(f"User initiated: {request.isUserInitiated()}")
-        
-        if self.is_same_origin(requested_url):
-            self.log("ALLOWED: Same origin pop-out")
-            
-            # Create new popup page
+
+        # Allow same-origin AND about:blank (Foundry uses about:blank as
+        # the initial URL before loading actual sheet content into the popup)
+        is_allowed = (
+            self.is_same_origin(requested_url)
+            or requested_url == 'about:blank'
+            or requested_url == ''
+        )
+
+        if is_allowed:
+            self.log("ALLOWED: Foundry pop-out")
+
+            # Create new popup page with same navigation restrictions
             popup_page = FoundryPopupPage(self.profile(), self.allowed_origin, self.log)
-            
+
             # Create popup window
             popup_window = PopupWindow(popup_page, self.log)
-            
-            # Use Qt6's proper openIn() method
+
+            # Use Qt6's proper openIn() method - this hands the page to Qt
             request.openIn(popup_page)
-            
+
             # Show window
             popup_window.show()
-            
-            # Keep reference
+
+            # Keep reference to prevent garbage collection
             self.popup_windows.append(popup_window)
             self.log("Pop-out window created and shown")
         else:
