@@ -253,6 +253,10 @@ class TestWindow(QMainWindow):
         self.btn_popout.clicked.connect(self.test_popout)
         control_layout.addWidget(self.btn_popout)
         
+        self.btn_window_ref = QPushButton("Test 3b: Check window.open() Reference")
+        self.btn_window_ref.clicked.connect(self.test_window_reference)
+        control_layout.addWidget(self.btn_window_ref)
+        
         self.btn_external = QPushButton("Test 4: Try External Navigation (should block)")
         self.btn_external.clicked.connect(self.test_external_blocked)
         control_layout.addWidget(self.btn_external)
@@ -402,6 +406,78 @@ class TestWindow(QMainWindow):
                 self.log("Manual test required: Right-click a sheet and select 'Pop Out'")
         
         self.browser.page().runJavaScript(popout_script, on_result)
+    
+    def test_window_reference(self):
+        """Test 3b: Check if window.open() returns a valid window reference"""
+        self.log("\n--- TEST 3b: window.open() Reference Test ---")
+        self.log("This test checks if window.open() returns a valid window object")
+        self.log("(Required for Foundry's PopOut module to work)")
+        
+        ref_test_script = """
+        (function() {
+            try {
+                // Try to open a blank window
+                var popupWin = window.open('about:blank', 'test_popup_' + Date.now());
+                
+                if (popupWin === null) {
+                    return JSON.stringify({
+                        success: false,
+                        reference: 'null',
+                        message: 'window.open() returned null - popup blocked or not supported'
+                    });
+                }
+                
+                // Check if we can access window properties
+                try {
+                    var canAccess = typeof popupWin.document !== 'undefined';
+                    popupWin.close();
+                    
+                    return JSON.stringify({
+                        success: true,
+                        reference: 'valid',
+                        canAccess: canAccess,
+                        message: 'window.open() returns valid reference - PopOut module should work!'
+                    });
+                } catch(e) {
+                    return JSON.stringify({
+                        success: false,
+                        reference: 'object but restricted',
+                        message: 'Got reference but cannot access properties: ' + e.message
+                    });
+                }
+            } catch(e) {
+                return JSON.stringify({
+                    success: false,
+                    error: e.message,
+                    message: 'Exception thrown: ' + e.message
+                });
+            }
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                import json
+                data = json.loads(result)
+                
+                self.log(f"\nwindow.open() Reference Test Results:")
+                self.log(f"  Success: {data.get('success', False)}")
+                self.log(f"  Reference: {data.get('reference', 'unknown')}")
+                self.log(f"  Message: {data.get('message', 'N/A')}")
+                
+                if data.get('success'):
+                    self.log(f"\nPASS: window.open() returns valid reference")
+                    self.log(f"Foundry's PopOut module SHOULD work with this implementation")
+                    self.test_results['window_ref'] = True
+                else:
+                    self.log(f"\nFAIL: window.open() does not return valid reference")
+                    self.log(f"PopOut module will NOT work as-is")
+                    self.test_results['window_ref'] = False
+            except Exception as e:
+                self.log(f"Error parsing result: {e}")
+                self.log(f"Raw result: {result}")
+        
+        self.browser.page().runJavaScript(ref_test_script, on_result)
         
     def test_external_blocked(self):
         """Test 4: Verify external navigation is blocked"""
