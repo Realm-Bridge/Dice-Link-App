@@ -85,6 +85,7 @@ class CustomWebEnginePage(QWebEnginePage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.console_messages = []
+        self.load_errors = []
     
     def javaScriptConsoleMessage(self, level, message, line, source):
         """Capture JavaScript console messages"""
@@ -93,6 +94,17 @@ class CustomWebEnginePage(QWebEnginePage):
         log_entry = f"[JS {level_name}] {message} (line {line})"
         print(log_entry)
         self.console_messages.append(log_entry)
+    
+    def certificateError(self, error):
+        """Handle certificate errors - accept them for testing"""
+        print(f"[CERT ERROR] {error.errorDescription()} - Accepting anyway")
+        error.acceptCertificate()
+        return True
+    
+    def acceptNavigationRequest(self, url, nav_type, is_main_frame):
+        """Log navigation requests"""
+        print(f"[NAV] {'MAIN' if is_main_frame else 'SUB'}: {url.toString()[:100]}")
+        return True
 
 
 class EmbeddedBrowserTest(QMainWindow):
@@ -188,6 +200,11 @@ class EmbeddedBrowserTest(QMainWindow):
         self.summary_btn = QPushButton("Show Test Summary")
         self.summary_btn.clicked.connect(self.show_summary)
         control_layout.addWidget(self.summary_btn)
+        
+        # Debug button - check page content
+        self.debug_btn = QPushButton("DEBUG: Check Page Content")
+        self.debug_btn.clicked.connect(self.run_debug_check)
+        control_layout.addWidget(self.debug_btn)
         
         # Log output
         control_layout.addWidget(QLabel("Log Output:"))
@@ -595,6 +612,47 @@ class EmbeddedBrowserTest(QMainWindow):
         summary = self.test_results.get_summary()
         self.log(summary)
         QMessageBox.information(self, "Test Results", summary)
+    
+    def run_debug_check(self):
+        """Debug: Check what's actually loaded on the page"""
+        self.log("\n--- DEBUG: Checking Page Content ---")
+        
+        js_debug = """
+        (function() {
+            var results = {
+                url: window.location.href,
+                title: document.title,
+                doctype: document.doctype ? document.doctype.name : 'none',
+                htmlLength: document.documentElement.outerHTML.length,
+                headContent: document.head ? document.head.innerHTML.substring(0, 500) : 'no head',
+                bodyContent: document.body ? document.body.innerHTML.substring(0, 1000) : 'no body',
+                stylesheets: document.styleSheets.length,
+                scripts: document.scripts.length,
+                images: document.images.length,
+                links: document.querySelectorAll('link').length,
+                loadedResources: []
+            };
+            
+            // Check for any link/script tags and their status
+            var links = document.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach(function(link, i) {
+                results.loadedResources.push('CSS: ' + link.href.substring(0, 80));
+            });
+            
+            var scripts = document.querySelectorAll('script[src]');
+            scripts.forEach(function(script, i) {
+                results.loadedResources.push('JS: ' + script.src.substring(0, 80));
+            });
+            
+            return JSON.stringify(results, null, 2);
+        })();
+        """
+        self.browser.page().runJavaScript(js_debug, self.on_debug_complete)
+    
+    def on_debug_complete(self, result):
+        """Process debug result"""
+        self.log("Debug results:")
+        self.log(result if result else "No result returned")
 
 
 def main():
