@@ -103,16 +103,36 @@ class PopupWindow(QMainWindow):
         self.setWindowTitle("Foundry Pop-out")
         self.resize(600, 700)
         
+        # Hide OS window controls (minimize, maximize, close)
+        # so the user must use the character sheet's own close button
+        self.setWindowFlags(
+            Qt.WindowType.Window |
+            Qt.WindowType.CustomizeWindowHint |
+            Qt.WindowType.WindowTitleHint
+        )
+        
         self.setCentralWidget(web_view)
         
         # Update title when page title changes
         web_view.page().titleChanged.connect(self.on_title_changed)
+        
+        # Watch for page URL changes - if page goes back to about:blank
+        # it means the character sheet was closed and returned to main window
+        web_view.page().urlChanged.connect(self.on_url_changed)
         
         self.log("[POPUP] Window created")
     
     def on_title_changed(self, title):
         if title and title != "about:blank":
             self.setWindowTitle(title)
+    
+    def on_url_changed(self, url):
+        """Auto-close the Qt window when the sheet returns to main window (page goes blank)"""
+        url_str = url.toString()
+        self.log(f"[POPUP] URL changed to: {url_str}")
+        if url_str == "about:blank" or url_str == "":
+            self.log("[POPUP] Page went blank - sheet returned to main window, closing popup window")
+            self.close()
 
 
 class FoundryWebView(QWebEngineView):
