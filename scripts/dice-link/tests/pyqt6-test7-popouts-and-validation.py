@@ -99,6 +99,7 @@ class PopupWindow(QMainWindow):
         super().__init__()
         self.log = log_callback
         self.web_view = web_view
+        self.has_had_content = False  # Track if we've seen actual content
         
         self.setWindowTitle("Foundry Pop-out")
         self.resize(600, 700)
@@ -113,26 +114,40 @@ class PopupWindow(QMainWindow):
         
         self.setCentralWidget(web_view)
         
-        # Update title when page title changes
+        # Update title when page title changes - this indicates content
         web_view.page().titleChanged.connect(self.on_title_changed)
-        
-        # Watch for page URL changes - if page goes back to about:blank
-        # it means the character sheet was closed and returned to main window
-        web_view.page().urlChanged.connect(self.on_url_changed)
         
         self.log("[POPUP] Window created")
     
     def on_title_changed(self, title):
+        """Track when content is loaded by watching title changes"""
         if title and title != "about:blank":
             self.setWindowTitle(title)
-    
-    def on_url_changed(self, url):
-        """Auto-close the Qt window when the sheet returns to main window (page goes blank)"""
-        url_str = url.toString()
-        self.log(f"[POPUP] URL changed to: {url_str}")
-        if url_str == "about:blank" or url_str == "":
-            self.log("[POPUP] Page went blank - sheet returned to main window, closing popup window")
-            self.close()
+            # Once we see a real title, we know content was loaded
+            self.has_had_content = True
+            self.log(f"[POPUP] Content detected in popup: {title}")
+            
+            # Inject listener to close window when PopOut module unloads the content
+            # This listens for when the user clicks the close button in the PopOut header
+            listener_script = """
+            (function() {
+                if (window.__dla_unload_listener_installed) {
+                    return;
+                }
+                window.__dla_unload_listener_installed = true;
+                
+                window.addEventListener('beforeunload', function() {
+                    console.log('[POPUP_LISTENER] beforeunload fired - PopOut is returning sheet to main window');
+                });
+                
+                window.addEventListener('unload', function() {
+                    console.log('[POPUP_LISTENER] unload fired - page going away');
+                });
+                
+                console.log('[POPUP_LISTENER] Listeners installed');
+            })();
+            """
+            self.web_view.page().runJavaScript(listener_script)
 
 
 class FoundryWebView(QWebEngineView):
