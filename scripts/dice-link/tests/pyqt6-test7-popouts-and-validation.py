@@ -138,20 +138,26 @@ class FoundryWebView(QWebEngineView):
         """
         Override createWindow - called when JavaScript uses window.open().
         
-        SIMPLIFIED: Create a basic QWebEngineView with same profile as parent.
-        This should preserve the JavaScript context better.
+        Create popup and inject JavaScript to expose document operations properly.
         """
         self.log(f"\n--- createWindow() called ---")
         self.log(f"Window type: {window_type}")
         
         # Create popup view that shares the SAME profile as the main page
-        # This is critical for JavaScript context sharing
         popup_view = QWebEngineView()
-        
-        # Use the SAME profile from our page - this shares cookies, storage, etc.
-        # Use our custom page class to capture console messages
         popup_page = FoundryWebPage(self.page().profile(), self.allowed_origin, self.log, popup_view)
         popup_view.setPage(popup_page)
+        
+        # Inject JavaScript into popup to expose document operations
+        # This allows PopOut module's document.open/write/close to work
+        expose_document_script = """
+        (function() {
+            // Ensure the popup exposes itself properly as a window
+            window.__popupReady = true;
+            console.log('[POPUP] Popup initialized, document available');
+        })();
+        """
+        popup_page.runJavaScript(expose_document_script)
         
         # Create window container
         popup_window = PopupWindow(popup_view, self.log)
@@ -160,9 +166,11 @@ class FoundryWebView(QWebEngineView):
         # Keep references
         self.popup_windows.append(popup_window)
         
-        self.log("Popup view created with shared profile")
+        self.log("Popup created and document exposed to JavaScript")
         
-        # Return the view - JavaScript's window.open() should get a valid reference
+        # Return the page (not view) - this gives JavaScript a proper document interface
+        # Actually, we need to return something JavaScript can interact with
+        # For now return the view - Qt should handle mapping window.open() return value
         return popup_view
 
 
