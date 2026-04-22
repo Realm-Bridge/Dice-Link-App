@@ -324,7 +324,11 @@ class TestWindow(QMainWindow):
         self.btn_simulate_popout.clicked.connect(self.test_simulate_popout_exact)
         control_layout.addWidget(self.btn_simulate_popout)
         
-        self.btn_popout_workflow = QPushButton("Test 3f: Full Pop-out Workflow Test")
+        self.btn_override_window_open = QPushButton("Test 3g: Install window.open() Override (BEFORE popout)")
+        self.btn_override_window_open.clicked.connect(self.test_install_window_open_override)
+        control_layout.addWidget(self.btn_override_window_open)
+        
+        self.btn_popout_workflow = QPushButton("Test 3h: Full Pop-out Workflow Test")
         self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
         control_layout.addWidget(self.btn_popout_workflow)
         
@@ -1082,6 +1086,277 @@ class TestWindow(QMainWindow):
                 self.log(f"Raw result: {result}")
         
         self.browser.page().runJavaScript(simulate_script, on_result)
+
+    def test_install_window_open_override(self):
+        """Test 3g: Install window.open() override that returns proper Window object"""
+        self.log("\n--- TEST 3g: Installing window.open() Override ---")
+        self.log("This replaces window.open() with a version that returns a proper Window object")
+        self.log("with functional .document.open(), .write(), .close() methods")
+        
+        override_script = """
+        (function() {
+            console.log('[OVERRIDE] Installing window.open() override...');
+            
+            // Store the original
+            var originalWindowOpen = window.open;
+            
+            // Track all popups we create
+            window.__dla_managed_popups = [];
+            
+            window.open = function(url, name, features) {
+                console.log('[OVERRIDE] window.open() intercepted');
+                console.log('[OVERRIDE]   URL:', url);
+                console.log('[OVERRIDE]   Name:', name);
+                console.log('[OVERRIDE]   Features:', features);
+                
+                // Call original to create the Qt popup
+                var realPopup = originalWindowOpen.call(window, url, name, features);
+                console.log('[OVERRIDE] Original window.open returned:', realPopup ? 'object' : 'NULL');
+                
+                if (!realPopup) {
+                    console.log('[OVERRIDE] ERROR: Original window.open returned null');
+                    return null;
+                }
+                
+                // Check what properties the real popup has
+                console.log('[OVERRIDE] realPopup.document exists:', typeof realPopup.document);
+                console.log('[OVERRIDE] realPopup.document.open exists:', typeof (realPopup.document && realPopup.document.open));
+                console.log('[OVERRIDE] realPopup.document.write exists:', typeof (realPopup.document && realPopup.document.write));
+                
+                // Create a buffer to store written content
+                var documentBuffer = [];
+                var isDocumentOpen = false;
+                var unloadHandlers = [];
+                var closeHandlers = [];
+                
+                // Create a fake Window object with proper document support
+                var fakeWindow = {
+                    // Reference to real popup for operations that work
+                    __realPopup: realPopup,
+                    __documentBuffer: documentBuffer,
+                    
+                    // Window properties
+                    closed: false,
+                    name: name || '',
+                    
+                    // Document object with open/write/close support
+                    document: {
+                        open: function() {
+                            console.log('[OVERRIDE] fakeWindow.document.open() called');
+                            isDocumentOpen = true;
+                            documentBuffer = [];
+                            console.log('[OVERRIDE] Document buffer cleared, ready for write');
+                            return this;
+                        },
+                        
+                        write: function(html) {
+                            console.log('[OVERRIDE] fakeWindow.document.write() called');
+                            console.log('[OVERRIDE]   Content length:', html ? html.length : 0);
+                            console.log('[OVERRIDE]   First 200 chars:', html ? html.substring(0, 200) : '');
+                            documentBuffer.push(html);
+                            console.log('[OVERRIDE]   Buffer now has', documentBuffer.length, 'entries');
+                        },
+                        
+                        close: function() {
+                            console.log('[OVERRIDE] fakeWindow.document.close() called');
+                            console.log('[OVERRIDE]   Total buffered content:', documentBuffer.length, 'entries');
+                            isDocumentOpen = false;
+                            
+                            // Now write all buffered content to the real popup
+                            var fullContent = documentBuffer.join('');
+                            console.log('[OVERRIDE]   Full content length:', fullContent.length);
+                            
+                            try {
+                                // Try writing to real popup
+                                if (realPopup.document && typeof realPopup.document.open === 'function') {
+                                    console.log('[OVERRIDE] Writing to real popup via document.open/write/close');
+                                    realPopup.document.open();
+                                    realPopup.document.write(fullContent);
+                                    realPopup.document.close();
+                                    console.log('[OVERRIDE] SUCCESS: Content written to real popup');
+                                } else {
+                                    console.log('[OVERRIDE] Real popup document.open not available, trying alternative');
+                                    // Alternative: set innerHTML on body after a delay
+                                    setTimeout(function() {
+                                        try {
+                                            // Parse the content and extract body
+                                            var parser = new DOMParser();
+                                            var doc = parser.parseFromString(fullContent, 'text/html');
+                                            if (realPopup.document && realPopup.document.body) {
+                                                realPopup.document.body.innerHTML = doc.body.innerHTML;
+                                                console.log('[OVERRIDE] Alternative: Set body innerHTML');
+                                            }
+                                            // Copy head too
+                                            if (realPopup.document && realPopup.document.head && doc.head) {
+                                                realPopup.document.head.innerHTML = doc.head.innerHTML;
+                                                console.log('[OVERRIDE] Alternative: Set head innerHTML');
+                                            }
+                                        } catch(e) {
+                                            console.log('[OVERRIDE] Alternative method failed:', e.message);
+                                        }
+                                    }, 100);
+                                }
+                            } catch(e) {
+                                console.log('[OVERRIDE] ERROR writing to real popup:', e.message);
+                            }
+                        },
+                        
+                        // Body for adoptNode operations
+                        get body() {
+                            console.log('[OVERRIDE] fakeWindow.document.body accessed');
+                            return realPopup.document ? realPopup.document.body : null;
+                        },
+                        
+                        get head() {
+                            console.log('[OVERRIDE] fakeWindow.document.head accessed');
+                            return realPopup.document ? realPopup.document.head : null;
+                        },
+                        
+                        get documentElement() {
+                            console.log('[OVERRIDE] fakeWindow.document.documentElement accessed');
+                            return realPopup.document ? realPopup.document.documentElement : null;
+                        },
+                        
+                        // adoptNode for DOM transfer
+                        adoptNode: function(node) {
+                            console.log('[OVERRIDE] fakeWindow.document.adoptNode() called');
+                            console.log('[OVERRIDE]   Node type:', node ? node.nodeName : 'null');
+                            if (realPopup.document && typeof realPopup.document.adoptNode === 'function') {
+                                var result = realPopup.document.adoptNode(node);
+                                console.log('[OVERRIDE]   adoptNode succeeded');
+                                return result;
+                            }
+                            console.log('[OVERRIDE]   adoptNode not available on real popup');
+                            return node;
+                        },
+                        
+                        // createElement for creating elements
+                        createElement: function(tag) {
+                            console.log('[OVERRIDE] fakeWindow.document.createElement() called:', tag);
+                            if (realPopup.document && typeof realPopup.document.createElement === 'function') {
+                                return realPopup.document.createElement(tag);
+                            }
+                            return document.createElement(tag);
+                        },
+                        
+                        // querySelector for finding elements
+                        querySelector: function(selector) {
+                            console.log('[OVERRIDE] fakeWindow.document.querySelector() called:', selector);
+                            if (realPopup.document && typeof realPopup.document.querySelector === 'function') {
+                                return realPopup.document.querySelector(selector);
+                            }
+                            return null;
+                        },
+                        
+                        querySelectorAll: function(selector) {
+                            console.log('[OVERRIDE] fakeWindow.document.querySelectorAll() called:', selector);
+                            if (realPopup.document && typeof realPopup.document.querySelectorAll === 'function') {
+                                return realPopup.document.querySelectorAll(selector);
+                            }
+                            return [];
+                        }
+                    },
+                    
+                    // Window methods
+                    close: function() {
+                        console.log('[OVERRIDE] fakeWindow.close() called');
+                        this.closed = true;
+                        if (realPopup && typeof realPopup.close === 'function') {
+                            realPopup.close();
+                        }
+                    },
+                    
+                    focus: function() {
+                        console.log('[OVERRIDE] fakeWindow.focus() called');
+                        if (realPopup && typeof realPopup.focus === 'function') {
+                            realPopup.focus();
+                        }
+                    },
+                    
+                    blur: function() {
+                        console.log('[OVERRIDE] fakeWindow.blur() called');
+                        if (realPopup && typeof realPopup.blur === 'function') {
+                            realPopup.blur();
+                        }
+                    },
+                    
+                    addEventListener: function(event, handler, options) {
+                        console.log('[OVERRIDE] fakeWindow.addEventListener() called');
+                        console.log('[OVERRIDE]   Event:', event);
+                        
+                        if (event === 'unload' || event === 'beforeunload') {
+                            unloadHandlers.push(handler);
+                            console.log('[OVERRIDE]   Stored unload handler, total:', unloadHandlers.length);
+                        }
+                        
+                        // Also try to attach to real popup
+                        if (realPopup && typeof realPopup.addEventListener === 'function') {
+                            try {
+                                realPopup.addEventListener(event, handler, options);
+                                console.log('[OVERRIDE]   Also attached to real popup');
+                            } catch(e) {
+                                console.log('[OVERRIDE]   Could not attach to real popup:', e.message);
+                            }
+                        }
+                    },
+                    
+                    removeEventListener: function(event, handler, options) {
+                        console.log('[OVERRIDE] fakeWindow.removeEventListener() called for:', event);
+                        if (realPopup && typeof realPopup.removeEventListener === 'function') {
+                            try {
+                                realPopup.removeEventListener(event, handler, options);
+                            } catch(e) {}
+                        }
+                    }
+                };
+                
+                // Track this popup
+                window.__dla_managed_popups.push({
+                    fakeWindow: fakeWindow,
+                    realPopup: realPopup,
+                    name: name,
+                    createdAt: Date.now()
+                });
+                
+                console.log('[OVERRIDE] Returning fake Window object to caller');
+                console.log('[OVERRIDE] Total managed popups:', window.__dla_managed_popups.length);
+                
+                return fakeWindow;
+            };
+            
+            console.log('[OVERRIDE] window.open() override installed successfully');
+            console.log('[OVERRIDE] Now pop out a character sheet to test');
+            
+            return JSON.stringify({
+                success: true,
+                message: 'window.open() override installed'
+            });
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                data = json.loads(result)
+                self.log(f"\nOverride Installation Result:")
+                self.log(f"  Success: {data.get('success', False)}")
+                self.log(f"  Message: {data.get('message', 'N/A')}")
+                
+                if data.get('success'):
+                    self.log(f"\nOverride installed. Now:")
+                    self.log(f"  1. Open a character sheet")
+                    self.log(f"  2. Click the pop-out button")
+                    self.log(f"  3. Watch the logs for [OVERRIDE] messages")
+                    self.log(f"  4. Check if popup shows actual sheet content")
+                    self.log(f"  5. Check if Pop In button appears")
+                    self.log(f"  6. Try closing popup - does sheet return?")
+                else:
+                    self.log(f"\nFailed to install override")
+                    
+            except Exception as e:
+                self.log(f"Error parsing result: {e}")
+                self.log(f"Raw result: {result}")
+        
+        self.browser.page().runJavaScript(override_script, on_result)
 
     def test_popout_workflow(self):
         """Test 3c: Test the FULL pop-out workflow"""
