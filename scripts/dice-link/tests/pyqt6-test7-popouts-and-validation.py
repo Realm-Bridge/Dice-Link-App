@@ -138,6 +138,8 @@ class PopupWindow(QMainWindow):
                 
                 window.addEventListener('beforeunload', function() {
                     console.log('[POPUP_LISTENER] beforeunload fired - PopOut is returning sheet to main window');
+                    console.log('[POPUP_LISTENER] Closing popup window');
+                    window.close();
                 });
                 
                 window.addEventListener('unload', function() {
