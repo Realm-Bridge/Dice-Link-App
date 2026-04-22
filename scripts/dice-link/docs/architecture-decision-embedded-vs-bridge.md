@@ -138,12 +138,30 @@ Our simple `test-page.html` used standard CSS without `@layer` declarations. Qt 
 - No amount of command-line flags can add CSS feature support that doesn't exist in the browser engine
 - This is NOT a security issue (same behavior on localhost and external IP)
 
-**Next Steps Required:**
-1. Determine Chromium version in PyQt6 - does it support CSS Cascade Layers?
-2. Determine Chromium version in CEF Python - does it support CSS Cascade Layers?
-3. If neither supports Chromium 99+, embedded browser approach is NOT viable for Foundry v13+
+**CSS Cascade Layers Support Across Foundry Versions:**
 
-**Source:** https://foundryvtt.wiki/en/development/guides/css-cascade-layers
+**Foundry v13 (current stable - tested on v13.351):**
+- From release notes (v13.341): "Community developers can also rejoice as we've migrated entirely to using CSS Layers for Foundry VTT-controlled UI elements"
+- Extensive use of CSS Cascade Layers documented
+- Requires browser with `@layer` support
+
+**Foundry v14 (latest - v14.360):**
+- From release notes: "There are no significant feature changes worth highlighting" (regarding CSS)
+- CSS Cascade Layers remain unchanged from v13
+- **No new CSS requirements introduced in v14**
+- If solution works for v13, it works for v14
+
+**Consequence:** This is not a temporary problem. CSS Cascade Layers are now core to Foundry's architecture and will likely remain so through future versions.
+
+**Next Steps Required:**
+1. Determine Chromium version in PyQt6 - does it support CSS Cascade Layers (requires Chromium 99+)?
+2. Determine Chromium version in CEF Python - does it support CSS Cascade Layers?
+3. If neither supports Chromium 99+, embedded browser approach is NOT viable for any current Foundry version
+
+**Source:** 
+- CSS Cascade Layers guide: https://foundryvtt.wiki/en/development/guides/css-cascade-layers
+- Foundry v13 release notes (v13.341): https://foundryvtt.com/article/release-13.341
+- Foundry v14 release notes (v14.360): https://foundryvtt.com/releases/14.360
 
 ---
 
