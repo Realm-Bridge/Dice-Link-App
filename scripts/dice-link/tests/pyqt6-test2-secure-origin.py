@@ -9,12 +9,23 @@ Second run: WITH security bypass flags (if needed)
 import sys
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 # IMPORTANT: Set this BEFORE QApplication creation if you want to test WITH flags
 USE_SECURITY_BYPASS = True  # Changed to True to test with bypass flags
 
+# Get URL from command line for the unsafely-treat flag
+TARGET_URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:30000"
+
 if USE_SECURITY_BYPASS:
+    # Extract origin from URL for the unsafely-treat flag
+    parsed = urlparse(TARGET_URL)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    
     os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = ' '.join([
+        # THE KEY FLAG - tells Chromium to treat this specific HTTP origin as secure
+        f'--unsafely-treat-insecure-origin-as-secure={origin}',
+        # Additional flags for good measure
         '--disable-web-security',
         '--disable-features=CrossOriginOpenerPolicy',
         '--disable-features=CrossOriginEmbedderPolicy', 
@@ -22,7 +33,11 @@ if USE_SECURITY_BYPASS:
         '--disable-site-isolation-trials',
         '--disable-features=IsolateOrigins',
         '--disable-features=site-per-process',
+        # Force treat as secure context
+        '--test-type',
+        '--ignore-certificate-errors',
     ])
+    print(f"[BYPASS] Setting origin as secure: {origin}")
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QTextEdit, QLabel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
