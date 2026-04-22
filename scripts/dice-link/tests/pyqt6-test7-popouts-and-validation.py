@@ -92,22 +92,67 @@ class FoundryValidator:
             callback(False, f"Validation error: {str(e)}", None)
 
 
+class PopupWebPage(QWebEnginePage):
+    """Page for popup windows - inherits same security restrictions"""
+    
+    def __init__(self, profile, allowed_origin, log_callback, parent=None):
+        super().__init__(profile, parent)
+        self.allowed_origin = allowed_origin
+        self.log = log_callback
+        
+    def is_same_origin(self, url_str: str) -> bool:
+        if not url_str or url_str == 'about:blank':
+            return True
+        parsed_new = urlparse(url_str)
+        parsed_allowed = urlparse(self.allowed_origin)
+        return (parsed_new.scheme == parsed_allowed.scheme and 
+                parsed_new.netloc == parsed_allowed.netloc)
+    
+    def acceptNavigationRequest(self, url, nav_type, is_main_frame):
+        url_str = url.toString()
+        if self.is_same_origin(url_str) or url_str.startswith('javascript:'):
+            return True
+        self.log(f"[POPUP] BLOCKED: External navigation to {url_str}")
+        return False
+
+
+class PopupWindow(QMainWindow):
+    """Native popup window for Foundry pop-outs"""
+    
+    def __init__(self, page, log_callback):
+        super().__init__()
+        self.log = log_callback
+        self._page = page
+        
+        self.setWindowTitle("Foundry Pop-out")
+        self.resize(600, 700)
+        
+        self.browser = QWebEngineView(self)
+        self.setCentralWidget(self.browser)
+        self.browser.setPage(page)
+        
+        # Update title from page
+        page.titleChanged.connect(lambda t: self.setWindowTitle(t) if t else None)
+        
+        self.log("[POPUP] Window created")
+
+
 class FoundryWebPage(QWebEnginePage):
-    """Custom web page that only blocks EXTERNAL navigation - lets Foundry handle pop-outs natively"""
+    """Custom web page - creates popup windows for same-origin, blocks external"""
     
     def __init__(self, profile, allowed_origin, log_callback, main_window=None, parent=None):
         super().__init__(profile, parent)
         self.allowed_origin = allowed_origin
         self.log = log_callback
         self.main_window = main_window
+        self.popup_windows = []
         
-        # Only block external popups - let same-origin work naturally
         self.newWindowRequested.connect(self.handle_new_window)
         
     def is_same_origin(self, url_str: str) -> bool:
         """Check if URL is same origin as allowed Foundry server"""
         if not url_str or url_str == 'about:blank':
-            return True  # Allow blank URLs (used by Foundry popouts)
+            return True
         
         parsed_new = urlparse(url_str)
         parsed_allowed = urlparse(self.allowed_origin)
@@ -116,17 +161,27 @@ class FoundryWebPage(QWebEnginePage):
                 parsed_new.netloc == parsed_allowed.netloc)
     
     def handle_new_window(self, request):
-        """Only BLOCK external popups - let Foundry handle same-origin popups natively"""
+        """Create popup window for same-origin, block external"""
         requested_url = request.requestedUrl().toString()
         self.log(f"\n--- POPUP REQUEST ---")
         self.log(f"URL: {requested_url}")
         
         if self.is_same_origin(requested_url):
-            # DON'T intercept - let Qt/Foundry handle it natively
-            self.log("ALLOWED: Same-origin popup (handled by Foundry)")
-            # Don't call request.openIn() - just let it proceed naturally
+            self.log("ALLOWED: Creating popup window")
+            
+            # Create popup page with same restrictions
+            popup_page = PopupWebPage(self.profile(), self.allowed_origin, self.log)
+            
+            # Create window
+            popup_window = PopupWindow(popup_page, self.log)
+            
+            # CRITICAL: Use openIn to hand the request to the new page
+            request.openIn(popup_page)
+            
+            # Show and keep reference
+            popup_window.show()
+            self.popup_windows.append(popup_window)
         else:
-            # Block external popups
             self.log("BLOCKED: External origin popup")
             request.reject()
     
