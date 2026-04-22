@@ -280,7 +280,11 @@ class TestWindow(QMainWindow):
         self.btn_popout_ops.clicked.connect(self.test_popout_operations)
         control_layout.addWidget(self.btn_popout_ops)
         
-        self.btn_popout_workflow = QPushButton("Test 3d: Full Pop-out Workflow Test")
+        self.btn_write_persist = QPushButton("Test 3d: Check Write Persistence")
+        self.btn_write_persist.clicked.connect(self.test_popout_write_persistence)
+        control_layout.addWidget(self.btn_write_persist)
+        
+        self.btn_popout_workflow = QPushButton("Test 3e: Full Pop-out Workflow Test")
         self.btn_popout_workflow.clicked.connect(self.test_popout_workflow)
         control_layout.addWidget(self.btn_popout_workflow)
         
@@ -610,6 +614,85 @@ class TestWindow(QMainWindow):
                 self.log(f"Raw result: {result}")
         
         self.browser.page().runJavaScript(ops_test_script, on_result)
+        
+    def test_popout_write_persistence(self):
+        """Test 3d: Check if document.write() content persists in popup"""
+        self.log("\n--- TEST 3d: Document.write() Persistence ---")
+        self.log("This tests if document.write() actually writes to the popup document")
+        
+        persistence_test = """
+        (function() {
+            var results = {
+                writtenContent: null,
+                contentReadBack: null,
+                writePersisted: false,
+                error: null
+            };
+            
+            try {
+                // Open popup
+                var popupWin = window.open('about:blank', 'persistence_test_' + Date.now());
+                if (!popupWin) {
+                    results.error = 'window.open() returned null';
+                    return JSON.stringify(results);
+                }
+                
+                // Write content
+                var testContent = '<html><body><h1>Test Content</h1><p>Written via document.write()</p></body></html>';
+                popupWin.document.open();
+                popupWin.document.write(testContent);
+                popupWin.document.close();
+                
+                results.writtenContent = testContent;
+                
+                // Try to read it back immediately
+                try {
+                    var readContent = popupWin.document.documentElement.outerHTML;
+                    results.contentReadBack = readContent.substring(0, 100);  // First 100 chars
+                    
+                    // Check if our content is there
+                    if (readContent.includes('Test Content')) {
+                        results.writePersisted = true;
+                    }
+                } catch(e) {
+                    results.error = 'Cannot read back content: ' + e.message;
+                }
+                
+                popupWin.close();
+                
+            } catch(e) {
+                results.error = 'Exception: ' + e.message;
+            }
+            
+            return JSON.stringify(results);
+        })();
+        """
+        
+        def on_result(result):
+            try:
+                data = json.loads(result)
+                
+                self.log(f"\nDocument.write() Persistence Test Results:")
+                self.log(f"  Written content: {data.get('writtenContent')[:50] if data.get('writtenContent') else 'None'}...")
+                self.log(f"  Content persisted: {data.get('writePersisted', False)}")
+                self.log(f"  Read back: {data.get('contentReadBack', 'Failed to read')}")
+                
+                if data.get('error'):
+                    self.log(f"  Error: {data['error']}")
+                
+                if data.get('writePersisted'):
+                    self.log(f"\nPASS: document.write() content persists in popup")
+                    self.test_results['write_persist'] = True
+                else:
+                    self.log(f"\nFAIL: document.write() content does NOT persist")
+                    self.log(f"This explains why PopOut module cannot write to popup")
+                    self.test_results['write_persist'] = False
+                    
+            except Exception as e:
+                self.log(f"Error parsing result: {e}")
+                self.log(f"Raw result: {result}")
+        
+        self.browser.page().runJavaScript(persistence_test, on_result)
         
     def test_popout_workflow(self):
         """Test 3c: Test the FULL pop-out workflow"""
