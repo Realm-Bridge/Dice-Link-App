@@ -795,6 +795,40 @@ class TestWindow(QMainWindow):
                 };
                 debugInfo.adoptNodeHooked = true;
                 
+                // CRITICAL: Hook the PopoutModule.singleton.addPopout method itself
+                if (PopoutModule && PopoutModule.singleton && typeof PopoutModule.singleton.addPopout === 'function') {
+                    var originalAddPopout = PopoutModule.singleton.addPopout.bind(PopoutModule.singleton);
+                    PopoutModule.singleton.addPopout = async function(app) {
+                        console.log('[DLA DEBUG] === addPopout CALLED ===');
+                        console.log('[DLA DEBUG] App:', app);
+                        console.log('[DLA DEBUG] App type:', app ? app.constructor.name : 'null');
+                        try {
+                            var result = await originalAddPopout(app);
+                            console.log('[DLA DEBUG] addPopout completed successfully');
+                            return result;
+                        } catch(e) {
+                            console.log('[DLA DEBUG] addPopout THREW ERROR:', e.message, e.stack);
+                            throw e;
+                        }
+                    };
+                    debugInfo.addPopoutHooked = true;
+                    console.log('[DLA DEBUG] addPopout method hooked');
+                }
+                
+                // Also hook createWindow method
+                if (PopoutModule && PopoutModule.singleton && typeof PopoutModule.singleton.createWindow === 'function') {
+                    var originalCreateWindow = PopoutModule.singleton.createWindow.bind(PopoutModule.singleton);
+                    PopoutModule.singleton.createWindow = function(features) {
+                        console.log('[DLA DEBUG] === createWindow CALLED ===');
+                        console.log('[DLA DEBUG] Features:', features);
+                        var result = originalCreateWindow(features);
+                        console.log('[DLA DEBUG] createWindow returned:', result ? 'valid window' : 'NULL');
+                        return result;
+                    };
+                    debugInfo.createWindowHooked = true;
+                    console.log('[DLA DEBUG] createWindow method hooked');
+                }
+                
                 console.log('[DLA DEBUG] All hooks installed');
                 console.log('[DLA DEBUG] PopoutModule exists:', debugInfo.popoutModuleClassExists);
                 console.log('[DLA DEBUG] Singleton exists:', debugInfo.popoutSingletonExists);
