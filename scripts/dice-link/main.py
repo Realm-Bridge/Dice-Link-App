@@ -467,10 +467,44 @@ class VTTWebView(QWebEngineView):
         
         def on_qwebchannel_loaded(result):
             log_vtt(f"[WEBCHANNEL] QWebChannel.js load result: {result}")
-            # Now initialize the channel and expose dlaInterface
-            self.initialize_webchannel()
+            # Try to initialize the channel - if QWebChannel isn't ready yet, retry
+            self.attempt_initialize_webchannel(attempt=1, max_attempts=10)
         
         self.page().runJavaScript(load_qwebchannel_js, on_qwebchannel_loaded)
+    
+    def attempt_initialize_webchannel(self, attempt=1, max_attempts=10):
+        """
+        Try to initialize QWebChannel. If QWebChannel is not defined yet, retry with backoff.
+        This handles timing issues on fresh page loads where qwebchannel.js takes time to load.
+        """
+        # First, check if QWebChannel is available
+        check_script = "typeof QWebChannel !== 'undefined'"
+        
+        def on_check_result(is_available):
+            if is_available:
+                # QWebChannel is ready, initialize now
+                log_vtt(f"[WEBCHANNEL] QWebChannel detected (attempt {attempt}), initializing...")
+                self.initialize_webchannel()
+            elif attempt < max_attempts:
+                # QWebChannel not ready yet, retry with exponential backoff
+                wait_ms = min(50 * attempt, 500)  # Cap at 500ms
+                log_vtt(f"[WEBCHANNEL] QWebChannel not ready (attempt {attempt}/{max_attempts}), retrying in {wait_ms}ms...")
+                
+                # Schedule retry
+                timer = QTimer()
+                timer.setSingleShot(True)
+                timer.timeout.connect(lambda: self.attempt_initialize_webchannel(attempt + 1, max_attempts))
+                timer.start(wait_ms)
+                
+                # Keep reference to prevent garbage collection
+                if not hasattr(self, '_init_timers'):
+                    self._init_timers = []
+                self._init_timers.append(timer)
+            else:
+                # Max attempts reached
+                log_vtt(f"[WEBCHANNEL] ERROR: QWebChannel still not available after {max_attempts} attempts")
+        
+        self.page().runJavaScript(check_script, on_check_result)
     
     def initialize_webchannel(self):
         """Initialize the QWebChannel in JavaScript and expose dlaInterface"""
