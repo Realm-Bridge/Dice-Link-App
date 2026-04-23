@@ -167,10 +167,10 @@ function initDiceEntry(diceRequest) {
     
     debugLog('Dice results to send', results);
     
-    // Send to DLC
-    sendMessage({
+    // Send to DLA via bridge
+    sendToDLA({
       type: 'diceResult',
-      originalRollId: diceRequest.originalRollId,
+      id: diceRequest.id,
       results: results
     });
     

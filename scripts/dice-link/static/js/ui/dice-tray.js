@@ -123,16 +123,27 @@ function initDiceTray() {
       
       debugLog(`Sending diceTrayRoll: ${formula}`);
       
-      if (typeof sendMessage !== 'function') {
+      // Check if communication is available
+      if (typeof window !== 'undefined' && window.dlaInterface && typeof window.dlaInterface.receiveDiceRequest === 'function') {
+        // Using new QWebChannel bridge
+        debugLog('Sending dice tray roll via QWebChannel bridge', { formula, flavor: 'Manual Dice Roll' });
+        window.dlaInterface.receiveDiceRequest(JSON.stringify({
+          type: 'diceTrayRoll',
+          formula: formula,
+          flavor: 'Manual Dice Roll'
+        }));
+      } else if (typeof sendMessage !== 'function') {
         debugError('sendMessage is not defined');
         return;
+      } else {
+        // Fallback to old sendMessage
+        debugLog('Fallback: Sending dice tray roll via sendMessage', { formula });
+        sendMessage({
+          type: 'diceTrayRoll',
+          formula: formula,
+          flavor: 'Manual Dice Roll'
+        });
       }
-      
-      sendMessage({
-        type: 'diceTrayRoll',
-        formula: formula,
-        flavor: 'Manual Dice Roll'
-      });
       
       // Reset tray after sending
       resetDiceTrayUI();
