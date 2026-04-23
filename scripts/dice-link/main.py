@@ -8,6 +8,7 @@ import os
 import json
 import urllib.request
 import urllib.error
+from urllib.parse import urlparse
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -23,181 +24,268 @@ os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
-from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end
+from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt
 
 
 class VTTValidator:
-    """Validates VTT URLs by checking for API endpoints or Foundry markers"""
+    """Validates if a URL points to a Foundry VTT server"""
     
     @staticmethod
-    def validate(url, callback):
-        """Validate VTT URL in a separate thread
-        
-        Args:
-            url: VTT server URL to validate
-            callback: Function to call with (is_valid, message, data) when done
+    def validate_url(url: str, callback):
         """
-        def call_on_main_thread(is_valid, message, data):
-            """Schedule callback on main Qt thread using QTimer"""
-            QTimer.singleShot(0, lambda: callback(is_valid, message, data))
+        Check if URL is a valid Foundry VTT server.
         
-        def validate_thread():
+        Foundry indicators:
+        - Page title contains "Foundry Virtual Tabletop"
+        - Has /api/status endpoint
+        - Returns specific HTML structure
+        """
+        try:
+            # Try the /api/status endpoint (Foundry v9+)
+            api_url = url.rstrip('/') + '/api/status'
+            req = urllib.request.Request(api_url, headers={'User-Agent': 'DLA-Validator/1.0'})
+            
             try:
-                # Ensure URL has a scheme
-                if not url.startswith(('http://', 'https://')):
-                    url_to_check = f'http://{url}'
-                else:
-                    url_to_check = url
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    data = response.read().decode('utf-8')
+                    # Foundry returns JSON with specific fields
+                    try:
+                        status = json.loads(data)
+                        if 'active' in status or 'users' in status:
+                            callback(True, "Foundry API status endpoint found", status)
+                            return
+                    except json.JSONDecodeError:
+                        pass
+            except urllib.error.HTTPError as e:
+                # 404 is expected if not Foundry, but other errors might indicate it's there
+                if e.code == 403:
+                    # Forbidden could mean it's Foundry but requires auth
+                    callback(True, "Foundry detected (API requires authentication)", None)
+                    return
+            
+            # Fallback: Try loading the main page and checking for Foundry markers
+            req = urllib.request.Request(url, headers={'User-Agent': 'DLA-Validator/1.0'})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                html = response.read().decode('utf-8', errors='ignore')
                 
-                # Try to get the root page to check for VTT markers
-                try:
-                    req = urllib.request.Request(f'{url_to_check}/api/status', headers={'User-Agent': 'Dice Link'})
-                    with urllib.request.urlopen(req, timeout=5) as response:
-                        # If /api/status exists, it's likely a Foundry instance
-                        call_on_main_thread(True, 'Valid Foundry instance detected', {'url': url_to_check})
+                # Check for Foundry-specific markers
+                foundry_markers = [
+                    'Foundry Virtual Tabletop',
+                    'foundryvtt',
+                    'game.ready',
+                    'FoundryVTT'
+                ]
+                
+                for marker in foundry_markers:
+                    if marker.lower() in html.lower():
+                        callback(True, f"Foundry marker found: '{marker}'", None)
                         return
-                except (urllib.error.HTTPError, urllib.error.URLError):
-                    # /api/status failed, try checking the root page for Foundry markers
-                    pass
                 
-                # Check root page for Foundry HTML markers
-                try:
-                    req = urllib.request.Request(url_to_check, headers={'User-Agent': 'Dice Link'})
-                    with urllib.request.urlopen(req, timeout=5) as response:
-                        html = response.read().decode('utf-8', errors='ignore')
-                        if any(marker in html.lower() for marker in ['foundry', 'vtt', '/ui/players', 'socket']):
-                            call_on_main_thread(True, 'VTT instance detected', {'url': url_to_check})
-                        else:
-                            call_on_main_thread(False, 'URL does not appear to be a valid VTT', {})
-                except (urllib.error.HTTPError, urllib.error.URLError) as e:
-                    call_on_main_thread(False, f'Could not connect to URL: {str(e)}', {})
-            except Exception as e:
-                call_on_main_thread(False, f'Validation error: {str(e)}', {})
-        
-        # Run validation in background thread to avoid blocking UI
-        thread = threading.Thread(target=validate_thread, daemon=True)
-        thread.start()
+                # Not Foundry
+                callback(False, "No Foundry markers found in page", None)
+                
+        except urllib.error.URLError as e:
+            callback(False, f"Connection failed: {e.reason}", None)
+        except Exception as e:
+            callback(False, f"Validation error: {str(e)}", None)
 
 
 class VTTWebPage(QWebEnginePage):
-    """Custom web page for VTT viewing - blocks external navigation"""
+    """Custom web page - only blocks external navigation"""
     
     def __init__(self, profile, allowed_origin, parent=None):
         super().__init__(profile, parent)
         self.allowed_origin = allowed_origin
     
-    def is_same_origin(self, url_str):
-        """Check if URL is same origin as allowed VTT server"""
+    def javaScriptConsoleMessage(self, level, message, line, source):
+        """Capture ALL JavaScript console output and display in our log"""
+        try:
+            # level is a JavaScriptConsoleMessageLevel enum, convert to int
+            level_int = int(level)
+            level_str = {0: "INFO", 1: "WARN", 2: "ERROR"}.get(level_int, "LOG")
+            
+            # Only log messages that seem relevant (errors, our debug, or PopOut related)
+            if level_int >= 1 or "DLA" in message or "POPOUT" in message or "SIMULATE" in message or "error" in message.lower() or "Error" in message:
+                log_vtt(f"[JS {level_str}] {message}")
+                if level_int >= 2:  # For errors, also show source info
+                    log_vtt(f"  Source: {source}, Line: {line}")
+        except Exception as e:
+            log_vtt(f"[Console Error] {message}")
+        
+    def is_same_origin(self, url_str: str) -> bool:
+        """Check if URL is same origin as allowed Foundry server"""
         if not url_str or url_str == 'about:blank':
             return True
         
-        try:
-            url = QUrl(url_str)
-            origin = QUrl(self.allowed_origin)
-            return url.host() == origin.host() and url.scheme() == origin.scheme()
-        except:
-            return False
+        parsed_new = urlparse(url_str)
+        parsed_allowed = urlparse(self.allowed_origin)
+        
+        return (parsed_new.scheme == parsed_allowed.scheme and 
+                parsed_new.netloc == parsed_allowed.netloc)
     
-    def acceptNavigationRequest(self, url, navigation_type, is_main_frame):
-        """Only allow navigation within the same origin"""
+    def acceptNavigationRequest(self, url, nav_type, is_main_frame):
+        """Only block external navigation"""
         url_str = url.toString()
         
-        # Always allow about:blank (used for popups)
-        if url_str == 'about:blank':
-            return True
-        
-        # Allow same-origin navigation
         if self.is_same_origin(url_str):
             return True
         
-        # Block external navigation
+        if url_str.startswith('javascript:'):
+            return True
+        
+        log_vtt(f"\nBLOCKED: External navigation to {url_str}")
         return False
 
 
 class VTTPopupWindow(QMainWindow):
-    """Window container for VTT popups - handles close events properly"""
+    """Window container for VTT pop-outs"""
     
-    def __init__(self, web_view, parent=None):
-        super().__init__(parent)
+    def __init__(self, web_view):
+        super().__init__()
         self.web_view = web_view
-        self.is_closing = False
+        self.is_closing = False  # Flag to prevent multiple close attempts
+        
+        self.setWindowTitle("VTT Pop-out")
+        self.resize(600, 700)
         
         self.setCentralWidget(web_view)
-        self.setWindowTitle("VTT Popup")
-        self.resize(800, 600)
+        
+        # Update title when page title changes
+        web_view.page().titleChanged.connect(self.on_title_changed)
+        
+        log_vtt("[POPUP] Window created")
     
+    def on_title_changed(self, title):
+        if title and title != "about:blank":
+            self.setWindowTitle(title)
+
     def closeEvent(self, event):
-        """Handle close - trigger sheet close button first if present"""
+        """Intercept OS close button - trigger the sheet's own close button instead"""
         if self.is_closing:
+            # Already processing close, allow it this time
+            log_vtt("[POPUP] Close already in progress, allowing close")
             event.accept()
             return
         
+        log_vtt("[POPUP] OS close button clicked - triggering sheet close button")
         self.is_closing = True
         
-        # Try to click the sheet's close button before closing
+        # Click the sheet's close button so PopOut module returns the sheet properly
         trigger_script = """
         (function() {
             var closeBtn = document.querySelector('[data-action="close"]');
             if (closeBtn) {
+                console.log('[POPUP] Found close button, clicking it');
                 closeBtn.click();
                 return 'clicked';
+            } else {
+                console.log('[POPUP] Close button not found');
+                return 'not_found';
             }
-            return 'not_found';
         })();
         """
         
         def on_result(result):
+            log_vtt(f"[POPUP] Trigger close button result: {result}")
             if result == 'clicked':
-                # Wait for unload, then close
+                # Sheet button was clicked, wait a moment for the page to unload, then close the window
+                log_vtt("[POPUP] Sheet button clicked, waiting for unload...")
+                # Use a timer to wait for the unload to complete
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(500, self.perform_close)
             else:
+                # No sheet button found - close immediately
+                log_vtt("[POPUP] No sheet button, closing window directly")
                 self.perform_close()
         
         self.web_view.page().runJavaScript(trigger_script, on_result)
+        
+        # Ignore the close event for now - we'll call perform_close() when ready
         event.ignore()
     
     def perform_close(self):
         """Actually close the window"""
-        self.close()
+        log_vtt("[POPUP] Performing window close")
+        self.close()  # This will call closeEvent again, but is_closing flag will allow it
 
 
 class VTTWebView(QWebEngineView):
-    """Custom web view for displaying VTT instances - handles popups properly"""
+    """
+    Custom WebEngineView that properly handles window.open() by overriding createWindow().
     
-    def __init__(self, url, parent=None):
+    This is the KEY fix: when JavaScript calls window.open(), Qt calls createWindow()
+    and the RETURNED view becomes the popup. JavaScript gets a reference to this window,
+    which is what Foundry's PopOut module needs.
+    """
+    
+    def __init__(self, allowed_origin, parent=None):
         super().__init__(parent)
-        self.allowed_origin = url
+        self.allowed_origin = allowed_origin
         self.popup_windows = []  # Keep references to prevent garbage collection
         
-        # Create custom page with same profile for session sharing
-        self.custom_page = VTTWebPage(self.page().profile(), url, self)
+        # Set custom page for navigation blocking
+        self.custom_page = VTTWebPage(self.page().profile(), allowed_origin)
         self.setPage(self.custom_page)
-        
-        # Load the VTT
-        self.load(QUrl(url))
     
     def createWindow(self, window_type):
-        """Handle window.open() calls from the VTT - create proper popup windows"""
-        # Create popup view sharing the same profile
+        """
+        Override createWindow - called when JavaScript uses window.open().
+        
+        Create popup and inject JavaScript to expose document operations properly.
+        """
+        log_vtt(f"\n--- createWindow() called ---")
+        log_vtt(f"Window type: {window_type}")
+        
+        # Create popup view that shares the SAME profile as the main page
         popup_view = QWebEngineView()
         popup_page = VTTWebPage(self.page().profile(), self.allowed_origin, popup_view)
         popup_view.setPage(popup_page)
         
-        # Inject script to mark popup as ready
-        expose_script = """
+        # Inject JavaScript into popup to expose document operations
+        # This allows PopOut module's document.open/write/close to work
+        expose_document_script = """
         (function() {
+            // Ensure the popup exposes itself properly as a window
             window.__popupReady = true;
-            console.log('[VTT Popup] Popup initialized');
+            console.log('[POPUP] Popup initialized, document available');
         })();
         """
-        popup_page.runJavaScript(expose_script)
+        popup_page.runJavaScript(expose_document_script)
         
         # Create window container
         popup_window = VTTPopupWindow(popup_view)
         popup_window.show()
         
-        # Keep reference
+        # Keep references
+        self.popup_windows.append(popup_window)
+        
+        log_vtt("Popup created and document exposed to JavaScript")
+        
+        # Return the page (not view) - this gives JavaScript a proper document interface
+        # Actually, we need to return something JavaScript can interact with
+        # For now return the view - Qt should handle mapping window.open() return value
+        return popup_view
+
+
+class VTTPopupView(QWebEngineView):
+    """WebEngineView for popup windows - can create nested popups if needed"""
+    
+    def __init__(self, allowed_origin, parent=None):
+        super().__init__(parent)
+        self.allowed_origin = allowed_origin
+        self.popup_windows = []
+        
+        # Set custom page with navigation restrictions
+        self.custom_page = VTTWebPage(self.page().profile(), allowed_origin)
+        self.setPage(self.custom_page)
+    
+    def createWindow(self, window_type):
+        """Allow nested popups with same restrictions"""
+        log_vtt(f"[POPUP] Nested createWindow() called")
+        
+        popup_view = VTTPopupView(self.allowed_origin)
+        popup_window = VTTPopupWindow(popup_view)
+        popup_window.show()
         self.popup_windows.append(popup_window)
         
         return popup_view
@@ -255,23 +343,24 @@ class ConnectionDialog(QDialog):
             self.show_error("Please enter a URL")
             return
         
-        # Start validation
-        self.is_validating = True
+        # Store the URL being validated
+        self.validating_url = url
+        
+        # Update UI state
         self.connect_btn.setEnabled(False)
         self.connect_btn.setText("Validating...")
         self.error_label.setVisible(False)
         
-        # Validate URL
-        VTTValidator.validate(url, self.on_validation_complete)
+        # Validate URL (synchronous - callback called directly)
+        VTTValidator.validate_url(url, self.on_validation_complete)
     
     def on_validation_complete(self, is_valid, message, data):
         """Handle validation result"""
         self.connect_btn.setEnabled(True)
         self.connect_btn.setText("Connect")
-        self.is_validating = False
         
         if is_valid:
-            self.vtt_url = data.get('url')
+            self.vtt_url = self.validating_url
             self.accept()
         else:
             self.show_error(message)
@@ -335,13 +424,19 @@ class WindowController(QObject):
         if not hasattr(self, 'vtt_windows'):
             self.vtt_windows = []
         
+        allowed_origin = url.rstrip('/')
+        
         vtt_window = QMainWindow()
         vtt_window.setWindowTitle("VTT Viewer")
         vtt_window.setGeometry(100, 100, 1200, 800)
         
-        # Create VTT web view
-        vtt_view = VTTWebView(url)
+        # Create VTT web view with allowed origin
+        vtt_view = VTTWebView(allowed_origin)
         vtt_window.setCentralWidget(vtt_view)
+        
+        # Load the URL
+        vtt_view.load(QUrl(url))
+        
         vtt_window.show()
         
         # Keep reference

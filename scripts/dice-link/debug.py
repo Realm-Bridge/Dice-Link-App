@@ -154,3 +154,13 @@ def log_drag_end():
     """Log drag end."""
     if DEBUG_ENABLED and DEBUG_DRAG:
         print(f"[Drag DEBUG] === DRAG END ===")
+
+
+# VTT debug switch
+DEBUG_VTT = True
+
+
+def log_vtt(message: str):
+    """Log VTT-related debug messages."""
+    if DEBUG_ENABLED and DEBUG_VTT:
+        print(f"[VTT DEBUG] {message}")
