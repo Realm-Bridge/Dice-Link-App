@@ -417,9 +417,197 @@ Once approach is chosen:
 
 ---
 
----
+## CRITICAL: Foundry PopOut Module Integration (Qt WebEngine/Embedded Browser)
 
-## Browser Engine Compatibility & Licensing Analysis
+**Status:** Solved - Tested and working  
+**Date Documented:** April 23, 2026  
+**Impact:** MANDATORY for any Qt-based embedded browser approach  
+
+### The Problem: PopOut Windows Don't Work in Qt WebEngine
+
+Foundry v14+ includes a PopOut module that allows players to "pop out" character sheets into separate browser windows. When loaded in a Qt WebEngine embedded browser, this fails silently:
+
+1. PopOut module calls `window.open("about:blank", "_blank", features)`
+2. Qt's `createWindow()` override returns a popup object to JavaScript
+3. PopOut module tries: `popout.location.hash = "popout"` 
+4. **Crashes** - The popup object lacks a `.location` property
+5. Popup window opens but stays blank; sheet access is lost
+
+**Root Cause:** Qt's `createWindow()` returns a `QWebEngineView` object (a Python/C++ Qt object), NOT a proper JavaScript `Window` object with a `.location` property that the PopOut module expects.
+
+### The Solution: JavaScript Patch + Smart Window Management
+
+**Step 1: Patch `window.open()` before Foundry loads**
+
+Inject this JavaScript into the main page (e.g., in your page load handler) BEFORE any Foundry modules run:
+
+```python
+# In your FoundryValidator or main initialization:
+
+patch_script = """
+(function() {
+    console.log('[PATCH] Installing window.open() patch...');
+    var originalWindowOpen = window.open;
+    
+    window.open = function(url, name, features) {
+        console.log('[PATCH] window.open() called');
+        var popup = originalWindowOpen.call(window, url, name, features);
+        
+        if (!popup) return null;
+        
+        // Qt's popup lacks .location - add it
+        if (!popup.location) {
+            console.log('[PATCH] Adding location object to popup');
+            popup.location = {
+                hash: "",
+                href: url || "about:blank",
+                pathname: "/",
+                search: "",
+                protocol: "about:"
+            };
+        }
+        
+        // Test that it works
+        try {
+            popup.location.hash = "popout";
+            console.log('[PATCH] Successfully set location.hash');
+        } catch(e) {
+            console.log('[PATCH] ERROR:', e.message);
+        }
+        
+        return popup;
+    };
+    
+    console.log('[PATCH] window.open() override installed');
+    return 'success';
+})();
+"""
+
+# Execute this after page loads but before Foundry initializes
+web_view.page().runJavaScript(patch_script)
+```
+
+**Why this works:**
+- `popout.location.hash = "popout"` now succeeds because we added the `.location` object
+- PopOut module can proceed with `document.open()`, `document.write()`, `document.close()`
+- Qt's real popup document object works fine - we only needed to add the missing `.location` property
+
+**Step 2: Handle OS close button properly**
+
+Users will see TWO close buttons on the popup:
+- OS window close button (minimize/maximize/close at top)
+- Character sheet's own close button (part of Foundry UI)
+
+If users click the OS close button WITHOUT clicking the sheet's button, the sheet data is lost (PopOut module doesn't get to return it to the main window).
+
+**Solution: Intercept the OS close button**
+
+```python
+class PopupWindow(QMainWindow):
+    def __init__(self, web_view, log_callback):
+        super().__init__()
+        self.log = log_callback
+        self.web_view = web_view
+        self.is_closing = False  # Prevent double-close
+        
+        # ... standard setup ...
+        self.setCentralWidget(web_view)
+    
+    def closeEvent(self, event):
+        """OS close button - trigger sheet close button instead"""
+        if self.is_closing:
+            # Already closing, allow it
+            event.accept()
+            return
+        
+        self.is_closing = True
+        self.log("[POPUP] OS close clicked - triggering sheet close button")
+        
+        # Click the sheet's close button
+        trigger_script = """
+        (function() {
+            var closeBtn = document.querySelector('[data-action="close"]');
+            if (closeBtn) {
+                console.log('[POPUP] Found sheet close button, clicking');
+                closeBtn.click();
+                return 'clicked';
+            }
+            return 'not_found';
+        })();
+        """
+        
+        def on_result(result):
+            if result == 'clicked':
+                # Wait for PopOut unload to complete
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(500, self.perform_close)
+            else:
+                self.perform_close()
+        
+        self.web_view.page().runJavaScript(trigger_script, on_result)
+        event.ignore()  # Don't close yet - wait for sheet button
+    
+    def perform_close(self):
+        """Actually close the window"""
+        self.close()  # This calls closeEvent again, but is_closing=True allows it
+```
+
+**Key points:**
+- `is_closing` flag prevents rapid re-triggering of close events
+- 500ms delay gives PopOut module time to return the sheet to main window
+- Sheet button click (`[data-action="close"]`) triggers PopOut's unload handler
+
+**Step 3: Test with logging**
+
+Add these console.log entries to verify the patch is working:
+
+```javascript
+// Should appear in your test app logs:
+// [PATCH] Installing window.open() patch...
+// [PATCH] window.open() called
+// [PATCH] location object added to popup
+// [PATCH] Successfully set location.hash
+// [PATCH] window.open() override installed
+
+// When user clicks OS close:
+// [POPUP] OS close clicked - triggering sheet close button
+// [POPUP] Found sheet close button, clicking
+// [POPUP] unload event - sheet returned to main window
+// [POPUP] Performing window close
+```
+
+### Why This Is Mandatory
+
+1. **PopOut is built-in to Foundry v14+** - not optional
+2. **Players expect it to work** - not having working popouts is a regression from browser experience
+3. **Silent failures are worse than no feature** - broken popouts lose sheet access without warning
+4. **This affects all embedded browser approaches** - Qt, CEF, or any other engine returning non-standard Window objects
+
+### Gotchas & Gotchas
+
+1. **Timing matters** - patch must be installed BEFORE Foundry's PopOut module runs. Best practice: install after DOM ready, before module initialization
+
+2. **The 500ms delay** - May be too short on slow systems or too long for impatient users. Adjust based on testing. The delay allows PopOut's `beforeunload` handler to fire and return the sheet to the main window.
+
+3. **`[data-action="close"]` selector** - This is specific to Foundry's PopOut module architecture. If Foundry changes the PopOut UI (unlikely), this selector would need updating.
+
+4. **Multiple popups** - The patch works for any number of popups simultaneously. Each gets its own `.location` object added.
+
+5. **Closing main window vs popup** - Only handle the POPUP close button. Don't intercept the main Foundry window close - let it close normally.
+
+### Testing Checklist
+
+- [ ] Pop out a character sheet - should display normally
+- [ ] Close sheet with Foundry's close button - should return to main window
+- [ ] Close popup window with OS close button - should trigger sheet close and return sheet
+- [ ] Open multiple popouts simultaneously - each should work independently
+- [ ] Check browser console for [PATCH] and [POPUP] messages
+- [ ] Verify no JavaScript errors in console
+
+### Related Code Files
+
+- PopOut module: `/popout/popout.js` (lines 1159-1327 contain the core logic)
+- Test implementation: `/scripts/dice-link/tests/pyqt6-test7-popouts-and-validation.py` (PopupWindow class, test_patch_location_hash method)
 
 **Critical Requirement:** Any embedded browser solution must use **Chromium 99 or later** to support CSS Cascade Layers.
 
