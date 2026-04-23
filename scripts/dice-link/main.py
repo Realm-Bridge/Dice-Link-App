@@ -21,7 +21,7 @@ os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
-from debug import log_startup, log_server
+from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end
 
 
 class WindowController(QObject):
@@ -76,6 +76,7 @@ class DraggableWebEngineView(QWebEngineView):
         if event.position().y() < 80:
             self.is_dragging = True
             self.drag_position = event.globalPosition().toPoint() - self.pos()
+            log_drag_start(event.globalPosition(), self.drag_position, self.pos())
             event.accept()
         else:
             super().mousePressEvent(event)
@@ -83,7 +84,12 @@ class DraggableWebEngineView(QWebEngineView):
     def mouseMoveEvent(self, event):
         """Handle mouse move for window dragging"""
         if self.is_dragging:
-            self.move(event.globalPosition().toPoint() - self.drag_position)
+            global_pos_float = event.globalPosition()
+            global_pos_int = global_pos_float.toPoint()
+            calculated_pos = global_pos_int - self.drag_position
+            current_window_pos = self.pos()
+            log_drag_move(global_pos_float, global_pos_int, self.drag_position, calculated_pos, current_window_pos)
+            self.move(calculated_pos)
             event.accept()
         else:
             super().mouseMoveEvent(event)
@@ -91,6 +97,7 @@ class DraggableWebEngineView(QWebEngineView):
     def mouseReleaseEvent(self, event):
         """Handle mouse release"""
         self.is_dragging = False
+        log_drag_end()
         super().mouseReleaseEvent(event)
     
     def keyPressEvent(self, event):
