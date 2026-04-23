@@ -171,7 +171,10 @@ function selectActionButton(actionId) {
     configChanges: configChanges
   });
   
-  debugLog('Button selection sent to DLC');
+  // Close the roll request window immediately - dice-entry state will open when DLC responds
+  updateRollWindow('idle');
+  
+  debugLog('Button selection sent to DLC, roll request window closed');
 }
 
 /**
