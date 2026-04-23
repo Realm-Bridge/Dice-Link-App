@@ -68,8 +68,16 @@ class DraggableWebEngineView(QWebEngineView):
         super().__init__()
         self.drag_position = QPoint()
         self.is_dragging = False
-        # Remove grey border
-        self.setStyleSheet("border: none; outline: none;")
+        # Remove grey border and set background
+        self.setStyleSheet("""
+            QWebEngineView {
+                border: none;
+                outline: none;
+                margin: 0px;
+                padding: 0px;
+                background-color: transparent;
+            }
+        """)
     
     def mousePressEvent(self, event):
         """Handle mouse press for window dragging"""
@@ -198,8 +206,9 @@ def main():
         # Update window size
         browser.setFixedSize(scaled_width, scaled_height)
         
-        # Update zoom factor
-        browser.setZoomFactor(device_pixel_ratio)
+        # Update zoom factor - inverse of device ratio so content scales DOWN with window
+        # If device ratio is 2.0 (200% scaling), zoom should be 0.5 to fit content in half-sized window
+        browser.setZoomFactor(1.0 / device_pixel_ratio)
         
         # Update rounded corners mask
         corner_radius = 24
