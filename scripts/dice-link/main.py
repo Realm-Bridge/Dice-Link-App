@@ -209,6 +209,33 @@ class VTTPopupWindow(QMainWindow):
         self.close()  # This will call closeEvent again, but is_closing flag will allow it
 
 
+class VTTViewingWindow(QMainWindow):
+    """Main viewing window for VTT - closes all popups when closed"""
+    
+    def __init__(self, vtt_view):
+        super().__init__()
+        self.vtt_view = vtt_view
+        
+        self.setWindowTitle("VTT Viewer")
+        self.setGeometry(100, 100, 1200, 800)
+        self.setCentralWidget(vtt_view)
+        
+        log_vtt("[VIEWER] Viewing window created")
+    
+    def closeEvent(self, event):
+        """Close all popup windows when viewing window closes"""
+        log_vtt("[VIEWER] Viewing window closing - closing all popups")
+        
+        # Close all popup windows created by this viewing window
+        if hasattr(self.vtt_view, 'popup_windows'):
+            for popup_window in self.vtt_view.popup_windows:
+                log_vtt(f"[VIEWER] Closing popup window")
+                popup_window.close()
+        
+        # Allow the viewing window to close
+        event.accept()
+
+
 class VTTWebView(QWebEngineView):
     """
     Custom WebEngineView that properly handles window.open() by overriding createWindow().
@@ -426,13 +453,11 @@ class WindowController(QObject):
         
         allowed_origin = url.rstrip('/')
         
-        vtt_window = QMainWindow()
-        vtt_window.setWindowTitle("VTT Viewer")
-        vtt_window.setGeometry(100, 100, 1200, 800)
-        
         # Create VTT web view with allowed origin
         vtt_view = VTTWebView(allowed_origin)
-        vtt_window.setCentralWidget(vtt_view)
+        
+        # Create viewing window (which will close all popups when closed)
+        vtt_window = VTTViewingWindow(vtt_view)
         
         # Load the URL
         vtt_view.load(QUrl(url))
