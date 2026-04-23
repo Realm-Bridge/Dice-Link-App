@@ -190,15 +190,21 @@ class DLABridge(QObject):
             from bridge_state import send_player_modes_to_ui, update_connection_player_name, send_connection_status_to_ui
             send_player_modes_to_ui(data)
             
-            # Extract player name from first player in the modes data
-            # data format: {"playerId": {"name": "PlayerName", "mode": "digital", ...}, ...}
+            # Extract logged-in player name by looking for isSelf flag
+            # data format: {"playerId": {"name": "PlayerName", "mode": "digital", "isSelf": true, ...}, ...}
+            player_name = None
             for player_id, player_data in data.items():
-                if isinstance(player_data, dict) and 'name' in player_data:
-                    player_name = player_data['name']
-                    update_connection_player_name(player_name)
-                    # Update connection status display with the actual player name
-                    send_connection_status_to_ui(connected=True, player_name=player_name)
+                if isinstance(player_data, dict) and player_data.get('isSelf') is True:
+                    player_name = player_data.get('name')
                     break
+            
+            if player_name:
+                update_connection_player_name(player_name)
+                # Update connection status display with the logged-in player name
+                send_connection_status_to_ui(connected=True, player_name=player_name)
+                self.log_vtt(f"[BRIDGE] Logged-in player: {player_name}")
+            else:
+                self.log_vtt("[BRIDGE] WARNING: No player found with isSelf=true in player modes data")
                     
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receivePlayerModesUpdate")
