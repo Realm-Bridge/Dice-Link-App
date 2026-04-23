@@ -4,24 +4,6 @@
  */
 
 /**
- * Send result back to DLA via QWebChannel bridge
- * @param {Object} resultData - Data to send back to Foundry DLC
- */
-function sendToDLA(resultData) {
-  if (window.dlaInterface && typeof window.dlaInterface.receiveRollResult === 'function') {
-    // Using new QWebChannel bridge
-    debugLog('Sending to DLA via QWebChannel bridge', resultData);
-    window.dlaInterface.receiveRollResult(JSON.stringify(resultData));
-  } else if (typeof sendMessage === 'function') {
-    // Fallback to old sendMessage (for testing/compatibility)
-    debugLog('Fallback: Sending via sendMessage', resultData);
-    sendMessage(resultData);
-  } else {
-    debugError('No communication method available (neither dlaInterface nor sendMessage)');
-  }
-}
-
-/**
  * Cache Roll Window elements
  */
 let rwElements = {};
@@ -181,15 +163,15 @@ function selectActionButton(actionId) {
     });
   }
   
-  // Send button selection to DLA
-  sendToDLA({
+  // Send button selection to DLC (use mapped ID)
+  sendMessage({
     type: 'buttonSelect',
     rollId: currentRoll.id,
     button: mappedActionId,
     configChanges: configChanges
   });
   
-  debugLog('Button selection sent to DLA');
+  debugLog('Button selection sent to DLC');
 }
 
 /**
@@ -286,10 +268,10 @@ function cancelRoll() {
   const isTestRoll = rollId.startsWith('test-');
   
   if (!isTestRoll) {
-    // Send cancel message to DLA via bridge
-    sendToDLA({
-      type: 'rollCancelled',
-      id: rollId,
+    // Send cancel message to server (matches Python backend expectation)
+    sendMessage({
+      type: 'cancelRoll',
+      rollId: rollId,
       reason: 'User cancelled'
     });
   }

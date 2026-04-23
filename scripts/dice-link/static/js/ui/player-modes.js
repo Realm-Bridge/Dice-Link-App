@@ -1,21 +1,6 @@
 // Player Modes UI Module
 // Handles rendering and interaction for the Player Modes section
 
-// Utility function to send player mode actions to DLA via bridge
-function sendPlayerModeAction(data) {
-    if (window.dlaInterface && typeof window.dlaInterface.receivePlayerModesUpdate === 'function') {
-        // Using new QWebChannel bridge
-        debugLog('Sending player mode action via QWebChannel bridge', data);
-        window.dlaInterface.receivePlayerModesUpdate(JSON.stringify(data));
-    } else if (typeof sendMessage === 'function') {
-        // Fallback to old sendMessage
-        debugLog('Fallback: Sending player mode action via sendMessage', data);
-        sendMessage(data);
-    } else {
-        debugError('No communication method available for player mode action');
-    }
-}
-
 // Utility function to escape HTML
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -159,7 +144,7 @@ function handleApproveClick(event) {
     const playerId = event.currentTarget.dataset.playerId;
     debugLog(`[Player Modes] Approving player: ${playerId}`);
     
-    sendPlayerModeAction({
+    sendMessage({
         type: 'playerModeAction',
         action: 'approve',
         playerId: playerId
@@ -171,7 +156,7 @@ function handleDenyClick(event) {
     const playerId = event.currentTarget.dataset.playerId;
     debugLog(`[Player Modes] Denying player: ${playerId}`);
     
-    sendPlayerModeAction({
+    sendMessage({
         type: 'playerModeAction',
         action: 'deny',
         playerId: playerId
