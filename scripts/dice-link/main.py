@@ -197,9 +197,6 @@ class DLABridge(QObject):
                 if isinstance(player_data, dict) and 'name' in player_data:
                     player_name = player_data['name']
                     update_connection_player_name(player_name)
-                    # Re-send connection status with actual player name
-                    from bridge_state import send_connection_status_to_ui
-                    send_connection_status_to_ui(connected=True, player_name=player_name)
                     break
                     
         except json.JSONDecodeError:
