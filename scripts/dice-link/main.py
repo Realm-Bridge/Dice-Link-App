@@ -91,6 +91,15 @@ class DraggableWebEngineView(QWebEngineView):
         """Handle mouse release"""
         self.is_dragging = False
         super().mouseReleaseEvent(event)
+    
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts"""
+        # F12 opens DevTools
+        if event.key() == Qt.Key.Key_F12:
+            self.page().setDevToolsPage(self.page())
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
 
 def run_server():
