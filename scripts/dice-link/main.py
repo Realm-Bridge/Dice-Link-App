@@ -187,7 +187,7 @@ class DLABridge(QObject):
             self.log_vtt(f"[BRIDGE] Received player modes update")
             
             # Forward to UI controls window via Flask WebSocket
-            from bridge_state import send_player_modes_to_ui, update_connection_player_name
+            from bridge_state import send_player_modes_to_ui, update_connection_player_name, send_connection_status_to_ui
             send_player_modes_to_ui(data)
             
             # Extract player name from first player in the modes data
