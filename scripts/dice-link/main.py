@@ -178,15 +178,30 @@ def main():
     browser.page().setWebChannel(channel)
     
     # Lock window to fixed size - cannot be resized
-    fixed_width = 894
-    fixed_height = 600
-    browser.setFixedSize(fixed_width, fixed_height)
+    # Original planned size - will be scaled by device pixel ratio
+    fixed_width = 1788
+    fixed_height = 1500
+    
+    # Get device pixel ratio and scale window accordingly
+    # This ensures consistent sizing across different DPI settings without blur
+    screen = browser.screen()
+    device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
+    
+    # Calculate scaled window size
+    scaled_width = int(fixed_width / device_pixel_ratio)
+    scaled_height = int(fixed_height / device_pixel_ratio)
+    
+    browser.setFixedSize(scaled_width, scaled_height)
+    
+    # Set zoom factor to compensate - this scales all content proportionally
+    # zoom factor = 1.0 is 100%, so we set it back to original by multiplying by DPI ratio
+    browser.setZoomFactor(device_pixel_ratio)
     
     # Set rounded corners on frameless window
     # Note: WA_TranslucentBackground handles transparency in PyQt6 - setMask is a fallback
     corner_radius = 24
     path = QPainterPath()
-    path.addRoundedRect(0, 0, fixed_width, fixed_height, corner_radius, corner_radius)
+    path.addRoundedRect(0, 0, scaled_width, scaled_height, corner_radius, corner_radius)
     region = QRegion(path.toFillPolygon().toPolygon())
     browser.setMask(region)
     
