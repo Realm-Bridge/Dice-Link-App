@@ -69,6 +69,7 @@ class DraggableWebEngineView(QWebEngineView):
         self.drag_position = QPoint()
         self.drag_window_pos = QPoint()
         self.is_dragging = False
+        self.device_pixel_ratio = 1.0
         # Remove grey border and set background
         self.setStyleSheet("""
             QWebEngineView {
@@ -80,13 +81,18 @@ class DraggableWebEngineView(QWebEngineView):
             }
         """)
     
+    def set_device_pixel_ratio(self, ratio):
+        """Store the DPI ratio for drag calculations"""
+        self.device_pixel_ratio = ratio
+    
     def mousePressEvent(self, event):
         """Handle mouse press for window dragging"""
         # Check if click is in title bar area (top 80px)
-        # PyQt6 uses event.position() instead of event.y()/event.globalPos()
-        if event.position().y() < 80:
+        # Use device-independent coordinates (before zoom scaling)
+        logical_y = event.position().y() / self.device_pixel_ratio
+        if logical_y < 80:
             self.is_dragging = True
-            # Store both the initial mouse position and initial window position
+            # Store initial mouse position in screen coordinates (not zoomed)
             self.drag_position = event.globalPosition().toPoint()
             self.drag_window_pos = self.window().pos()
             event.accept()
@@ -96,9 +102,10 @@ class DraggableWebEngineView(QWebEngineView):
     def mouseMoveEvent(self, event):
         """Handle mouse move for window dragging"""
         if self.is_dragging:
-            # Calculate delta movement from initial positions to avoid rounding errors
+            # Calculate delta in screen coordinates (unaffected by zoom)
             current_pos = event.globalPosition().toPoint()
             delta = current_pos - self.drag_position
+            # Apply delta to window position
             new_window_pos = self.drag_window_pos + delta
             self.window().move(new_window_pos)
             event.accept()
@@ -206,6 +213,9 @@ def main():
         screen = browser.screen()
         device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
         
+        # Update the browser's DPI ratio for drag calculations
+        browser.set_device_pixel_ratio(device_pixel_ratio)
+        
         # Calculate scaled window size
         scaled_width = int(browser.fixed_width / device_pixel_ratio)
         scaled_height = int(browser.fixed_height / device_pixel_ratio)
@@ -235,6 +245,30 @@ def main():
         screen.logicalDotsPerInchChanged.connect(update_dpi_scaling)
         # If window moves to different display, also update scaling
         screen.geometryChanged.connect(update_dpi_scaling)
+    
+    # Make the page background transparent to remove grey border
+    # Inject CSS that forces the body and all containers to have transparent background
+    def on_load_finished(ok):
+        if ok:
+            transparent_css = """
+            (function() {
+                var style = document.createElement('style');
+                style.innerHTML = `
+                    * { 
+                        background-color: transparent !important; 
+                        margin: 0;
+                        padding: 0;
+                    }
+                    body, html {
+                        background-color: transparent !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            })();
+            """
+            browser.page().runJavaScript(transparent_css)
+    
+    browser.page().loadFinished.connect(on_load_finished)
     
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST
