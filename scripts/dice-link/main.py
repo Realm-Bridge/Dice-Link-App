@@ -7,11 +7,11 @@ import sys
 import os
 import json
 from pathlib import Path
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
-from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtGui import QPainterPath, QRegion, QDesktopServices
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
+from PyQt6.QtWebChannel import QWebChannel
+from PyQt6.QtGui import QPainterPath, QRegion, QDesktopServices
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -160,14 +160,14 @@ def main():
     browser = DraggableWebEngineView()
     
     # Enable transparent background for rounded corners
-    browser.setAttribute(Qt.WA_TranslucentBackground, True)
+    browser.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
     
     # Set up window controller for frameless window control
     window_controller = WindowController(browser)
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
-    browser.setWindowFlags(Qt.FramelessWindowHint)
+    browser.setWindowFlags(Qt.WindowType.FramelessWindowHint)
     
     # Set up web channel for JavaScript-to-Python communication
     channel = QWebChannel()
