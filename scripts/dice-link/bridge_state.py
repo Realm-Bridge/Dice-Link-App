@@ -57,3 +57,28 @@ def send_roll_result_to_foundry(result_data):
             return False
     return False
 
+
+def send_connection_status_to_ui(connected, player_name=None):
+    """
+    Send connection status to the UI controls window.
+    Called when DLC connects or disconnects via QWebChannel.
+    """
+    try:
+        from core.websocket_handler import broadcast_to_ui
+        
+        status_message = {
+            'type': 'connectionStatus',
+            'connected': connected,
+            'playerName': player_name or 'Foundry VTT'
+        }
+        
+        # Use asyncio to run the async broadcast function from a sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(broadcast_to_ui(status_message))
+        print(f"[BRIDGE STATE] Broadcast connection status to UI: connected={connected}")
+        return True
+    except Exception as e:
+        print(f"[BRIDGE STATE] Error broadcasting connection status to UI: {e}")
+        return False
+

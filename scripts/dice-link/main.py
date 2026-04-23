@@ -117,9 +117,13 @@ class DLABridge(QObject):
         """
         self.log_vtt("[BRIDGE] DLC module has initialized and announced it's ready")
         
-        # Emit connection status as connected
+        # Emit connection status as connected (to Foundry/DLC via QWebChannel)
         self.connectionStatusChanged.emit("connected")
         self.log_vtt("[BRIDGE] Emitted connectionStatusChanged: connected")
+        
+        # Broadcast connection status to UI controls window (via Flask WebSocket)
+        from bridge_state import send_connection_status_to_ui
+        send_connection_status_to_ui(connected=True, player_name="Foundry VTT")
         
         # Emit signal to acknowledge DLC is present
         self.dlcModuleReady.emit(json.dumps({
