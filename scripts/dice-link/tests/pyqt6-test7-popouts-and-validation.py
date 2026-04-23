@@ -99,8 +99,9 @@ class PopupWindow(QMainWindow):
         super().__init__()
         self.log = log_callback
         self.web_view = web_view
+        self.is_closing = False  # Flag to prevent multiple close attempts
         
-        self.setWindowTitle("Foundry Pop-out - Use sheet's X button to close")
+        self.setWindowTitle("Foundry Pop-out")
         self.resize(600, 700)
         
         self.setCentralWidget(web_view)
@@ -113,42 +114,17 @@ class PopupWindow(QMainWindow):
     def on_title_changed(self, title):
         if title and title != "about:blank":
             self.setWindowTitle(title)
-            # Once we have a real title, install a listener so that when the
-            # page unloads (sheet returned to main window), we close the Qt window
-            install_script = """
-            (function() {
-                if (window.__dla_close_listener) return;
-                window.__dla_close_listener = true;
-                window.addEventListener('unload', function() {
-                    console.log('[POPUP] unload event - sheet returned to main window');
-                });
-                console.log('[POPUP] unload listener installed');
-            })();
-            """
-            self.web_view.page().runJavaScript(install_script)
-            # Also connect loadFinished - if page reloads to blank AFTER having content, close
-            self.web_view.page().loadFinished.connect(self.on_load_finished)
-
-    def on_load_finished(self, ok):
-        """Close popup if page reloads to blank after having had content"""
-        self.web_view.page().runJavaScript(
-            "document.title || ''",
-            lambda title: self._check_if_blank(title)
-        )
-
-    def _check_if_blank(self, title):
-        if not title or title.strip() == "":
-            self.log("[POPUP] Page is blank after content - closing popup window")
-            # Disconnect to avoid repeat calls
-            try:
-                self.web_view.page().loadFinished.disconnect(self.on_load_finished)
-            except Exception:
-                pass
-            self.destroy()
 
     def closeEvent(self, event):
         """Intercept OS close button - trigger the sheet's own close button instead"""
+        if self.is_closing:
+            # Already processing close, allow it this time
+            self.log("[POPUP] Close already in progress, allowing close")
+            event.accept()
+            return
+        
         self.log("[POPUP] OS close button clicked - triggering sheet close button")
+        self.is_closing = True
         
         # Click the sheet's close button so PopOut module returns the sheet properly
         trigger_script = """
@@ -167,15 +143,26 @@ class PopupWindow(QMainWindow):
         
         def on_result(result):
             self.log(f"[POPUP] Trigger close button result: {result}")
-            if result == 'not_found':
-                # No sheet button found - safe to just close
+            if result == 'clicked':
+                # Sheet button was clicked, wait a moment for the page to unload, then close the window
+                self.log("[POPUP] Sheet button clicked, waiting for unload...")
+                # Use a timer to wait for the unload to complete
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(500, self.perform_close)
+            else:
+                # No sheet button found - close immediately
                 self.log("[POPUP] No sheet button, closing window directly")
-                self.deleteLater()
+                self.perform_close()
         
         self.web_view.page().runJavaScript(trigger_script, on_result)
         
-        # Always ignore the OS close event - let the sheet button handle it
+        # Ignore the close event for now - we'll call perform_close() when ready
         event.ignore()
+    
+    def perform_close(self):
+        """Actually close the window"""
+        self.log("[POPUP] Performing window close")
+        self.close()  # This will call closeEvent again, but is_closing flag will allow it
 
 
 class FoundryWebView(QWebEngineView):
