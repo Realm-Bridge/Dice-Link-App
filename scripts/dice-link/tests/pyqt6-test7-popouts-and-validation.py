@@ -21,22 +21,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
-from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSignal
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PyQt6.QtWebChannel import QWebChannel
-
-
-class PopupBridge(QObject):
-    """Bridge between JavaScript and Python to close the popup window"""
-    
-    closeRequested = pyqtSignal()
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-    
-    def requestClose(self):
-        """Called from JavaScript when the sheet is unloading"""
-        self.closeRequested.emit()
 
 
 class FoundryValidator:
@@ -113,82 +99,20 @@ class PopupWindow(QMainWindow):
         super().__init__()
         self.log = log_callback
         self.web_view = web_view
-        self.has_had_content = False  # Track if we've seen actual content
         
-        self.setWindowTitle("Foundry Pop-out")
+        self.setWindowTitle("Foundry Pop-out - Use sheet's X button to close")
         self.resize(600, 700)
-        
-        # Hide OS window controls (minimize, maximize, close)
-        # so the user must use the character sheet's own close button
-        self.setWindowFlags(
-            Qt.WindowType.Window |
-            Qt.WindowType.CustomizeWindowHint |
-            Qt.WindowType.WindowTitleHint
-        )
         
         self.setCentralWidget(web_view)
         
-        # Create bridge for JavaScript to communicate with Python
-        self.bridge = PopupBridge()
-        self.bridge.closeRequested.connect(self.close)
-        
-        # Set up QWebChannel to expose bridge to JavaScript
-        channel = QWebChannel()
-        channel.registerObject("popupBridge", self.bridge)
-        web_view.page().setWebChannel(channel)
-        
-        # Update title when page title changes - this indicates content
+        # Update title when page title changes
         web_view.page().titleChanged.connect(self.on_title_changed)
         
-        self.log("[POPUP] Window created with QWebChannel bridge")
+        self.log("[POPUP] Window created")
     
     def on_title_changed(self, title):
-        """Track when content is loaded by watching title changes"""
         if title and title != "about:blank":
             self.setWindowTitle(title)
-            # Once we see a real title, we know content was loaded
-            self.has_had_content = True
-            self.log(f"[POPUP] Content detected in popup: {title}")
-            
-            # Inject listener to call Python bridge when PopOut module unloads
-            # This listens for when the user clicks the close button in the PopOut header
-            listener_script = """
-            (function() {
-                if (window.__dla_unload_listener_installed) {
-                    return;
-                }
-                window.__dla_unload_listener_installed = true;
-                
-                // Wait for QWebChannel to be ready
-                if (typeof qt !== 'undefined' && qt.webChannelTransport) {
-                    setupUnloadListener();
-                } else {
-                    document.addEventListener('DOMContentLoaded', setupUnloadListener);
-                    setTimeout(setupUnloadListener, 100);
-                }
-                
-                function setupUnloadListener() {
-                    window.addEventListener('beforeunload', function() {
-                        console.log('[POPUP_LISTENER] beforeunload fired - PopOut is returning sheet to main window');
-                        
-                        // Call Python method to close the window
-                        if (typeof popupBridge !== 'undefined') {
-                            console.log('[POPUP_LISTENER] Calling popupBridge.requestClose()');
-                            popupBridge.requestClose();
-                        } else {
-                            console.log('[POPUP_LISTENER] popupBridge not available');
-                        }
-                    });
-                    
-                    window.addEventListener('unload', function() {
-                        console.log('[POPUP_LISTENER] unload fired - page going away');
-                    });
-                    
-                    console.log('[POPUP_LISTENER] Listeners installed');
-                }
-            })();
-            """
-            self.web_view.page().runJavaScript(listener_script)
 
 
 class FoundryWebView(QWebEngineView):
