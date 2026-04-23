@@ -5,6 +5,7 @@ import time
 from typing import Any
 from state import app_state
 from config import APP_NAME, APP_VERSION
+from debug import log_websocket, log_server
 
 
 async def broadcast_to_ui(message: dict):
@@ -172,14 +173,14 @@ async def send_button_select(roll_id: str, button: str, config_changes: dict) ->
         await app_state.dlc_websocket.send_text(json.dumps(message))
         return True
     except Exception as e:
-        print(f"Error sending button select: {e}")
+        log_websocket(f"Error sending button select: {e}")
         return False
 
 
 async def send_dice_tray_roll(formula: str, flavor: str = "Manual Dice Roll") -> bool:
     """Send a dice tray roll request to DLC for evaluation"""
     if not app_state.dlc_websocket or not app_state.connection.connected:
-        print(f"[DLA] send_dice_tray_roll: No DLC websocket or not connected")
+        log_websocket(f"send_dice_tray_roll: No DLC websocket or not connected")
         return False
     
     message = {
@@ -189,20 +190,20 @@ async def send_dice_tray_roll(formula: str, flavor: str = "Manual Dice Roll") ->
     }
     
     try:
-        print(f"[DLA] Sending diceTrayRoll to DLC: {message}")
+        log_websocket(f"Sending diceTrayRoll to DLC: {message}")
         await app_state.dlc_websocket.send_text(json.dumps(message))
         return True
     except Exception as e:
-        print(f"Error sending dice tray roll: {e}")
+        log_websocket(f"Error sending dice tray roll: {e}")
         return False
 
 
 async def send_dice_result(original_roll_id: str, results: list) -> bool:
     """Send dice results to DLC (Phase B response)"""
-    print(f"[DLA] send_dice_result called with originalRollId={original_roll_id}, results={results}")
+    log_websocket(f"send_dice_result called with originalRollId={original_roll_id}, results={results}")
     
     if not app_state.dlc_websocket or not app_state.connection.connected:
-        print(f"[DLA] send_dice_result: No DLC websocket or not connected")
+        log_websocket(f"send_dice_result: No DLC websocket or not connected")
         return False
     
     message = {
@@ -212,7 +213,7 @@ async def send_dice_result(original_roll_id: str, results: list) -> bool:
     }
     
     try:
-        print(f"[DLA] Sending diceResult to DLC: {message}")
+        log_websocket(f"Sending diceResult to DLC: {message}")
         await app_state.dlc_websocket.send_text(json.dumps(message))
         await app_state.clear_roll_request()
         
@@ -224,7 +225,7 @@ async def send_dice_result(original_roll_id: str, results: list) -> bool:
         
         return True
     except Exception as e:
-        print(f"Error sending dice result: {e}")
+        log_websocket(f"Error sending dice result: {e}")
         return False
 
 
@@ -254,7 +255,7 @@ async def send_roll_result(roll_id: str, button_clicked: str, config_changes: di
         
         return True
     except Exception as e:
-        print(f"Error sending roll result: {e}")
+        log_websocket(f"Error sending roll result: {e}")
         return False
 
 
@@ -281,5 +282,49 @@ async def send_roll_cancelled(roll_id: str, reason: str = "User cancelled") -> b
         
         return True
     except Exception as e:
-        print(f"Error sending roll cancelled: {e}")
+        log_websocket(f"Error sending roll cancelled: {e}")
         return False
+
+
+# ============== WebRTC Helper Functions ==============
+
+async def send_message_via_webrtc(message: dict) -> bool:
+    """Send a message via WebRTC data channel if connected"""
+    if not app_state.webrtc_data_channel or app_state.webrtc_data_channel.readyState != "open":
+        return False
+    
+    try:
+        app_state.webrtc_data_channel.send(json.dumps(message))
+        return True
+    except Exception as e:
+        log_server(f"Error sending message via WebRTC: {e}")
+        return False
+
+
+def get_webrtc_connection_status() -> dict:
+    """Get current WebRTC connection status"""
+    pc_state = "disconnected"
+    dc_state = "closed"
+    
+    if app_state.webrtc_peer_connection:
+        pc_state = getattr(app_state.webrtc_peer_connection, "connectionState", "unknown")
+    
+    if app_state.webrtc_data_channel:
+        dc_state = getattr(app_state.webrtc_data_channel, "readyState", "unknown")
+    
+    return {
+        "peerConnectionState": pc_state,
+        "dataChannelState": dc_state,
+        "connected": dc_state == "open"
+    }
+
+
+# ============== WebRTC Handshake Debug Logging ==============
+
+def log_handshake_step(step_num: int, step_name: str, details: str = ""):
+    """Log a step in the WebRTC handshake process for debugging"""
+    message = f"[WebRTC Handshake] Step {step_num}: {step_name}"
+    if details:
+        message += f" - {details}"
+    log_server(message)
+

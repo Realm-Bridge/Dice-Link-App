@@ -1,6 +1,10 @@
 """Configuration settings for Dice Link"""
 
-# WebSocket settings
+# Connection method: "webrtc" (primary) or "websocket" (fallback)
+# WebRTC bypasses Chrome's Private Network Access restrictions on HTTP pages
+CONNECTION_METHOD = "webrtc"
+
+# Server settings (used for both WebRTC signaling and WebSocket fallback)
 WEBSOCKET_HOST = "0.0.0.0"
 WEBSOCKET_PORT = 8765
 

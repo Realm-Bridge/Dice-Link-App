@@ -35,6 +35,8 @@ class AppState:
         self.current_roll: RollRequest | None = None
         self.dlc_websocket: Any = None  # WebSocket connection to DLC
         self.ui_websockets: set = set()  # Browser UI connections
+        self.webrtc_peer_connection: Any = None  # WebRTC RTCPeerConnection from browser
+        self.webrtc_data_channel: Any = None  # WebRTC data channel for messaging
         self._lock = asyncio.Lock()
     
     async def set_dlc_connected(self, client_id: str, player_name: str, player_id: str, version: str, websocket: Any):
@@ -83,6 +85,20 @@ class AppState:
     def remove_ui_websocket(self, websocket: Any):
         """Remove a browser UI WebSocket connection"""
         self.ui_websockets.discard(websocket)
+    
+    async def set_webrtc_peer_connection(self, pc: Any, data_channel: Any):
+        """Store the WebRTC peer connection and data channel"""
+        async with self._lock:
+            self.webrtc_peer_connection = pc
+            self.webrtc_data_channel = data_channel
+    
+    async def close_webrtc_connection(self):
+        """Close and clean up WebRTC connection"""
+        async with self._lock:
+            if self.webrtc_peer_connection:
+                await self.webrtc_peer_connection.close()
+            self.webrtc_peer_connection = None
+            self.webrtc_data_channel = None
     
     def get_status(self) -> dict:
         """Get current status for UI"""

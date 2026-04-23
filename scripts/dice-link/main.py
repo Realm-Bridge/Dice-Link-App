@@ -7,20 +7,20 @@ import sys
 import os
 import json
 from pathlib import Path
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
-from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtGui import QPainterPath, QRegion, QDesktopServices
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
+from PyQt6.QtWebChannel import QWebChannel
+from PyQt6.QtGui import QPainterPath, QRegion, QDesktopServices
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(DICE_LINK_DIR))
 os.chdir(DICE_LINK_DIR)
 
-from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG
+from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
-from debug import log_startup
+from debug import log_startup, log_server
 
 
 class WindowController(QObject):
@@ -106,29 +106,45 @@ def run_server():
 
 def main():
     """Main entry point for Dice Link - launches desktop app with PyQt5"""
+    # Print startup banner
     print(f"\n{'='*50}")
     print(f"  {APP_NAME}")
     print(f"  Physical dice rolling for Foundry VTT")
     print(f"{'='*50}\n")
-    print(f"Starting Dice Link Desktop App...")
-    log_startup(WEBSOCKET_HOST, WEBSOCKET_PORT)
-    print(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
-    print(f"UI available at http://localhost:{WEBSOCKET_PORT}")
-    print(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
     
-    # Attempt UPnP port forwarding for remote connections
-    upnp_success, external_ip = setup_upnp_port_forward(WEBSOCKET_PORT)
-    if upnp_success:
-        print(f"\n[UPnP] Remote connections enabled!")
-        print(f"[UPnP] Players should configure DLC to connect to: {external_ip}")
+    log_server("Starting Dice Link Desktop App...")
+    log_startup(WEBSOCKET_HOST, WEBSOCKET_PORT)
+    log_server(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
+    log_server(f"UI available at http://localhost:{WEBSOCKET_PORT}")
+    
+    # Show connection method info
+    if CONNECTION_METHOD == "webrtc":
+        log_server(f"Connection method: WebRTC (bypasses browser security restrictions)")
+        log_server(f"DLC connects via WebRTC handshake at http://localhost:{WEBSOCKET_PORT}/api/receive-offer")
     else:
-        if external_ip:
-            print(f"\n[UPnP] Automatic port forwarding unavailable")
-            print(f"[UPnP] Your external IP is: {external_ip}")
-            print(f"[UPnP] For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
+        log_server(f"Connection method: WebSocket (fallback mode)")
+        log_server(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
+    
+    # UPnP is only relevant for WebSocket fallback mode (remote connections)
+    # For WebRTC on localhost, no port forwarding is needed
+    upnp_success = False
+    external_ip = None
+    if CONNECTION_METHOD == "websocket":
+        # Attempt UPnP port forwarding for remote connections
+        upnp_success, external_ip = setup_upnp_port_forward(WEBSOCKET_PORT)
+        if upnp_success:
+            log_server("Remote connections enabled!")
+            log_server(f"Players should configure DLC to connect to: {external_ip}")
         else:
-            print(f"\n[UPnP] Could not determine external IP or set up port forwarding")
-            print(f"[UPnP] Remote connections may require manual router configuration")
+            if external_ip:
+                log_server("Automatic port forwarding unavailable")
+                log_server(f"Your external IP is: {external_ip}")
+                log_server(f"For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
+            else:
+                log_server("Could not determine external IP or set up port forwarding")
+                log_server("Remote connections may require manual router configuration")
+    else:
+        log_server("UPnP skipped (not needed for localhost WebRTC connections)")
     
     # Start the FastAPI server in a background thread
     server_thread = threading.Thread(target=run_server, daemon=True)
@@ -144,14 +160,14 @@ def main():
     browser = DraggableWebEngineView()
     
     # Enable transparent background for rounded corners
-    browser.setAttribute(Qt.WA_TranslucentBackground, True)
+    browser.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
     
     # Set up window controller for frameless window control
     window_controller = WindowController(browser)
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
-    browser.setWindowFlags(Qt.FramelessWindowHint)
+    browser.setWindowFlags(Qt.WindowType.FramelessWindowHint)
     
     # Set up web channel for JavaScript-to-Python communication
     channel = QWebChannel()
@@ -179,11 +195,11 @@ def main():
     browser.show()
     
     # Run the application
-    exit_code = app.exec_()
+    exit_code = app.exec()
     
     # Clean up UPnP port forwarding on exit
     if upnp_success:
-        print("[UPnP] Cleaning up port forwarding...")
+        log_server("Cleaning up port forwarding...")
         remove_upnp_port_forward(WEBSOCKET_PORT)
     
     sys.exit(exit_code)
