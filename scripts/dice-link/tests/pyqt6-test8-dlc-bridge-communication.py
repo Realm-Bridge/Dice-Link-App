@@ -14,14 +14,21 @@ import json
 import time
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add parent directory to path so we can import main and debug
+parent_dir = str(Path(__file__).parent.parent)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QTextEdit, QPushButton, QLabel
 from PyQt6.QtCore import Qt, QUrl, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
-from main import VTTWebView
+try:
+    from main import VTTWebView
+except ImportError as e:
+    print(f"Error importing from main: {e}")
+    print(f"sys.path: {sys.path}")
+    raise
 
 
 class DLCSimulator(QMainWindow):
