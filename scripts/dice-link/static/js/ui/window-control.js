@@ -33,6 +33,15 @@ function initWindowControls() {
         // Expose pyqtBridge globally so other elements can use it
         window.pyqtBridge = pyqtBridge;
         
+        // Connect button
+        const connectBtn = document.getElementById('connect-btn');
+        if (connectBtn) {
+            connectBtn.addEventListener('click', () => {
+                console.log('[WindowControl] Connect button clicked');
+                pyqtBridge.openConnectionDialog();
+            });
+        }
+        
         // Minimize button
         minimizeBtn.addEventListener('click', () => {
             console.log('[WindowControl] Minimize button clicked');

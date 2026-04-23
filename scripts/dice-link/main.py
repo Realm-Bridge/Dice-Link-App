@@ -6,10 +6,12 @@ import uvicorn
 import sys
 import os
 import json
+import urllib.request
+import urllib.error
 from pathlib import Path
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEngineProfile
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtGui import QDesktopServices
@@ -24,12 +26,179 @@ from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external
 from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end
 
 
+class VTTValidator:
+    """Validates VTT URLs by checking for API endpoints or Foundry markers"""
+    
+    @staticmethod
+    def validate(url, callback):
+        """Validate VTT URL in a separate thread
+        
+        Args:
+            url: VTT server URL to validate
+            callback: Function to call with (is_valid, message, data) when done
+        """
+        def validate_thread():
+            try:
+                # Ensure URL has a scheme
+                if not url.startswith(('http://', 'https://')):
+                    url_to_check = f'http://{url}'
+                else:
+                    url_to_check = url
+                
+                # Try to get the root page to check for VTT markers
+                try:
+                    req = urllib.request.Request(f'{url_to_check}/api/status', headers={'User-Agent': 'Dice Link'})
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        # If /api/status exists, it's likely a Foundry instance
+                        callback(True, 'Valid Foundry instance detected', {'url': url_to_check})
+                        return
+                except (urllib.error.HTTPError, urllib.error.URLError):
+                    # /api/status failed, try checking the root page for Foundry markers
+                    pass
+                
+                # Check root page for Foundry HTML markers
+                try:
+                    req = urllib.request.Request(url_to_check, headers={'User-Agent': 'Dice Link'})
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        html = response.read().decode('utf-8', errors='ignore')
+                        if any(marker in html.lower() for marker in ['foundry', 'vtt', '/ui/players', 'socket']):
+                            callback(True, 'VTT instance detected', {'url': url_to_check})
+                        else:
+                            callback(False, 'URL does not appear to be a valid VTT', {})
+                except (urllib.error.HTTPError, urllib.error.URLError) as e:
+                    callback(False, f'Could not connect to URL: {str(e)}', {})
+            except Exception as e:
+                callback(False, f'Validation error: {str(e)}', {})
+        
+        # Run validation in background thread to avoid blocking UI
+        thread = threading.Thread(target=validate_thread, daemon=True)
+        thread.start()
+
+
+class VTTWebPage(QWebEnginePage):
+    """Custom web page for VTT viewing - blocks external navigation"""
+    
+    def acceptNavigationRequest(self, url, navigation_type, is_redirect):
+        """Only allow navigation within the same origin"""
+        if not hasattr(self, 'base_url'):
+            return True
+        
+        # Allow same-origin navigation
+        if url.host() == self.base_url.host() and url.scheme() == self.base_url.scheme():
+            return True
+        
+        # Block external navigation
+        return False
+
+
+class VTTWebView(QWebEngineView):
+    """Custom web view for displaying VTT instances"""
+    
+    def __init__(self, url):
+        super().__init__()
+        self.base_url = QUrl(url)
+        
+        # Create custom page and set base URL for origin checking
+        page = VTTWebPage(self)
+        page.base_url = self.base_url
+        self.setPage(page)
+        
+        # Load the VTT
+        self.load(self.base_url)
+    
+    def createWindow(self, window_type):
+        """Handle window.open() calls from the VTT - open in new windows"""
+        new_view = VTTWebView(self.base_url.toString())
+        new_view.show()
+        return new_view
+
+
+class ConnectionDialog(QDialog):
+    """Dialog for entering and validating VTT server URL"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Connect to VTT Server")
+        self.setMinimumWidth(400)
+        self.vtt_url = None
+        self.is_validating = False
+        
+        # Create layout
+        layout = QVBoxLayout()
+        
+        # Label
+        label = QLabel("Enter VTT Server URL:")
+        layout.addWidget(label)
+        
+        # URL input field
+        self.url_input = QLineEdit()
+        self.url_input.setPlaceholderText("http://localhost:30000 or https://example.com")
+        layout.addWidget(self.url_input)
+        
+        # Error message label
+        self.error_label = QLabel()
+        self.error_label.setStyleSheet("color: #ff6b6b;")
+        self.error_label.setVisible(False)
+        layout.addWidget(self.error_label)
+        
+        # Button layout
+        button_layout = QHBoxLayout()
+        
+        # Connect button
+        self.connect_btn = QPushButton("Connect")
+        self.connect_btn.clicked.connect(self.on_connect)
+        button_layout.addWidget(self.connect_btn)
+        
+        # Cancel button
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        layout.addLayout(button_layout)
+        self.setLayout(layout)
+    
+    def on_connect(self):
+        """Handle connect button click - validate the URL"""
+        url = self.url_input.text().strip()
+        
+        if not url:
+            self.show_error("Please enter a URL")
+            return
+        
+        # Start validation
+        self.is_validating = True
+        self.connect_btn.setEnabled(False)
+        self.connect_btn.setText("Validating...")
+        self.error_label.setVisible(False)
+        
+        # Validate URL
+        VTTValidator.validate(url, self.on_validation_complete)
+    
+    def on_validation_complete(self, is_valid, message, data):
+        """Handle validation result"""
+        self.connect_btn.setEnabled(True)
+        self.connect_btn.setText("Connect")
+        self.is_validating = False
+        
+        if is_valid:
+            self.vtt_url = data.get('url')
+            self.accept()
+        else:
+            self.show_error(message)
+    
+    def show_error(self, message):
+        """Display error message"""
+        self.error_label.setText(f"Error: {message}")
+        self.error_label.setVisible(True)
+
+
 class WindowController(QObject):
     """Handles window control commands from JavaScript"""
     
-    def __init__(self, browser):
+    def __init__(self, browser, main_window=None):
         super().__init__()
         self.browser = browser
+        self.main_window = main_window  # Reference to main application window
         self.mouse_offset = QPoint()  # Offset from mouse to window corner
     
     @pyqtSlot()
@@ -61,6 +230,25 @@ class WindowController(QObject):
         # Window position = mouse position + stored offset
         new_window_pos = global_mouse_pos + self.mouse_offset
         self.browser.move(new_window_pos)
+    
+    @pyqtSlot()
+    def openConnectionDialog(self):
+        """Open connection dialog to enter VTT server URL"""
+        dialog = ConnectionDialog(self.main_window)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.vtt_url:
+            # Launch VTT viewing window
+            self.launch_vtt_window(dialog.vtt_url)
+    
+    def launch_vtt_window(self, url):
+        """Launch a new window to view the VTT"""
+        vtt_window = QMainWindow()
+        vtt_window.setWindowTitle("VTT Viewer")
+        vtt_window.setGeometry(100, 100, 1200, 800)
+        
+        # Create VTT web view
+        vtt_view = VTTWebView(url)
+        vtt_window.setCentralWidget(vtt_view)
+        vtt_window.show()
     
     @pyqtSlot(str)
     def openUrl(self, url):
@@ -193,7 +381,7 @@ def main():
     browser.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
     
     # Set up window controller for frameless window control
-    window_controller = WindowController(browser)
+    window_controller = WindowController(browser, browser)
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
