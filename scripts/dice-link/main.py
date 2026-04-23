@@ -97,13 +97,16 @@ class DLABridge(QObject):
     Allows Foundry DLC module to communicate with DLA and vice versa.
     """
     
-    # Signals emitted to JavaScript
+    # Signals emitted to JavaScript (names must match what DLC expects)
     rollResultReady = pyqtSignal(str)  # Emits JSON string of roll result
-    rollCancelled = pyqtSignal(str)    # Emits JSON string with cancellation reason
+    rollCancelledReady = pyqtSignal(str)  # Emits JSON string with cancellation reason
+    rollCompleteReady = pyqtSignal(str)  # Emits JSON string when roll is complete/acknowledged
     diceResultReady = pyqtSignal(str)  # Emits JSON string of dice result
-    connectionStatusChanged = pyqtSignal(str)  # Emits connection status
+    connectionStatusReady = pyqtSignal(str)  # Emits connection status: "connected", "disconnected", or "error"
     dlcModuleReady = pyqtSignal(str)  # Emits acknowledgement when DLC module announces it's ready
-    buttonSelected = pyqtSignal(str)  # Emits button selection from UI to DLC
+    buttonSelectReady = pyqtSignal(str)  # Emits button selection from UI to DLC
+    diceTrayRollReady = pyqtSignal(str)  # Emits dice tray roll result
+    playerModesUpdateReady = pyqtSignal(str)  # Emits player mode changes from DLA
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -119,8 +122,8 @@ class DLABridge(QObject):
         self.log_vtt("[BRIDGE] DLC module has initialized and announced it's ready")
         
         # Emit connection status as connected (to Foundry/DLC via QWebChannel)
-        self.connectionStatusChanged.emit("connected")
-        self.log_vtt("[BRIDGE] Emitted connectionStatusChanged: connected")
+        self.connectionStatusReady.emit("connected")
+        self.log_vtt("[BRIDGE] Emitted connectionStatusReady: connected")
         
         # Broadcast connection status to UI controls window (via Flask WebSocket)
         from bridge_state import send_connection_status_to_ui, get_current_player_name
@@ -217,7 +220,7 @@ class DLABridge(QObject):
             self.log_vtt(f"[BRIDGE] Received button select from UI: {button} for roll {roll_id}")
             
             # Forward to DLC via QWebChannel signal
-            self.buttonSelected.emit(json.dumps(data))
+            self.buttonSelectReady.emit(json.dumps(data))
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveButtonSelect")
     
@@ -251,7 +254,7 @@ class DLABridge(QObject):
         try:
             data_json = json.dumps(data)
             self.log_vtt(f"[BRIDGE] Sending roll cancelled: {request_id}")
-            self.rollCancelled.emit(data_json)
+            self.rollCancelledReady.emit(data_json)
         except Exception as e:
             self.log_vtt(f"[BRIDGE] ERROR sending roll cancelled: {str(e)}")
     
@@ -277,7 +280,49 @@ class DLABridge(QObject):
             status: Status string ("connected", "disconnected", "error")
         """
         self.log_vtt(f"[BRIDGE] Connection status: {status}")
-        self.connectionStatusChanged.emit(status)
+        self.connectionStatusReady.emit(status)
+    
+    def sendRollComplete(self, roll_data):
+        """
+        Called by DLA to notify Foundry that a roll has been completed/acknowledged.
+        
+        Args:
+            roll_data: Dict with roll completion data (will be converted to JSON)
+        """
+        try:
+            data_json = json.dumps(roll_data)
+            self.log_vtt(f"[BRIDGE] Sending roll complete: {roll_data.get('id', 'unknown')}")
+            self.rollCompleteReady.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending roll complete: {str(e)}")
+    
+    def sendDiceTrayRoll(self, dice_tray_data):
+        """
+        Called by DLA to send dice tray roll result back to Foundry DLC.
+        
+        Args:
+            dice_tray_data: Dict with dice tray roll data (will be converted to JSON)
+        """
+        try:
+            data_json = json.dumps(dice_tray_data)
+            self.log_vtt(f"[BRIDGE] Sending dice tray roll: {dice_tray_data.get('id', 'unknown')}")
+            self.diceTrayRollReady.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending dice tray roll: {str(e)}")
+    
+    def sendPlayerModesUpdate(self, player_modes_data):
+        """
+        Called by DLA to send player modes update to Foundry DLC.
+        
+        Args:
+            player_modes_data: Dict with player modes data (will be converted to JSON)
+        """
+        try:
+            data_json = json.dumps(player_modes_data)
+            self.log_vtt(f"[BRIDGE] Sending player modes update to DLC")
+            self.playerModesUpdateReady.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending player modes update: {str(e)}")
 
 
 class VTTWebPage(QWebEnginePage):
