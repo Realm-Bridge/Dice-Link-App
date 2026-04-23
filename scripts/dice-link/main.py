@@ -223,14 +223,23 @@ class VTTViewingWindow(QMainWindow):
         log_vtt("[VIEWER] Viewing window created")
     
     def closeEvent(self, event):
-        """Close all popup windows when viewing window closes"""
-        log_vtt("[VIEWER] Viewing window closing - closing all popups")
+        """Close all popup windows and disconnect from VTT when viewing window closes"""
+        log_vtt("[VIEWER] Viewing window closing - closing all popups and disconnecting")
         
         # Close all popup windows created by this viewing window
         if hasattr(self.vtt_view, 'popup_windows'):
             for popup_window in self.vtt_view.popup_windows:
-                log_vtt(f"[VIEWER] Closing popup window")
+                log_vtt("[VIEWER] Closing popup window")
                 popup_window.close()
+        
+        # Disconnect from Foundry by stopping page and navigating away
+        log_vtt("[VIEWER] Disconnecting from VTT")
+        self.vtt_view.stop()
+        self.vtt_view.setUrl(QUrl("about:blank"))
+        
+        # Clean up the page to fully release the connection
+        if self.vtt_view.page():
+            self.vtt_view.page().deleteLater()
         
         # Allow the viewing window to close
         event.accept()
