@@ -68,13 +68,16 @@ class DraggableWebEngineView(QWebEngineView):
         super().__init__()
         self.drag_position = QPoint()
         self.is_dragging = False
+        # Remove grey border
+        self.setStyleSheet("border: none; outline: none;")
     
     def mousePressEvent(self, event):
         """Handle mouse press for window dragging"""
         # Check if click is in title bar area (top 80px)
-        if event.y() < 80:
+        # PyQt6 uses event.position() instead of event.y()/event.globalPos()
+        if event.position().y() < 80:
             self.is_dragging = True
-            self.drag_position = event.globalPos() - self.pos()
+            self.drag_position = event.globalPosition().toPoint() - self.pos()
             event.accept()
         else:
             super().mousePressEvent(event)
@@ -82,7 +85,7 @@ class DraggableWebEngineView(QWebEngineView):
     def mouseMoveEvent(self, event):
         """Handle mouse move for window dragging"""
         if self.is_dragging:
-            self.move(event.globalPos() - self.drag_position)
+            self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
         else:
             super().mouseMoveEvent(event)
@@ -175,16 +178,17 @@ def main():
     browser.page().setWebChannel(channel)
     
     # Lock window to fixed size - cannot be resized
-    fixed_width = 1788
-    fixed_height = 1500
+    fixed_width = 894
+    fixed_height = 600
     browser.setFixedSize(fixed_width, fixed_height)
     
     # Set rounded corners on frameless window
+    # Note: WA_TranslucentBackground handles transparency in PyQt6 - setMask is a fallback
     corner_radius = 24
     path = QPainterPath()
     path.addRoundedRect(0, 0, fixed_width, fixed_height, corner_radius, corner_radius)
-    mask = QRegion(path.toFillPolygon().toPolygon())
-    browser.setMask(mask)
+    region = QRegion(path.toFillPolygon().toPolygon())
+    browser.setMask(region)
     
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST
