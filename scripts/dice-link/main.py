@@ -67,6 +67,7 @@ class DraggableWebEngineView(QWebEngineView):
     def __init__(self):
         super().__init__()
         self.drag_position = QPoint()
+        self.drag_window_pos = QPoint()
         self.is_dragging = False
         # Remove grey border and set background
         self.setStyleSheet("""
@@ -85,7 +86,9 @@ class DraggableWebEngineView(QWebEngineView):
         # PyQt6 uses event.position() instead of event.y()/event.globalPos()
         if event.position().y() < 80:
             self.is_dragging = True
-            self.drag_position = event.globalPosition().toPoint() - self.pos()
+            # Store both the initial mouse position and initial window position
+            self.drag_position = event.globalPosition().toPoint()
+            self.drag_window_pos = self.window().pos()
             event.accept()
         else:
             super().mousePressEvent(event)
@@ -93,7 +96,11 @@ class DraggableWebEngineView(QWebEngineView):
     def mouseMoveEvent(self, event):
         """Handle mouse move for window dragging"""
         if self.is_dragging:
-            self.move(event.globalPosition().toPoint() - self.drag_position)
+            # Calculate delta movement from initial positions to avoid rounding errors
+            current_pos = event.globalPosition().toPoint()
+            delta = current_pos - self.drag_position
+            new_window_pos = self.drag_window_pos + delta
+            self.window().move(new_window_pos)
             event.accept()
         else:
             super().mouseMoveEvent(event)
