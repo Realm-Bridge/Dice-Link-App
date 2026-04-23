@@ -78,39 +78,125 @@ class VTTValidator:
 class VTTWebPage(QWebEnginePage):
     """Custom web page for VTT viewing - blocks external navigation"""
     
-    def acceptNavigationRequest(self, url, navigation_type, is_redirect):
+    def __init__(self, profile, allowed_origin, parent=None):
+        super().__init__(profile, parent)
+        self.allowed_origin = allowed_origin
+    
+    def is_same_origin(self, url_str):
+        """Check if URL is same origin as allowed VTT server"""
+        if not url_str or url_str == 'about:blank':
+            return True
+        
+        try:
+            url = QUrl(url_str)
+            origin = QUrl(self.allowed_origin)
+            return url.host() == origin.host() and url.scheme() == origin.scheme()
+        except:
+            return False
+    
+    def acceptNavigationRequest(self, url, navigation_type, is_main_frame):
         """Only allow navigation within the same origin"""
-        if not hasattr(self, 'base_url'):
+        url_str = url.toString()
+        
+        # Always allow about:blank (used for popups)
+        if url_str == 'about:blank':
             return True
         
         # Allow same-origin navigation
-        if url.host() == self.base_url.host() and url.scheme() == self.base_url.scheme():
+        if self.is_same_origin(url_str):
             return True
         
         # Block external navigation
         return False
 
 
-class VTTWebView(QWebEngineView):
-    """Custom web view for displaying VTT instances"""
+class VTTPopupWindow(QMainWindow):
+    """Window container for VTT popups - handles close events properly"""
     
-    def __init__(self, url):
-        super().__init__()
-        self.base_url = QUrl(url)
+    def __init__(self, web_view, parent=None):
+        super().__init__(parent)
+        self.web_view = web_view
+        self.is_closing = False
         
-        # Create custom page and set base URL for origin checking
-        page = VTTWebPage(self)
-        page.base_url = self.base_url
-        self.setPage(page)
+        self.setCentralWidget(web_view)
+        self.setWindowTitle("VTT Popup")
+        self.resize(800, 600)
+    
+    def closeEvent(self, event):
+        """Handle close - trigger sheet close button first if present"""
+        if self.is_closing:
+            event.accept()
+            return
+        
+        self.is_closing = True
+        
+        # Try to click the sheet's close button before closing
+        trigger_script = """
+        (function() {
+            var closeBtn = document.querySelector('[data-action="close"]');
+            if (closeBtn) {
+                closeBtn.click();
+                return 'clicked';
+            }
+            return 'not_found';
+        })();
+        """
+        
+        def on_result(result):
+            if result == 'clicked':
+                # Wait for unload, then close
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(500, self.perform_close)
+            else:
+                self.perform_close()
+        
+        self.web_view.page().runJavaScript(trigger_script, on_result)
+        event.ignore()
+    
+    def perform_close(self):
+        """Actually close the window"""
+        self.close()
+
+
+class VTTWebView(QWebEngineView):
+    """Custom web view for displaying VTT instances - handles popups properly"""
+    
+    def __init__(self, url, parent=None):
+        super().__init__(parent)
+        self.allowed_origin = url
+        self.popup_windows = []  # Keep references to prevent garbage collection
+        
+        # Create custom page with same profile for session sharing
+        self.custom_page = VTTWebPage(self.page().profile(), url, self)
+        self.setPage(self.custom_page)
         
         # Load the VTT
-        self.load(self.base_url)
+        self.load(QUrl(url))
     
     def createWindow(self, window_type):
-        """Handle window.open() calls from the VTT - open in new windows"""
-        new_view = VTTWebView(self.base_url.toString())
-        new_view.show()
-        return new_view
+        """Handle window.open() calls from the VTT - create proper popup windows"""
+        # Create popup view sharing the same profile
+        popup_view = QWebEngineView()
+        popup_page = VTTWebPage(self.page().profile(), self.allowed_origin, popup_view)
+        popup_view.setPage(popup_page)
+        
+        # Inject script to mark popup as ready
+        expose_script = """
+        (function() {
+            window.__popupReady = true;
+            console.log('[VTT Popup] Popup initialized');
+        })();
+        """
+        popup_page.runJavaScript(expose_script)
+        
+        # Create window container
+        popup_window = VTTPopupWindow(popup_view)
+        popup_window.show()
+        
+        # Keep reference
+        self.popup_windows.append(popup_window)
+        
+        return popup_view
 
 
 class ConnectionDialog(QDialog):
@@ -241,6 +327,10 @@ class WindowController(QObject):
     
     def launch_vtt_window(self, url):
         """Launch a new window to view the VTT"""
+        # Store reference to prevent garbage collection
+        if not hasattr(self, 'vtt_windows'):
+            self.vtt_windows = []
+        
         vtt_window = QMainWindow()
         vtt_window.setWindowTitle("VTT Viewer")
         vtt_window.setGeometry(100, 100, 1200, 800)
@@ -249,6 +339,9 @@ class WindowController(QObject):
         vtt_view = VTTWebView(url)
         vtt_window.setCentralWidget(vtt_view)
         vtt_window.show()
+        
+        # Keep reference
+        self.vtt_windows.append(vtt_window)
     
     @pyqtSlot(str)
     def openUrl(self, url):
@@ -365,7 +458,15 @@ def main():
     time.sleep(1.5)
     
     # Create and display the PyQt6 window
-    app = QApplication(sys.argv)
+    # Chromium flags MUST be passed to QApplication constructor for WebRTC/getUserMedia on HTTP origins
+    chromium_args = [
+        sys.argv[0],
+        '--unsafely-treat-insecure-origin-as-secure=http://localhost:30000',
+        '--enable-features=InsecureOriginPermissions',
+        '--disable-web-security',
+        '--allow-running-insecure-content',
+    ]
+    app = QApplication(chromium_args)
     
     # Enable DevTools via environment variable - must be set before creating the profile
     os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"

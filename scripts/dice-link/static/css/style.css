@@ -165,6 +165,24 @@ body {
     height: 20px;
 }
 
+/* Title Bar Button */
+.title-bar-btn {
+    padding: 6px 12px;
+    background-color: var(--dlc-accent);
+    border: 1px solid var(--dlc-accent);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.title-bar-btn:hover {
+    background-color: var(--dlc-accent-hover);
+    border-color: var(--dlc-accent-hover);
+}
+
 /* Connection Status */
 .connection-status {
     display: flex;
