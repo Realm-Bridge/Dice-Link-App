@@ -113,6 +113,69 @@ class PopupWindow(QMainWindow):
     def on_title_changed(self, title):
         if title and title != "about:blank":
             self.setWindowTitle(title)
+            # Once we have a real title, install a listener so that when the
+            # page unloads (sheet returned to main window), we close the Qt window
+            install_script = """
+            (function() {
+                if (window.__dla_close_listener) return;
+                window.__dla_close_listener = true;
+                window.addEventListener('unload', function() {
+                    console.log('[POPUP] unload event - sheet returned to main window');
+                });
+                console.log('[POPUP] unload listener installed');
+            })();
+            """
+            self.web_view.page().runJavaScript(install_script)
+            # Also connect loadFinished - if page reloads to blank AFTER having content, close
+            self.web_view.page().loadFinished.connect(self.on_load_finished)
+
+    def on_load_finished(self, ok):
+        """Close popup if page reloads to blank after having had content"""
+        self.web_view.page().runJavaScript(
+            "document.title || ''",
+            lambda title: self._check_if_blank(title)
+        )
+
+    def _check_if_blank(self, title):
+        if not title or title.strip() == "":
+            self.log("[POPUP] Page is blank after content - closing popup window")
+            # Disconnect to avoid repeat calls
+            try:
+                self.web_view.page().loadFinished.disconnect(self.on_load_finished)
+            except Exception:
+                pass
+            self.destroy()
+
+    def closeEvent(self, event):
+        """Intercept OS close button - trigger the sheet's own close button instead"""
+        self.log("[POPUP] OS close button clicked - triggering sheet close button")
+        
+        # Click the sheet's close button so PopOut module returns the sheet properly
+        trigger_script = """
+        (function() {
+            var closeBtn = document.querySelector('[data-action="close"]');
+            if (closeBtn) {
+                console.log('[POPUP] Found close button, clicking it');
+                closeBtn.click();
+                return 'clicked';
+            } else {
+                console.log('[POPUP] Close button not found');
+                return 'not_found';
+            }
+        })();
+        """
+        
+        def on_result(result):
+            self.log(f"[POPUP] Trigger close button result: {result}")
+            if result == 'not_found':
+                # No sheet button found - safe to just close
+                self.log("[POPUP] No sheet button, closing window directly")
+                self.deleteLater()
+        
+        self.web_view.page().runJavaScript(trigger_script, on_result)
+        
+        # Always ignore the OS close event - let the sheet button handle it
+        event.ignore()
 
 
 class FoundryWebView(QWebEngineView):
