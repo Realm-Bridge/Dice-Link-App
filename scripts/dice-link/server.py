@@ -26,7 +26,7 @@ from core.websocket_handler import (
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS, CONNECTION_METHOD
 from debug import log_dlc_connection, log_dlc_accepted, log_dlc_message, log_dlc_response, log_dlc_disconnect, log_server
-from bridge_state import send_roll_result_to_foundry
+from bridge_state import send_dice_result_to_foundry
 
 # Get the base directory (now app.py is at the root of dice-link/)
 BASE_DIR = Path(__file__).resolve().parent
@@ -767,9 +767,9 @@ async def handle_ui_message(message: dict):
             "id": original_roll_id,
             "results": results
         }
-        bridge_success = send_roll_result_to_foundry(result_data)
+        bridge_success = send_dice_result_to_foundry(result_data)
         if bridge_success:
-            log_server(f"Forwarded diceResult to Foundry via bridge")
+            log_server(f"Forwarded diceResult to Foundry via bridge (using diceResultReady signal)")
         
         await broadcast_to_ui({
             "type": "diceResultAck",

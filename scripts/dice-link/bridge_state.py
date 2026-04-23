@@ -45,19 +45,20 @@ def send_roll_request_to_ui(roll_request_data):
     return False
 
 
-def send_roll_result_to_foundry(result_data):
+def send_dice_result_to_foundry(result_data):
     """
-    Send a roll result from UI back to Foundry through the bridge.
+    Send dice result from UI back to Foundry through the bridge.
     Called when Flask receives diceResult from the UI.
+    Uses diceResultReady signal (not rollResultReady) as DLC expects.
     """
     bridge = get_bridge()
     if bridge:
         try:
-            bridge.sendRollResult(result_data)
-            print(f"[BRIDGE STATE] Sent roll result to Foundry: {result_data.get('id')}")
+            bridge.sendDiceResult(result_data)
+            print(f"[BRIDGE STATE] Sent dice result to Foundry: {result_data.get('id')}")
             return True
         except Exception as e:
-            print(f"[BRIDGE STATE] Error sending roll result to Foundry: {e}")
+            print(f"[BRIDGE STATE] Error sending dice result to Foundry: {e}")
             return False
     return False
 
