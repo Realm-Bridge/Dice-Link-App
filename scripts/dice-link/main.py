@@ -13,7 +13,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
-from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent, QTimer
+from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtGui import QDesktopServices
 
@@ -88,6 +88,130 @@ class VTTValidator:
             callback(False, f"Connection failed: {e.reason}", None)
         except Exception as e:
             callback(False, f"Validation error: {str(e)}", None)
+
+
+class DLABridge(QObject):
+    """
+    Python object exposed to JavaScript via QWebChannel.
+    Allows Foundry DLC module to communicate with DLA and vice versa.
+    """
+    
+    # Signals emitted to JavaScript
+    rollResultReady = pyqtSignal(str)  # Emits JSON string of roll result
+    rollCancelled = pyqtSignal(str)    # Emits JSON string with cancellation reason
+    diceResultReady = pyqtSignal(str)  # Emits JSON string of dice result
+    connectionStatusChanged = pyqtSignal(str)  # Emits connection status
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.log_vtt = log_vtt  # Store reference to logging function
+        self.log_vtt("[BRIDGE] DLABridge created")
+    
+    @pyqtSlot(str)
+    def receiveRollRequest(self, data_json):
+        """
+        Called by JavaScript (DLC module) to send a roll request to DLA.
+        
+        Args:
+            data_json: JSON string containing roll request data
+        """
+        try:
+            data = json.loads(data_json)
+            request_id = data.get('id', 'unknown')
+            self.log_vtt(f"[BRIDGE] Received roll request #{request_id}")
+            self.log_vtt(f"[BRIDGE] Roll: {data.get('roll', {}).get('title', 'Unknown')}")
+            # DLA will process this and eventually emit rollResultReady
+        except json.JSONDecodeError:
+            self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveRollRequest")
+    
+    @pyqtSlot(str)
+    def receiveDiceRequest(self, data_json):
+        """
+        Called by JavaScript (DLC module) to send a dice request to DLA.
+        
+        Args:
+            data_json: JSON string containing dice request data
+        """
+        try:
+            data = json.loads(data_json)
+            request_id = data.get('id', 'unknown')
+            self.log_vtt(f"[BRIDGE] Received dice request #{request_id}")
+            # DLA will process this and eventually emit diceResultReady
+        except json.JSONDecodeError:
+            self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveDiceRequest")
+    
+    @pyqtSlot(str)
+    def receivePlayerModesUpdate(self, data_json):
+        """
+        Called by JavaScript (DLC module) to broadcast player modes update.
+        
+        Args:
+            data_json: JSON string containing player modes data
+        """
+        try:
+            data = json.loads(data_json)
+            self.log_vtt(f"[BRIDGE] Received player modes update")
+            # This will be broadcast to other connected players
+        except json.JSONDecodeError:
+            self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receivePlayerModesUpdate")
+    
+    def sendRollResult(self, roll_result_data):
+        """
+        Called by DLA to send roll result back to Foundry DLC.
+        
+        Args:
+            roll_result_data: Dict with roll result (will be converted to JSON)
+        """
+        try:
+            data_json = json.dumps(roll_result_data)
+            self.log_vtt(f"[BRIDGE] Sending roll result: {roll_result_data.get('id', 'unknown')}")
+            self.rollResultReady.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending roll result: {str(e)}")
+    
+    def sendRollCancelled(self, request_id, reason="User cancelled"):
+        """
+        Called by DLA to notify Foundry that a roll was cancelled.
+        
+        Args:
+            request_id: Original request ID
+            reason: Reason for cancellation
+        """
+        data = {
+            "type": "rollCancelled",
+            "id": request_id,
+            "reason": reason
+        }
+        try:
+            data_json = json.dumps(data)
+            self.log_vtt(f"[BRIDGE] Sending roll cancelled: {request_id}")
+            self.rollCancelled.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending roll cancelled: {str(e)}")
+    
+    def sendDiceResult(self, dice_result_data):
+        """
+        Called by DLA to send dice result back to Foundry DLC.
+        
+        Args:
+            dice_result_data: Dict with dice result (will be converted to JSON)
+        """
+        try:
+            data_json = json.dumps(dice_result_data)
+            self.log_vtt(f"[BRIDGE] Sending dice result: {dice_result_data.get('id', 'unknown')}")
+            self.diceResultReady.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending dice result: {str(e)}")
+    
+    def notifyConnectionStatus(self, status):
+        """
+        Notify JavaScript of connection status changes.
+        
+        Args:
+            status: Status string ("connected", "disconnected", "error")
+        """
+        self.log_vtt(f"[BRIDGE] Connection status: {status}")
+        self.connectionStatusChanged.emit(status)
 
 
 class VTTWebPage(QWebEnginePage):
@@ -262,6 +386,125 @@ class VTTWebView(QWebEngineView):
         # Set custom page for navigation blocking
         self.custom_page = VTTWebPage(self.page().profile(), allowed_origin)
         self.setPage(self.custom_page)
+        
+        # Setup QWebChannel bridge for DLC communication
+        self.setup_webchannel()
+        
+        # Inject QWebChannel when page loads
+        self.page().loadFinished.connect(self.on_page_loaded)
+    
+    def setup_webchannel(self):
+        """Setup QWebChannel with DLABridge object"""
+        # Create the channel
+        self.channel = QWebChannel()
+        
+        # Create the DLA bridge object
+        self.dla_bridge = DLABridge()
+        
+        # Register the bridge - will be accessible as 'dlaInterface' in JS
+        self.channel.registerObject("dlaInterface", self.dla_bridge)
+        
+        # Attach channel to the page
+        self.page().setWebChannel(self.channel)
+        
+        log_vtt("[WEBCHANNEL] QWebChannel created and DLABridge registered as 'dlaInterface'")
+    
+    def on_page_loaded(self, ok):
+        """Called when page finishes loading - inject qwebchannel.js"""
+        if not ok:
+            log_vtt("[WEBCHANNEL] Page load failed")
+            return
+        
+        log_vtt("[WEBCHANNEL] Page loaded, injecting QWebChannel.js...")
+        
+        # First inject the qwebchannel.js library
+        load_qwebchannel_js = """
+        (function() {
+            return new Promise(function(resolve, reject) {
+                var script = document.createElement('script');
+                script.src = 'qrc:///qtwebchannel/qwebchannel.js';
+                script.onload = function() {
+                    resolve('QWebChannel.js loaded');
+                };
+                script.onerror = function() {
+                    reject('Failed to load qwebchannel.js');
+                };
+                document.head.appendChild(script);
+            });
+        })();
+        """
+        
+        def on_qwebchannel_loaded(result):
+            log_vtt(f"[WEBCHANNEL] QWebChannel.js load result: {result}")
+            # Now initialize the channel and expose dlaInterface
+            self.initialize_webchannel()
+        
+        self.page().runJavaScript(load_qwebchannel_js, on_qwebchannel_loaded)
+    
+    def initialize_webchannel(self):
+        """Initialize the QWebChannel in JavaScript and expose dlaInterface"""
+        inject_script = """
+        (function() {
+            // Check if qt.webChannelTransport exists (Qt's internal transport)
+            if (typeof qt === 'undefined' || typeof qt.webChannelTransport === 'undefined') {
+                console.error('[DLA] qt.webChannelTransport not available!');
+                return JSON.stringify({
+                    success: false,
+                    error: 'qt.webChannelTransport not available',
+                    hasQt: typeof qt !== 'undefined'
+                });
+            }
+            
+            // Load QWebChannel using Qt's internal transport (NOT WebSocket!)
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                // Make the DLA bridge globally accessible
+                window.dlaInterface = channel.objects.dlaInterface;
+                
+                // Signal that we're ready
+                window.dlaInterfaceReady = true;
+                
+                console.log('[DLA] QWebChannel initialized successfully!');
+                console.log('[DLA] dlaInterface available:', typeof window.dlaInterface);
+                
+                // Dispatch event so DLC knows interface is ready
+                window.dispatchEvent(new Event('dlaInterfaceReady'));
+                
+                // Connect to signals from DLA
+                if (window.dlaInterface) {
+                    if (window.dlaInterface.rollResultReady) {
+                        window.dlaInterface.rollResultReady.connect(function(resultJson) {
+                            console.log('[DLA] Received roll result from Python');
+                        });
+                    }
+                    if (window.dlaInterface.rollCancelled) {
+                        window.dlaInterface.rollCancelled.connect(function(cancelJson) {
+                            console.log('[DLA] Received roll cancelled from Python');
+                        });
+                    }
+                    if (window.dlaInterface.diceResultReady) {
+                        window.dlaInterface.diceResultReady.connect(function(diceJson) {
+                            console.log('[DLA] Received dice result from Python');
+                        });
+                    }
+                }
+            });
+            
+            return JSON.stringify({
+                success: true,
+                hasQt: true,
+                hasTransport: true
+            });
+        })();
+        """
+        
+        def on_channel_initialized(result):
+            log_vtt(f"[WEBCHANNEL] Channel initialization result: {result}")
+            if result and 'success' in str(result):
+                log_vtt("[WEBCHANNEL] SUCCESS: QWebChannel initialized!")
+            else:
+                log_vtt("[WEBCHANNEL] WARNING: Channel may not be fully initialized")
+        
+        self.page().runJavaScript(inject_script, on_channel_initialized)
     
     def createWindow(self, window_type):
         """
