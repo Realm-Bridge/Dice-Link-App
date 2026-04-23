@@ -417,6 +417,96 @@ Once approach is chosen:
 
 ---
 
+## CRITICAL: Qt WebEngine Chromium Flags for HTTP Origins
+
+**Status:** Solved - Tested and working  
+**Date Documented:** April 23, 2026  
+**Impact:** MANDATORY for any Qt-based embedded browser loading HTTP origins  
+
+### The Problem
+
+Chromium browsers block WebRTC, getUserMedia, and other "powerful features" on HTTP origins that are not localhost. Most GMs host Foundry over HTTP (not HTTPS), so embedded browser will fail to access camera/WebRTC without bypassing these restrictions.
+
+### The Solution: Pass Chromium Flags via sys.argv
+
+**CRITICAL:** These flags MUST be passed via `sys.argv` to `QApplication()`, NOT via environment variables. The environment variable `QTWEBENGINE_CHROMIUM_FLAGS` does NOT work reliably.
+
+```python
+import sys
+from urllib.parse import urlparse
+
+# Get the target URL (e.g., from config or command line)
+TARGET_URL = "http://83.105.151.227:30000"  # Example Foundry URL
+
+# Extract origin for the key flag
+parsed = urlparse(TARGET_URL)
+origin = f"{parsed.scheme}://{parsed.netloc}"
+
+# Build argument list - MUST start with program name
+QT_ARGS = [sys.argv[0]]
+
+# Add Chromium flags
+chromium_flags = [
+    # THE KEY FLAG - tells Chromium to treat this specific HTTP origin as secure
+    f'--unsafely-treat-insecure-origin-as-secure={origin}',
+    
+    # Additional security bypass flags
+    '--disable-web-security',
+    '--disable-features=CrossOriginOpenerPolicy',
+    '--disable-features=CrossOriginEmbedderPolicy', 
+    '--allow-running-insecure-content',
+    '--disable-site-isolation-trials',
+    '--disable-features=IsolateOrigins',
+    '--disable-features=site-per-process',
+    
+    # Force treat as secure context
+    '--test-type',
+    '--ignore-certificate-errors',
+]
+
+QT_ARGS.extend(chromium_flags)
+
+# IMPORTANT: Pass QT_ARGS to QApplication, not sys.argv
+from PyQt6.QtWidgets import QApplication
+app = QApplication(QT_ARGS)
+```
+
+### Why Each Flag Matters
+
+| Flag | Purpose |
+|------|---------|
+| `--unsafely-treat-insecure-origin-as-secure={origin}` | **THE KEY FLAG** - Makes Chromium treat the specific HTTP origin as if it were HTTPS, enabling WebRTC, getUserMedia, etc. |
+| `--disable-web-security` | Disables same-origin policy checks |
+| `--disable-features=CrossOriginOpenerPolicy` | Prevents COOP header enforcement |
+| `--disable-features=CrossOriginEmbedderPolicy` | Prevents COEP header enforcement |
+| `--allow-running-insecure-content` | Allows HTTP content on HTTPS pages |
+| `--disable-site-isolation-trials` | Disables site isolation (process separation) |
+| `--disable-features=IsolateOrigins` | Prevents origin isolation |
+| `--disable-features=site-per-process` | Disables one-process-per-site |
+| `--test-type` | Puts Chromium in test mode, reduces security |
+| `--ignore-certificate-errors` | Ignores SSL certificate errors |
+
+### Verification
+
+After loading a page, verify the bypass worked by running:
+
+```javascript
+// Check if we're in a secure context
+console.log('isSecureContext:', window.isSecureContext);  // Should be true
+
+// Check if getUserMedia is available
+console.log('getUserMedia:', typeof navigator.mediaDevices?.getUserMedia);  // Should be 'function'
+
+// Check if WebRTC is available
+console.log('RTCPeerConnection:', typeof RTCPeerConnection);  // Should be 'function'
+```
+
+### Test Implementation Reference
+
+See `/scripts/dice-link/tests/pyqt6-test2-secure-origin.py` for the complete working test implementation.
+
+---
+
 ## CRITICAL: Foundry PopOut Module Integration (Qt WebEngine/Embedded Browser)
 
 **Status:** Solved - Tested and working  
