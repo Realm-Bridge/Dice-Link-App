@@ -44,15 +44,21 @@ class WindowController(QObject):
     
     @pyqtSlot(int, int)
     def startDrag(self, x, y):
-        """Start window drag - store initial mouse position relative to window"""
-        self.drag_start_pos = QPoint(x, y)
+        """Start window drag - convert client coords to global and store initial position"""
+        # JavaScript sends clientX/clientY (relative to browser window)
+        # Convert to global screen coordinates
+        global_pos = self.browser.mapToGlobal(QPoint(x, y))
+        self.drag_start_pos = global_pos
     
     @pyqtSlot(int, int)
     def doDrag(self, x, y):
         """Perform window drag - move window based on new mouse position"""
         if self.drag_start_pos.isNull():
             return
-        delta = QPoint(x, y) - self.drag_start_pos
+        # JavaScript sends clientX/clientY (relative to browser window)
+        # Convert to global screen coordinates
+        current_global = self.browser.mapToGlobal(QPoint(x, y))
+        delta = current_global - self.drag_start_pos
         new_pos = self.browser.pos() + delta
         self.browser.move(new_pos)
     
