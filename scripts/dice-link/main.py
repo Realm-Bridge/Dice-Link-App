@@ -12,7 +12,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile
 from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtGui import QPainterPath, QRegion, QDesktopServices
+from PyQt6.QtGui import QDesktopServices
 
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -215,13 +215,6 @@ def main():
         # Update zoom factor - inverse of device ratio so content scales DOWN with window
         # If device ratio is 2.0 (200% scaling), zoom should be 0.5 to fit content in half-sized window
         browser.setZoomFactor(1.0 / device_pixel_ratio)
-        
-        # Update rounded corners mask
-        corner_radius = 24
-        path = QPainterPath()
-        path.addRoundedRect(0, 0, scaled_width, scaled_height, corner_radius, corner_radius)
-        region = QRegion(path.toFillPolygon().toPolygon())
-        browser.setMask(region)
         
         print(f"[DPI UPDATE] Device pixel ratio: {device_pixel_ratio}, Window size: {scaled_width}x{scaled_height}")
     
