@@ -102,11 +102,27 @@ class DLABridge(QObject):
     rollCancelled = pyqtSignal(str)    # Emits JSON string with cancellation reason
     diceResultReady = pyqtSignal(str)  # Emits JSON string of dice result
     connectionStatusChanged = pyqtSignal(str)  # Emits connection status
+    dlcModuleReady = pyqtSignal(str)  # Emits acknowledgement when DLC module announces it's ready
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.log_vtt = log_vtt  # Store reference to logging function
         self.log_vtt("[BRIDGE] DLABridge created")
+    
+    @pyqtSlot()
+    def dlcModuleInitialized(self):
+        """
+        Called by JavaScript (DLC module) when it has loaded and initialized.
+        DLC uses this to announce it's ready and establish the connection.
+        """
+        self.log_vtt("[BRIDGE] DLC module has initialized and announced it's ready")
+        
+        # Emit signal to acknowledge DLC is present
+        self.dlcModuleReady.emit(json.dumps({
+            "type": "dlcModuleAck",
+            "status": "DLA is ready to receive rolls from DLC",
+            "embedded": True
+        }))
     
     @pyqtSlot(str)
     def receiveRollRequest(self, data_json):
@@ -468,14 +484,12 @@ class VTTWebView(QWebEngineView):
                 // Make the DLA bridge globally accessible
                 window.dlaInterface = channel.objects.dlaInterface;
                 
-                // Signal that we're ready
+                // Set flag indicating interface is ready
                 window.dlaInterfaceReady = true;
                 
                 console.log('[DLA] QWebChannel initialized successfully!');
                 console.log('[DLA] dlaInterface available:', typeof window.dlaInterface);
-                
-                // Dispatch event so DLC knows interface is ready
-                window.dispatchEvent(new Event('dlaInterfaceReady'));
+                console.log('[DLA] Waiting for DLC module to announce it is ready...');
                 
                 // Connect to signals from DLA
                 if (window.dlaInterface) {
@@ -492,6 +506,11 @@ class VTTWebView(QWebEngineView):
                     if (window.dlaInterface.diceResultReady) {
                         window.dlaInterface.diceResultReady.connect(function(diceJson) {
                             console.log('[DLA] Received dice result from Python');
+                        });
+                    }
+                    if (window.dlaInterface.dlcModuleReady) {
+                        window.dlaInterface.dlcModuleReady.connect(function(ackJson) {
+                            console.log('[DLA] DLC module acknowledged by Python:', ackJson);
                         });
                     }
                 }
