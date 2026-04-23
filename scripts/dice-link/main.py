@@ -68,6 +68,7 @@ class DraggableWebEngineView(QWebEngineView):
         super().__init__()
         self.drag_position = QPoint()
         self.is_dragging = False
+        self.devtools_view = None
     
     def mousePressEvent(self, event):
         """Handle mouse press for window dragging"""
@@ -94,12 +95,24 @@ class DraggableWebEngineView(QWebEngineView):
     
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
-        # F12 opens DevTools
+        # F12 opens DevTools in a separate window
         if event.key() == Qt.Key.Key_F12:
-            self.page().setDevToolsPage(self.page())
+            self.open_devtools()
             event.accept()
         else:
             super().keyPressEvent(event)
+    
+    def open_devtools(self):
+        """Open Chrome DevTools in a separate window"""
+        if self.devtools_view is None or not self.devtools_view.isVisible():
+            self.devtools_view = QWebEngineView()
+            self.devtools_view.setWindowTitle("DevTools - Dice Link")
+            self.devtools_view.resize(1200, 800)
+            self.page().setDevToolsPage(self.devtools_view.page())
+            self.devtools_view.show()
+        else:
+            self.devtools_view.raise_()
+            self.devtools_view.activateWindow()
 
 
 def run_server():
