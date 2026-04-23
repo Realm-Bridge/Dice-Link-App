@@ -492,15 +492,34 @@ web_view.page().runJavaScript(patch_script)
 - PopOut module can proceed with `document.open()`, `document.write()`, `document.close()`
 - Qt's real popup document object works fine - we only needed to add the missing `.location` property
 
-**Step 2: Handle OS close button properly**
+**Step 2: Handle OS close button properly (THE CRITICAL BREAKTHROUGH)**
+
+This is the part that required the most debugging and testing. **Do not skip this.**
+
+### The Problem (Why This Was So Hard)
 
 Users will see TWO close buttons on the popup:
-- OS window close button (minimize/maximize/close at top)
-- Character sheet's own close button (part of Foundry UI)
+- OS window close button (top-right X - system controls)
+- Character sheet's own close button (blue X - part of Foundry UI)
 
-If users click the OS close button WITHOUT clicking the sheet's button, the sheet data is lost (PopOut module doesn't get to return it to the main window).
+If users click the OS close button, Qt closes the window immediately WITHOUT triggering PopOut's unload handler. This means **the sheet data is LOST** and never returns to the main window - players lose access to their character sheet.
 
-**Solution: Intercept the OS close button**
+The naive approaches all failed:
+1. ❌ Just let OS close button close the window - loses sheet data
+2. ❌ Hide OS close button with `setWindowFlags()` - broke the entire window rendering
+3. ❌ `window.close()` from JavaScript - Qt won't allow it (security)
+4. ❌ QWebChannel bridge - crashed the app on initialization
+5. ❌ `loadFinished` detection - never fires when page unloads
+
+### The Solution That Actually Works
+
+**Intercept the OS close button and simulate a click on the sheet's close button instead.**
+
+When the user clicks OS close, we:
+1. Intercept `closeEvent()` in Python
+2. Use JavaScript to click the sheet's close button (`[data-action="close"]`)
+3. Wait for PopOut's `beforeunload` handler to fire (returns sheet to main window)
+4. Then actually close the Qt window
 
 ```python
 class PopupWindow(QMainWindow):
@@ -508,7 +527,7 @@ class PopupWindow(QMainWindow):
         super().__init__()
         self.log = log_callback
         self.web_view = web_view
-        self.is_closing = False  # Prevent double-close
+        self.is_closing = False  # CRITICAL: Prevents double-close after we trigger it
         
         # ... standard setup ...
         self.setCentralWidget(web_view)
@@ -516,14 +535,14 @@ class PopupWindow(QMainWindow):
     def closeEvent(self, event):
         """OS close button - trigger sheet close button instead"""
         if self.is_closing:
-            # Already closing, allow it
+            # Second close attempt (from perform_close) - allow it
             event.accept()
             return
         
         self.is_closing = True
         self.log("[POPUP] OS close clicked - triggering sheet close button")
         
-        # Click the sheet's close button
+        # Click the sheet's close button to properly trigger PopOut unload
         trigger_script = """
         (function() {
             var closeBtn = document.querySelector('[data-action="close"]');
@@ -538,24 +557,52 @@ class PopupWindow(QMainWindow):
         
         def on_result(result):
             if result == 'clicked':
-                # Wait for PopOut unload to complete
+                # Wait for PopOut's beforeunload/unload handlers to fire and
+                # return the sheet to the main window. Adjust timing as needed.
+                # Start with 500ms; may be reducible to 200-300ms depending on
+                # system performance and PopOut module speed.
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(500, self.perform_close)
             else:
                 self.perform_close()
         
         self.web_view.page().runJavaScript(trigger_script, on_result)
-        event.ignore()  # Don't close yet - wait for sheet button
+        event.ignore()  # Prevent immediate close - let sheet button handle it
     
     def perform_close(self):
-        """Actually close the window"""
-        self.close()  # This calls closeEvent again, but is_closing=True allows it
+        """Actually close the window after sheet is safely returned"""
+        self.log("[POPUP] Performing window close")
+        self.close()  # Calls closeEvent again, but is_closing=True allows it
 ```
 
-**Key points:**
-- `is_closing` flag prevents rapid re-triggering of close events
-- 500ms delay gives PopOut module time to return the sheet to main window
-- Sheet button click (`[data-action="close"]`) triggers PopOut's unload handler
+**Why this works:**
+- `is_closing` flag acts as a gate - first close attempt is intercepted, second is allowed
+- Clicking the sheet button triggers PopOut's `beforeunload` handler which returns sheet data
+- The delay gives PopOut time to complete the return operation
+- After the delay, we call `close()` again which passes through because `is_closing=True`
+
+### Timing Adjustment
+
+The 500ms delay is conservative and should be safe on all systems. However, you may optimize it:
+
+- **Slower systems or high load:** Keep at 500ms
+- **Normal operation:** 300-400ms should work
+- **Fast systems:** Could go as low as 200ms
+
+Test by opening a popout, clicking the OS close button, and observing console logs. If you see:
+```
+[POPUP] OS close clicked - triggering sheet close button
+[POPUP] Found sheet close button, clicking
+[POPUP] unload event - sheet returned to main window
+[POPUP] Performing window close
+```
+
+All within a reasonable time, you can reduce the delay. If the sheet takes longer to return, increase it.
+
+```python
+# Adjust this line based on your testing:
+QTimer.singleShot(300, self.perform_close)  # Try 300ms instead of 500ms
+```
 
 **Step 3: Test with logging**
 
