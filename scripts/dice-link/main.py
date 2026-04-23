@@ -12,7 +12,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
-from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
+from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent, QTimer
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtGui import QDesktopServices
 
@@ -37,6 +37,10 @@ class VTTValidator:
             url: VTT server URL to validate
             callback: Function to call with (is_valid, message, data) when done
         """
+        def call_on_main_thread(is_valid, message, data):
+            """Schedule callback on main Qt thread using QTimer"""
+            QTimer.singleShot(0, lambda: callback(is_valid, message, data))
+        
         def validate_thread():
             try:
                 # Ensure URL has a scheme
@@ -50,7 +54,7 @@ class VTTValidator:
                     req = urllib.request.Request(f'{url_to_check}/api/status', headers={'User-Agent': 'Dice Link'})
                     with urllib.request.urlopen(req, timeout=5) as response:
                         # If /api/status exists, it's likely a Foundry instance
-                        callback(True, 'Valid Foundry instance detected', {'url': url_to_check})
+                        call_on_main_thread(True, 'Valid Foundry instance detected', {'url': url_to_check})
                         return
                 except (urllib.error.HTTPError, urllib.error.URLError):
                     # /api/status failed, try checking the root page for Foundry markers
@@ -62,13 +66,13 @@ class VTTValidator:
                     with urllib.request.urlopen(req, timeout=5) as response:
                         html = response.read().decode('utf-8', errors='ignore')
                         if any(marker in html.lower() for marker in ['foundry', 'vtt', '/ui/players', 'socket']):
-                            callback(True, 'VTT instance detected', {'url': url_to_check})
+                            call_on_main_thread(True, 'VTT instance detected', {'url': url_to_check})
                         else:
-                            callback(False, 'URL does not appear to be a valid VTT', {})
+                            call_on_main_thread(False, 'URL does not appear to be a valid VTT', {})
                 except (urllib.error.HTTPError, urllib.error.URLError) as e:
-                    callback(False, f'Could not connect to URL: {str(e)}', {})
+                    call_on_main_thread(False, f'Could not connect to URL: {str(e)}', {})
             except Exception as e:
-                callback(False, f'Validation error: {str(e)}', {})
+                call_on_main_thread(False, f'Validation error: {str(e)}', {})
         
         # Run validation in background thread to avoid blocking UI
         thread = threading.Thread(target=validate_thread, daemon=True)
