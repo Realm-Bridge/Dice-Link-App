@@ -515,7 +515,10 @@ See `/scripts/dice-link/tests/pyqt6-test2-secure-origin.py` for the complete wor
 
 ### The Problem: PopOut Windows Don't Work in Qt WebEngine
 
-Foundry v14+ includes a PopOut module that allows players to "pop out" character sheets into separate browser windows. When loaded in a Qt WebEngine embedded browser, this fails silently:
+**Tested on:** Foundry v13 with third-party PopOut module  
+**Note:** Foundry v14 includes built-in popout functionality which has NOT been tested yet. The solution below may need revisiting when upgrading to v14.
+
+The PopOut module allows players to "pop out" character sheets into separate browser windows. When loaded in a Qt WebEngine embedded browser, this fails silently:
 
 1. PopOut module calls `window.open("about:blank", "_blank", features)`
 2. Qt's `createWindow()` override returns a popup object to JavaScript
