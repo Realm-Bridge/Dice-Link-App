@@ -103,20 +103,31 @@ def send_player_modes_to_ui(player_modes_data):
     """
     Send player modes data from DLC to the UI controls window.
     Called when DLC broadcasts player modes update via QWebChannel.
+    
+    Converts DLC data format (object with numeric keys) to UI expected format (array).
     """
     try:
         from core.websocket_handler import broadcast_to_ui
         
+        # Convert player modes data from DLC format to UI format
+        # DLC format: {"0": {"id": "...", "name": "...", "mode": "..."}, ...}
+        # UI format: [{"id": "...", "name": "...", "mode": "..."}, ...]
+        players_array = []
+        if isinstance(player_modes_data, dict):
+            for key, player_data in player_modes_data.items():
+                if isinstance(player_data, dict):
+                    players_array.append(player_data)
+        
         message = {
             'type': 'playerModesUpdate',
-            'data': player_modes_data
+            'players': players_array
         }
         
         # Use asyncio to run the async broadcast function from a sync context
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(broadcast_to_ui(message))
-        print(f"[BRIDGE STATE] Broadcast player modes to UI")
+        print(f"[BRIDGE STATE] Broadcast player modes to UI: {len(players_array)} players")
         return True
     except Exception as e:
         print(f"[BRIDGE STATE] Error broadcasting player modes to UI: {e}")
