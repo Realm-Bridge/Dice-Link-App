@@ -455,6 +455,7 @@ class DraggableWebEngineView(QWebEngineView):
         super().__init__()
         self.drag_position = QPoint()
         self.is_dragging = False
+        self.window_controller = None  # Will be set after creation
     
     def mousePressEvent(self, event):
         """Handle mouse press for window dragging"""
@@ -494,6 +495,16 @@ class DraggableWebEngineView(QWebEngineView):
             event.accept()
         else:
             super().keyPressEvent(event)
+    
+    def closeEvent(self, event):
+        """Handle main window close - close all child VTT windows"""
+        if self.window_controller and hasattr(self.window_controller, 'vtt_windows'):
+            # Close all VTT windows
+            for vtt_window in self.window_controller.vtt_windows:
+                vtt_window.close()
+        
+        # Allow the main window to close
+        event.accept()
 
 
 def run_server():
@@ -574,6 +585,7 @@ def main():
     
     # Set up window controller for frameless window control
     window_controller = WindowController(browser, browser)
+    browser.window_controller = window_controller  # Store reference for closeEvent
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
