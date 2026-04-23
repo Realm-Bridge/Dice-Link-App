@@ -126,9 +126,8 @@ class DLABridge(QObject):
         self.log_vtt("[BRIDGE] Emitted connectionStatusReady: connected")
         
         # Broadcast connection status to UI controls window (via Flask WebSocket)
-        from bridge_state import send_connection_status_to_ui, get_current_player_name
-        player_name = get_current_player_name() or "Foundry VTT"
-        send_connection_status_to_ui(connected=True, player_name=player_name)
+        from bridge_state import send_connection_status_to_ui
+        send_connection_status_to_ui(connected=True, player_name=None)
         
         # Emit signal to acknowledge DLC is present
         self.dlcModuleReady.emit(json.dumps({
@@ -197,6 +196,8 @@ class DLABridge(QObject):
                 if isinstance(player_data, dict) and 'name' in player_data:
                     player_name = player_data['name']
                     update_connection_player_name(player_name)
+                    # Update connection status display with the actual player name
+                    send_connection_status_to_ui(connected=True, player_name=player_name)
                     break
                     
         except json.JSONDecodeError:
