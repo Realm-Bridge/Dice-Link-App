@@ -557,15 +557,7 @@ def main():
     time.sleep(1.5)
     
     # Create and display the PyQt6 window
-    # Chromium flags MUST be passed to QApplication constructor for WebRTC/getUserMedia on HTTP origins
-    chromium_args = [
-        sys.argv[0],
-        '--unsafely-treat-insecure-origin-as-secure=http://localhost:30000',
-        '--enable-features=InsecureOriginPermissions',
-        '--disable-web-security',
-        '--allow-running-insecure-content',
-    ]
-    app = QApplication(chromium_args)
+    app = QApplication(sys.argv)
     
     # Enable DevTools via environment variable - must be set before creating the profile
     os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
