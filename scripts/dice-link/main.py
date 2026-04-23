@@ -217,9 +217,8 @@ def main():
     screen = browser.screen()
     if screen:
         screen.logicalDotsPerInchChanged.connect(update_dpi_scaling)
-    
-    # Also connect screenChanged in case window moves to different display
-    browser.screenChanged.connect(update_dpi_scaling)
+        # If window moves to different display, also update scaling
+        screen.geometryChanged.connect(update_dpi_scaling)
     
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST
