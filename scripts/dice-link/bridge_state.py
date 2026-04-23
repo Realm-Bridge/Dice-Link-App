@@ -150,3 +150,25 @@ def send_button_select_to_dlc(button_data):
             return False
     return False
 
+
+def send_dice_request_to_ui(dice_request_data):
+    """
+    Send a dice request from DLC to the UI controls window.
+    Called when DLABridge receives receiveDiceRequest from DLC.
+    This tells the UI to close the roll request window and show the dice rolling screen.
+    """
+    try:
+        from core.websocket_handler import broadcast_to_ui
+        
+        dice_request_data['type'] = 'diceRequest'
+        
+        # Use asyncio to run the async broadcast function from a sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(broadcast_to_ui(dice_request_data))
+        print(f"[BRIDGE STATE] Broadcast dice request to UI: {dice_request_data.get('id')}")
+        return True
+    except Exception as e:
+        print(f"[BRIDGE STATE] Error broadcasting dice request to UI: {e}")
+        return False
+

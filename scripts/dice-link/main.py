@@ -161,6 +161,7 @@ class DLABridge(QObject):
     def receiveDiceRequest(self, data_json):
         """
         Called by JavaScript (DLC module) to send a dice request to DLA.
+        Forwards to Flask UI to close roll request window and show dice rolling screen.
         
         Args:
             data_json: JSON string containing dice request data
@@ -169,7 +170,10 @@ class DLABridge(QObject):
             data = json.loads(data_json)
             request_id = data.get('id', 'unknown')
             self.log_vtt(f"[BRIDGE] Received dice request #{request_id}")
-            # DLA will process this and eventually emit diceResultReady
+            
+            # Forward to UI controls window to show dice rolling screen
+            from bridge_state import send_dice_request_to_ui
+            send_dice_request_to_ui(data)
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveDiceRequest")
     
