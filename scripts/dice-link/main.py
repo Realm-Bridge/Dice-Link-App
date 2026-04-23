@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
 from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtGui import QDesktopServices
@@ -407,6 +407,13 @@ class VTTWebView(QWebEngineView):
         # Set custom page for navigation blocking
         self.custom_page = VTTWebPage(self.page().profile(), allowed_origin)
         self.setPage(self.custom_page)
+        
+        # Configure WebEngine settings (required for QWebChannel and JavaScript to work)
+        settings = self.page().settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
         
         # Setup QWebChannel bridge for DLC communication
         self.setup_webchannel()
