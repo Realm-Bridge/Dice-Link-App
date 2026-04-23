@@ -1,9 +1,13 @@
 """Global state for DLABridge - allows Flask to communicate back through the QWebChannel bridge"""
 
 import asyncio
+import json
 
 # Reference to the DLABridge object, set when the viewing window is created
 dla_bridge = None
+
+# Global state for player name
+current_player_name = None
 
 
 def set_bridge(bridge):
@@ -76,9 +80,62 @@ def send_connection_status_to_ui(connected, player_name=None):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(broadcast_to_ui(status_message))
-        print(f"[BRIDGE STATE] Broadcast connection status to UI: connected={connected}")
+        print(f"[BRIDGE STATE] Broadcast connection status to UI: connected={connected}, player={player_name}")
         return True
     except Exception as e:
         print(f"[BRIDGE STATE] Error broadcasting connection status to UI: {e}")
         return False
+
+
+def update_connection_player_name(player_name):
+    """Update the stored player name from player modes data."""
+    global current_player_name
+    current_player_name = player_name
+    print(f"[BRIDGE STATE] Updated player name: {player_name}")
+
+
+def get_current_player_name():
+    """Get the currently stored player name."""
+    return current_player_name
+
+
+def send_player_modes_to_ui(player_modes_data):
+    """
+    Send player modes data from DLC to the UI controls window.
+    Called when DLC broadcasts player modes update via QWebChannel.
+    """
+    try:
+        from core.websocket_handler import broadcast_to_ui
+        
+        message = {
+            'type': 'playerModesUpdate',
+            'data': player_modes_data
+        }
+        
+        # Use asyncio to run the async broadcast function from a sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(broadcast_to_ui(message))
+        print(f"[BRIDGE STATE] Broadcast player modes to UI")
+        return True
+    except Exception as e:
+        print(f"[BRIDGE STATE] Error broadcasting player modes to UI: {e}")
+        return False
+
+
+def send_button_select_to_dlc(button_data):
+    """
+    Send button selection from UI to DLC via the bridge.
+    Called when user clicks a button in the controls window.
+    """
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.receiveButtonSelect(json.dumps(button_data))
+            print(f"[BRIDGE STATE] Sent button select to DLC: {button_data.get('button')}")
+            return True
+        except Exception as e:
+            print(f"[BRIDGE STATE] Error sending button select to DLC: {e}")
+            return False
+    return False
 

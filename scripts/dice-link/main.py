@@ -103,6 +103,7 @@ class DLABridge(QObject):
     diceResultReady = pyqtSignal(str)  # Emits JSON string of dice result
     connectionStatusChanged = pyqtSignal(str)  # Emits connection status
     dlcModuleReady = pyqtSignal(str)  # Emits acknowledgement when DLC module announces it's ready
+    buttonSelected = pyqtSignal(str)  # Emits button selection from UI to DLC
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -122,8 +123,9 @@ class DLABridge(QObject):
         self.log_vtt("[BRIDGE] Emitted connectionStatusChanged: connected")
         
         # Broadcast connection status to UI controls window (via Flask WebSocket)
-        from bridge_state import send_connection_status_to_ui
-        send_connection_status_to_ui(connected=True, player_name="Foundry VTT")
+        from bridge_state import send_connection_status_to_ui, get_current_player_name
+        player_name = get_current_player_name() or "Foundry VTT"
+        send_connection_status_to_ui(connected=True, player_name=player_name)
         
         # Emit signal to acknowledge DLC is present
         self.dlcModuleReady.emit(json.dumps({
@@ -173,6 +175,7 @@ class DLABridge(QObject):
     def receivePlayerModesUpdate(self, data_json):
         """
         Called by JavaScript (DLC module) to broadcast player modes update.
+        Forwards to Flask UI and extracts player name for connection status.
         
         Args:
             data_json: JSON string containing player modes data
@@ -180,9 +183,43 @@ class DLABridge(QObject):
         try:
             data = json.loads(data_json)
             self.log_vtt(f"[BRIDGE] Received player modes update")
-            # This will be broadcast to other connected players
+            
+            # Forward to UI controls window via Flask WebSocket
+            from bridge_state import send_player_modes_to_ui, update_connection_player_name
+            send_player_modes_to_ui(data)
+            
+            # Extract player name from first player in the modes data
+            # data format: {"playerId": {"name": "PlayerName", "mode": "digital", ...}, ...}
+            for player_id, player_data in data.items():
+                if isinstance(player_data, dict) and 'name' in player_data:
+                    player_name = player_data['name']
+                    update_connection_player_name(player_name)
+                    break
+                    
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receivePlayerModesUpdate")
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR processing player modes: {e}")
+    
+    @pyqtSlot(str)
+    def receiveButtonSelect(self, data_json):
+        """
+        Called by Flask handler when user clicks a button in the controls window.
+        Forwards button selection to DLC via QWebChannel.
+        
+        Args:
+            data_json: JSON string containing button selection data
+        """
+        try:
+            data = json.loads(data_json)
+            roll_id = data.get('rollId')
+            button = data.get('button')
+            self.log_vtt(f"[BRIDGE] Received button select from UI: {button} for roll {roll_id}")
+            
+            # Forward to DLC via QWebChannel signal
+            self.buttonSelected.emit(json.dumps(data))
+        except json.JSONDecodeError:
+            self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveButtonSelect")
     
     def sendRollResult(self, roll_result_data):
         """
