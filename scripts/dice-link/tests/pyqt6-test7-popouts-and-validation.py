@@ -21,8 +21,22 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSignal
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
+from PyQt6.QtWebChannel import QWebChannel
+
+
+class PopupBridge(QObject):
+    """Bridge between JavaScript and Python to close the popup window"""
+    
+    closeRequested = pyqtSignal()
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+    
+    def requestClose(self):
+        """Called from JavaScript when the sheet is unloading"""
+        self.closeRequested.emit()
 
 
 class FoundryValidator:
@@ -114,26 +128,19 @@ class PopupWindow(QMainWindow):
         
         self.setCentralWidget(web_view)
         
+        # Create bridge for JavaScript to communicate with Python
+        self.bridge = PopupBridge()
+        self.bridge.closeRequested.connect(self.close)
+        
+        # Set up QWebChannel to expose bridge to JavaScript
+        channel = QWebChannel()
+        channel.registerObject("popupBridge", self.bridge)
+        web_view.page().setWebChannel(channel)
+        
         # Update title when page title changes - this indicates content
         web_view.page().titleChanged.connect(self.on_title_changed)
         
-        # Watch for page load finished - if it finishes after having content, 
-        # it means the sheet was returned and page went blank
-        web_view.page().loadFinished.connect(self.on_load_finished)
-        
-        self.log("[POPUP] Window created")
-    
-    def on_load_finished(self, ok):
-        """Detect when page finishes loading - if it's blank after having content, close window"""
-        if self.has_had_content:
-            # Check what the page title is now
-            title = self.web_view.page().title()
-            self.log(f"[POPUP] Load finished, title now: {title}")
-            
-            # If title went back to default or blank, the content was removed
-            if not title or title == "about:blank" or title == "Foundry Virtual Tabletop":
-                self.log("[POPUP] Page went blank - sheet returned, closing window")
-                self.close()
+        self.log("[POPUP] Window created with QWebChannel bridge")
     
     def on_title_changed(self, title):
         """Track when content is loaded by watching title changes"""
@@ -143,7 +150,7 @@ class PopupWindow(QMainWindow):
             self.has_had_content = True
             self.log(f"[POPUP] Content detected in popup: {title}")
             
-            # Inject listener to close window when PopOut module unloads the content
+            # Inject listener to call Python bridge when PopOut module unloads
             # This listens for when the user clicks the close button in the PopOut header
             listener_script = """
             (function() {
@@ -152,17 +159,33 @@ class PopupWindow(QMainWindow):
                 }
                 window.__dla_unload_listener_installed = true;
                 
-                window.addEventListener('beforeunload', function() {
-                    console.log('[POPUP_LISTENER] beforeunload fired - PopOut is returning sheet to main window');
-                    console.log('[POPUP_LISTENER] Closing popup window');
-                    window.close();
-                });
+                // Wait for QWebChannel to be ready
+                if (typeof qt !== 'undefined' && qt.webChannelTransport) {
+                    setupUnloadListener();
+                } else {
+                    document.addEventListener('DOMContentLoaded', setupUnloadListener);
+                    setTimeout(setupUnloadListener, 100);
+                }
                 
-                window.addEventListener('unload', function() {
-                    console.log('[POPUP_LISTENER] unload fired - page going away');
-                });
-                
-                console.log('[POPUP_LISTENER] Listeners installed');
+                function setupUnloadListener() {
+                    window.addEventListener('beforeunload', function() {
+                        console.log('[POPUP_LISTENER] beforeunload fired - PopOut is returning sheet to main window');
+                        
+                        // Call Python method to close the window
+                        if (typeof popupBridge !== 'undefined') {
+                            console.log('[POPUP_LISTENER] Calling popupBridge.requestClose()');
+                            popupBridge.requestClose();
+                        } else {
+                            console.log('[POPUP_LISTENER] popupBridge not available');
+                        }
+                    });
+                    
+                    window.addEventListener('unload', function() {
+                        console.log('[POPUP_LISTENER] unload fired - page going away');
+                    });
+                    
+                    console.log('[POPUP_LISTENER] Listeners installed');
+                }
             })();
             """
             self.web_view.page().runJavaScript(listener_script)
