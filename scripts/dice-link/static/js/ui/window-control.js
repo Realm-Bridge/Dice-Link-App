@@ -54,13 +54,15 @@ function initWindowControls() {
                 return;
             }
             isDragging = true;
-            console.log('[WindowControl] Drag started at', e.clientX, e.clientY);
-            pyqtBridge.startDrag(e.clientX, e.clientY);
+            // Use screenX/screenY for global screen coordinates (unaffected by zoom)
+            console.log('[WindowControl] Drag started at', e.screenX, e.screenY);
+            pyqtBridge.startDrag(e.screenX, e.screenY);
         });
         
         document.addEventListener('mousemove', (e) => {
             if (isDragging) {
-                pyqtBridge.doDrag(e.clientX, e.clientY);
+                // Use screenX/screenY for global screen coordinates (unaffected by zoom)
+                pyqtBridge.doDrag(e.screenX, e.screenY);
             }
         });
         

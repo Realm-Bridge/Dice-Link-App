@@ -45,9 +45,8 @@ class WindowController(QObject):
     @pyqtSlot(int, int)
     def startDrag(self, x, y):
         """Start window drag - calculate offset from mouse to window corner"""
-        # JavaScript sends clientX/clientY (relative to browser window)
-        # Convert to global screen coordinates
-        global_mouse_pos = self.browser.mapToGlobal(QPoint(x, y))
+        # JavaScript sends screenX/screenY (global screen coordinates)
+        global_mouse_pos = QPoint(x, y)
         window_pos = self.browser.pos()
         # Store offset: how far from window corner the mouse clicked
         self.mouse_offset = window_pos - global_mouse_pos
@@ -57,9 +56,8 @@ class WindowController(QObject):
         """Perform window drag - move window so mouse stays at same relative position"""
         if self.mouse_offset.isNull():
             return
-        # JavaScript sends clientX/clientY (relative to browser window)
-        # Convert to global screen coordinates
-        global_mouse_pos = self.browser.mapToGlobal(QPoint(x, y))
+        # JavaScript sends screenX/screenY (global screen coordinates)
+        global_mouse_pos = QPoint(x, y)
         # Window position = mouse position + stored offset
         new_window_pos = global_mouse_pos + self.mouse_offset
         self.browser.move(new_window_pos)
