@@ -182,28 +182,44 @@ def main():
     fixed_width = 1788
     fixed_height = 1500
     
-    # Get device pixel ratio and scale window accordingly
-    # This ensures consistent sizing across different DPI settings without blur
+    # Store fixed size and browser reference for dynamic scaling
+    browser.fixed_width = fixed_width
+    browser.fixed_height = fixed_height
+    
+    # Function to update scaling when DPI changes
+    def update_dpi_scaling():
+        screen = browser.screen()
+        device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
+        
+        # Calculate scaled window size
+        scaled_width = int(browser.fixed_width / device_pixel_ratio)
+        scaled_height = int(browser.fixed_height / device_pixel_ratio)
+        
+        # Update window size
+        browser.setFixedSize(scaled_width, scaled_height)
+        
+        # Update zoom factor
+        browser.setZoomFactor(device_pixel_ratio)
+        
+        # Update rounded corners mask
+        corner_radius = 24
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, scaled_width, scaled_height, corner_radius, corner_radius)
+        region = QRegion(path.toFillPolygon().toPolygon())
+        browser.setMask(region)
+        
+        print(f"[DPI UPDATE] Device pixel ratio: {device_pixel_ratio}, Window size: {scaled_width}x{scaled_height}")
+    
+    # Initial scaling
+    update_dpi_scaling()
+    
+    # Connect to screen DPI changes
     screen = browser.screen()
-    device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
+    if screen:
+        screen.logicalDotsPerInchChanged.connect(update_dpi_scaling)
     
-    # Calculate scaled window size
-    scaled_width = int(fixed_width / device_pixel_ratio)
-    scaled_height = int(fixed_height / device_pixel_ratio)
-    
-    browser.setFixedSize(scaled_width, scaled_height)
-    
-    # Set zoom factor to compensate - this scales all content proportionally
-    # zoom factor = 1.0 is 100%, so we set it back to original by multiplying by DPI ratio
-    browser.setZoomFactor(device_pixel_ratio)
-    
-    # Set rounded corners on frameless window
-    # Note: WA_TranslucentBackground handles transparency in PyQt6 - setMask is a fallback
-    corner_radius = 24
-    path = QPainterPath()
-    path.addRoundedRect(0, 0, scaled_width, scaled_height, corner_radius, corner_radius)
-    region = QRegion(path.toFillPolygon().toPolygon())
-    browser.setMask(region)
+    # Also connect screenChanged in case window moves to different display
+    browser.screenChanged.connect(update_dpi_scaling)
     
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST
