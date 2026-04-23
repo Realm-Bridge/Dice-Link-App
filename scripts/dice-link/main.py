@@ -25,6 +25,7 @@ os.chdir(DICE_LINK_DIR)
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
 from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt
+from bridge_state import set_bridge
 
 
 class VTTValidator:
@@ -120,7 +121,11 @@ class DLABridge(QObject):
             request_id = data.get('id', 'unknown')
             self.log_vtt(f"[BRIDGE] Received roll request #{request_id}")
             self.log_vtt(f"[BRIDGE] Roll: {data.get('roll', {}).get('title', 'Unknown')}")
-            # DLA will process this and eventually emit rollResultReady
+            
+            # Forward to UI controls window via Flask WebSocket
+            from bridge_state import send_roll_request_to_ui
+            send_roll_request_to_ui(data)
+            
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveRollRequest")
     
@@ -400,6 +405,9 @@ class VTTWebView(QWebEngineView):
         
         # Create the DLA bridge object
         self.dla_bridge = DLABridge()
+        
+        # Register the bridge globally so Flask can access it
+        set_bridge(self.dla_bridge)
         
         # Register the bridge - will be accessible as 'dlaInterface' in JS
         self.channel.registerObject("dlaInterface", self.dla_bridge)
