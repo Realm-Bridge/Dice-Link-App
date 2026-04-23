@@ -108,6 +108,11 @@ class DLABridge(QObject):
     diceTrayRollReady = pyqtSignal(str)  # Emits dice tray roll result
     playerModesUpdateReady = pyqtSignal(str)  # Emits player mode changes from DLA
     
+    def __init__(self):
+        super().__init__()
+        self.last_dlc_activity = None
+        self.connection_check_timer = None
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.log_vtt = log_vtt  # Store reference to logging function
@@ -120,6 +125,8 @@ class DLABridge(QObject):
         DLC uses this to announce it's ready and establish the connection.
         """
         self.log_vtt("[BRIDGE] DLC module has initialized and announced it's ready")
+        self.update_dlc_activity()
+        self.start_connection_monitoring()
         
         # Emit connection status as connected (to Foundry/DLC via QWebChannel)
         self.connectionStatusReady.emit("connected")
@@ -144,6 +151,7 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing roll request data
         """
+        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             request_id = data.get('id', 'unknown')
@@ -166,6 +174,7 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing dice request data
         """
+        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             request_id = data.get('id', 'unknown')
@@ -186,6 +195,7 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing player modes data
         """
+        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             self.log_vtt(f"[BRIDGE] Received player modes update")
@@ -224,6 +234,7 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing button selection data
         """
+        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             roll_id = data.get('rollId')
@@ -292,6 +303,46 @@ class DLABridge(QObject):
         """
         self.log_vtt(f"[BRIDGE] Connection status: {status}")
         self.connectionStatusReady.emit(status)
+    
+    def start_connection_monitoring(self):
+        """Start periodic connection status check (every 30 seconds)"""
+        from PyQt6.QtCore import QTimer
+        self.connection_check_timer = QTimer()
+        self.connection_check_timer.timeout.connect(self.check_connection_status)
+        self.connection_check_timer.start(30000)  # 30 seconds
+        self.log_vtt("[BRIDGE] Started connection monitoring (30 second interval)")
+        
+        # Record initial activity
+        import time
+        self.last_dlc_activity = time.time()
+    
+    def stop_connection_monitoring(self):
+        """Stop the connection status check timer"""
+        if self.connection_check_timer:
+            self.connection_check_timer.stop()
+            self.log_vtt("[BRIDGE] Stopped connection monitoring")
+    
+    def check_connection_status(self):
+        """
+        Periodically check if DLC is still connected.
+        If no activity for too long, assume disconnected.
+        """
+        import time
+        current_time = time.time()
+        
+        # If we haven't heard from DLC in 90 seconds, consider it disconnected
+        if self.last_dlc_activity and (current_time - self.last_dlc_activity) > 90:
+            self.log_vtt("[BRIDGE] Connection timeout - no activity from DLC in 90 seconds")
+            self.notifyConnectionStatus("disconnected")
+            # Notify UI as well
+            from bridge_state import send_connection_status_to_ui
+            send_connection_status_to_ui(connected=False)
+            self.stop_connection_monitoring()
+    
+    def update_dlc_activity(self):
+        """Called whenever DLC sends something - updates last activity timestamp"""
+        import time
+        self.last_dlc_activity = time.time()
     
     def sendRollComplete(self, roll_data):
         """
@@ -477,6 +528,13 @@ class VTTViewingWindow(QMainWindow):
             for popup_window in self.vtt_view.popup_windows:
                 log_vtt("[VIEWER] Closing popup window")
                 popup_window.close()
+        
+        # Stop connection monitoring
+        if hasattr(self.vtt_view, 'dla_bridge') and self.vtt_view.dla_bridge:
+            self.vtt_view.dla_bridge.stop_connection_monitoring()
+            # Notify UI that connection is lost
+            from bridge_state import send_connection_status_to_ui
+            send_connection_status_to_ui(connected=False)
         
         # Disconnect from Foundry by stopping page and navigating away
         log_vtt("[VIEWER] Disconnecting from VTT")
