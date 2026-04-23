@@ -117,6 +117,10 @@ class DLABridge(QObject):
         """
         self.log_vtt("[BRIDGE] DLC module has initialized and announced it's ready")
         
+        # Emit connection status as connected
+        self.connectionStatusChanged.emit("connected")
+        self.log_vtt("[BRIDGE] Emitted connectionStatusChanged: connected")
+        
         # Emit signal to acknowledge DLC is present
         self.dlcModuleReady.emit(json.dumps({
             "type": "dlcModuleAck",
