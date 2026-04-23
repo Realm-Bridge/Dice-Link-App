@@ -83,20 +83,7 @@ class DraggableWebEngineView(QWebEngineView):
     def mouseMoveEvent(self, event):
         """Handle mouse move for window dragging"""
         if self.is_dragging:
-            global_pos_float = event.globalPosition()
-            global_pos_int = global_pos_float.toPoint()
-            calculated_pos = global_pos_int - self.drag_position
-            current_window_pos = self.pos()
-            
-            print(f"[DRAG] globalPosition (float): {global_pos_float.x()}, {global_pos_float.y()}")
-            print(f"[DRAG] globalPosition (int):   {global_pos_int.x()}, {global_pos_int.y()}")
-            print(f"[DRAG] drag_position: {self.drag_position.x()}, {self.drag_position.y()}")
-            print(f"[DRAG] calculated move pos: {calculated_pos.x()}, {calculated_pos.y()}")
-            print(f"[DRAG] current window pos: {current_window_pos.x()}, {current_window_pos.y()}")
-            print(f"[DRAG] moving window to: {calculated_pos.x()}, {calculated_pos.y()}")
-            print("---")
-            
-            self.move(calculated_pos)
+            self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
         else:
             super().mouseMoveEvent(event)
