@@ -195,7 +195,7 @@ def main():
     browser.show()
     
     # Run the application
-    exit_code = app.exec_()
+    exit_code = app.exec()
     
     # Clean up UPnP port forwarding on exit
     if upnp_success:
