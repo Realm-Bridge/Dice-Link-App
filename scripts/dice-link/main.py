@@ -569,7 +569,7 @@ class CustomViewerTitleBar(QWidget):
                 color: #6f2e9a;
                 background-color: transparent;
                 border: none;
-                font-size: 20px;
+                font-size: 28px;
                 font-weight: bold;
                 padding: 8px 12px;
                 border-radius: 4px;
