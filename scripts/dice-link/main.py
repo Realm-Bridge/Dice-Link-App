@@ -107,11 +107,14 @@ class DLABridge(QObject):
     diceTrayRollReady = pyqtSignal(str)  # Emits dice tray roll result
     playerModesUpdateReady = pyqtSignal(str)  # Emits player mode changes from DLA
     
+    def __init__(self):
+        super().__init__()
+        self.last_dlc_activity = None
+        self.connection_check_timer = None
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.log_vtt = log_vtt  # Store reference to logging function
-        self.last_dlc_activity = None
-        self.connection_check_timer = None
         self.log_vtt("[BRIDGE] DLABridge created")
     
     @pyqtSlot()
