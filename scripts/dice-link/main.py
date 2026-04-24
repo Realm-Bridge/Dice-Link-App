@@ -11,7 +11,7 @@ import urllib.error
 from urllib.parse import urlparse
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QWidget, QSizePolicy
-from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase
+from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase, QIcon
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
 from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
@@ -125,6 +125,11 @@ def main():
     # Set window properties
     browser.setWindowTitle(APP_NAME)
     browser.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+    
+    # Set window icon for taskbar branding
+    logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
+    if logo_path.exists():
+        browser.setWindowIcon(QIcon(str(logo_path)))
     
     # Set up web channel for JavaScript-to-Python communication
     channel = QWebChannel()
