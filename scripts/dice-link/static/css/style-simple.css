@@ -391,6 +391,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: scale(1.5);
 }
 
 .dice-roll-btn {
@@ -407,6 +408,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: scale(1.5);
 }
 
 .dice-roll-btn:hover {
