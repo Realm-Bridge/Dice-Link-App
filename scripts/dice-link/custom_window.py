@@ -220,6 +220,9 @@ class CustomTitleBar(QWidget):
         if self.maximize_btn:
             self.maximize_btn.set_maximized(self.parent_window.isMaximized())
 
+    def _close(self):
+        self.parent_window.close()
+
     def set_title(self, title: str):
         """Update the title displayed in the title bar."""
         self.title_label.setText(title)
