@@ -25,6 +25,7 @@ from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_M
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
 from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt
 from bridge_state import set_bridge
+from custom_window import CustomWindow, CustomTitleBar, ResizeGrip
 
 
 class VTTValidator:
@@ -502,205 +503,19 @@ class VTTPopupWindow(QMainWindow):
         self.close()  # This will call closeEvent again, but is_closing flag will allow it
 
 
-class CustomViewerTitleBar(QWidget):
-    """Custom title bar for VTT Viewing Window matching DLA main window style"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent_window = parent
-        self.drag_position = None
-        
-        # Set fixed height for title bar
-        self.setFixedHeight(40)
-        
-        # Style matching DLA main window colors
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #0f1419;
-            }
-            QLabel {
-                color: #f0f2f5;
-            }
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                color: #6f2e9a;
-                font-size: 28px;
-                font-weight: bold;
-                padding: 8px 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: rgba(139, 92, 246, 0.1);
-            }
-            QPushButton#closeBtn:hover {
-                background-color: rgba(239, 68, 68, 0.2);
-                color: #ef4444;
-            }
-        """)
-        
-        # Create layout
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 0, 8, 0)
-        layout.setSpacing(8)
-        
-        # Dice Link logo (left side)
-        self.dice_link_logo = QLabel()
-        logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
-        if logo_path.exists():
-            pixmap = QPixmap(str(logo_path))
-            scaled_pixmap = pixmap.scaledToHeight(44, Qt.TransformationMode.SmoothTransformation)
-            self.dice_link_logo.setPixmap(scaled_pixmap)
-        layout.addWidget(self.dice_link_logo)
-        
-        # Spacer
-        layout.addStretch()
-        
-        # Window control buttons (right side)
-        self.minimize_btn = QPushButton("−")
-        self.minimize_btn.setFixedSize(36, 36)
-        self.minimize_btn.clicked.connect(self.minimize_window)
-        layout.addWidget(self.minimize_btn)
-        
-        self.maximize_btn = QPushButton("O")
-        self.maximize_btn.setFixedSize(36, 36)
-        rubik_font = QFont("Rubik", 11)
-        self.maximize_btn.setFont(rubik_font)
-        self.maximize_btn.setStyleSheet("""
-            QPushButton {
-                font-size: 11px;
-                font-weight: normal;
-            }
-        """)
-        self.maximize_btn.clicked.connect(self.toggle_maximize)
-        layout.addWidget(self.maximize_btn)
-        
-        self.close_btn = QPushButton("×")
-        self.close_btn.setObjectName("closeBtn")
-        self.close_btn.setFixedSize(36, 36)
-        self.close_btn.clicked.connect(self.close_window)
-        layout.addWidget(self.close_btn)
-    
-    def minimize_window(self):
-        if self.parent_window:
-            self.parent_window.showMinimized()
-    
-    def toggle_maximize(self):
-        if self.parent_window:
-            if self.parent_window.isMaximized():
-                self.parent_window.showNormal()
-                self.maximize_btn.setText("O")
-            else:
-                self.parent_window.showMaximized()
-                self.maximize_btn.setText("o")
-    
-    def close_window(self):
-        if self.parent_window:
-            self.parent_window.close()
-    
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drag_position = event.globalPosition().toPoint() - self.parent_window.frameGeometry().topLeft()
-            event.accept()
-    
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton and self.drag_position:
-            self.parent_window.move(event.globalPosition().toPoint() - self.drag_position)
-            event.accept()
-    
-    def mouseReleaseEvent(self, event):
-        self.drag_position = None
-
-
-class ResizeGrip(QWidget):
-    """Invisible resize grip widget for handling window resizing"""
-    
-    def __init__(self, parent, resize_direction, grip_size=16):
-        super().__init__(parent)
-        self.parent_window = parent
-        self.resize_direction = resize_direction
-        self.resize_start_pos = None
-        self.resize_start_geometry = None
-        
-        self.setFixedSize(grip_size, grip_size)
-        self.setStyleSheet("background-color: transparent;")
-        self.setCursor(Qt.CursorShape.SizeFDiagCursor if "diagonal" in resize_direction else Qt.CursorShape.ArrowCursor)
-        self.setMouseTracking(True)
-    
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.resize_start_pos = event.globalPosition().toPoint()
-            self.resize_start_geometry = self.parent_window.geometry()
-            event.accept()
-    
-    def mouseMoveEvent(self, event):
-        if self.resize_start_pos:
-            diff = event.globalPosition().toPoint() - self.resize_start_pos
-            geo = self.resize_start_geometry
-            new_geo = self.parent_window.geometry()
-            
-            if "right" in self.resize_direction:
-                new_geo.setRight(geo.right() + diff.x())
-            if "bottom" in self.resize_direction:
-                new_geo.setBottom(geo.bottom() + diff.y())
-            
-            if new_geo.width() >= self.parent_window.minimumWidth() and new_geo.height() >= self.parent_window.minimumHeight():
-                self.parent_window.setGeometry(new_geo)
-            event.accept()
-    
-    def mouseReleaseEvent(self, event):
-        self.resize_start_pos = None
-        self.resize_start_geometry = None
-
-
-class VTTViewingWindow(QMainWindow):
+class VTTViewingWindow(CustomWindow):
     """Main viewing window for VTT - closes all popups when closed"""
     
     def __init__(self, vtt_view):
-        super().__init__()
+        super().__init__(show_maximize=True, resizable=True)
         self.vtt_view = vtt_view
         
-        # Make window frameless
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setGeometry(100, 100, 1200, 800)
-        self.setMinimumSize(400, 300)
         
-        # Create central widget to hold title bar and content
-        central_widget = QWidget()
-        central_widget.setStyleSheet("background-color: #0f1419;")
-        self.setCentralWidget(central_widget)
-        
-        # Create main layout
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        
-        # Add custom title bar
-        self.title_bar = CustomViewerTitleBar(self)
-        # Prevent cursor changes and event propagation for title bar
-        self.title_bar.setCursor(Qt.CursorShape.ArrowCursor)
-        self.title_bar.setMouseTracking(False)
-        main_layout.addWidget(self.title_bar)
-        
-        # Add the VTT view
-        main_layout.addWidget(vtt_view)
-        
-        # Add invisible resize grip for bottom-right corner
-        self.resize_grip = ResizeGrip(self, "bottom-right-diagonal", grip_size=16)
-        self.resize_grip.raise_()
+        # Add the VTT view into the content area
+        self.content_layout.addWidget(vtt_view)
         
         log_vtt("[VIEWER] Viewing window created with custom title bar and resize grip")
-    
-    def resizeEvent(self, event):
-        """Reposition resize grip when window is resized"""
-        super().resizeEvent(event)
-        if hasattr(self, 'resize_grip'):
-            # Position grip at bottom-right corner
-            grip_size = self.resize_grip.width()
-            self.resize_grip.move(
-                self.width() - grip_size,
-                self.height() - grip_size
-            )
     
     def closeEvent(self, event):
         """Close all popup windows and disconnect from VTT when viewing window closes"""
