@@ -621,13 +621,23 @@ class CustomViewerTitleBar(QWidget):
 class VTTViewingWindow(QMainWindow):
     """Main viewing window for VTT - closes all popups when closed"""
     
+    # Resize edge detection margin in pixels
+    RESIZE_MARGIN = 8
+    
     def __init__(self, vtt_view):
         super().__init__()
         self.vtt_view = vtt_view
+        self.resize_direction = None
+        self.resize_start_pos = None
+        self.resize_start_geometry = None
         
         # Make window frameless
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setGeometry(100, 100, 1200, 800)
+        self.setMinimumSize(400, 300)
+        
+        # Enable mouse tracking for resize cursor changes
+        self.setMouseTracking(True)
         
         # Create central widget to hold title bar and content
         central_widget = QWidget()
@@ -647,6 +657,95 @@ class VTTViewingWindow(QMainWindow):
         main_layout.addWidget(vtt_view)
         
         log_vtt("[VIEWER] Viewing window created with custom title bar")
+    
+    def _get_resize_direction(self, pos):
+        """Determine which edge/corner the mouse is near for resizing"""
+        rect = self.rect()
+        margin = self.RESIZE_MARGIN
+        
+        left = pos.x() < margin
+        right = pos.x() > rect.width() - margin
+        top = pos.y() < margin
+        bottom = pos.y() > rect.height() - margin
+        
+        if top and left:
+            return "top-left"
+        elif top and right:
+            return "top-right"
+        elif bottom and left:
+            return "bottom-left"
+        elif bottom and right:
+            return "bottom-right"
+        elif left:
+            return "left"
+        elif right:
+            return "right"
+        elif top:
+            return "top"
+        elif bottom:
+            return "bottom"
+        return None
+    
+    def _update_cursor(self, direction):
+        """Update cursor based on resize direction"""
+        from PyQt6.QtGui import QCursor
+        if direction in ("left", "right"):
+            self.setCursor(QCursor(Qt.CursorShape.SizeHorCursor))
+        elif direction in ("top", "bottom"):
+            self.setCursor(QCursor(Qt.CursorShape.SizeVerCursor))
+        elif direction in ("top-left", "bottom-right"):
+            self.setCursor(QCursor(Qt.CursorShape.SizeFDiagCursor))
+        elif direction in ("top-right", "bottom-left"):
+            self.setCursor(QCursor(Qt.CursorShape.SizeBDiagCursor))
+        else:
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+    
+    def mousePressEvent(self, event):
+        """Start resize if mouse is on edge"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            direction = self._get_resize_direction(event.pos())
+            if direction:
+                self.resize_direction = direction
+                self.resize_start_pos = event.globalPosition().toPoint()
+                self.resize_start_geometry = self.geometry()
+                event.accept()
+                return
+        super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """Handle resize or update cursor"""
+        if self.resize_direction and self.resize_start_pos:
+            # Perform resize
+            diff = event.globalPosition().toPoint() - self.resize_start_pos
+            geo = self.resize_start_geometry
+            new_geo = self.geometry()
+            
+            if "left" in self.resize_direction:
+                new_geo.setLeft(geo.left() + diff.x())
+            if "right" in self.resize_direction:
+                new_geo.setRight(geo.right() + diff.x())
+            if "top" in self.resize_direction:
+                new_geo.setTop(geo.top() + diff.y())
+            if "bottom" in self.resize_direction:
+                new_geo.setBottom(geo.bottom() + diff.y())
+            
+            # Enforce minimum size
+            if new_geo.width() >= self.minimumWidth() and new_geo.height() >= self.minimumHeight():
+                self.setGeometry(new_geo)
+            event.accept()
+        else:
+            # Update cursor based on position
+            direction = self._get_resize_direction(event.pos())
+            self._update_cursor(direction)
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """End resize"""
+        self.resize_direction = None
+        self.resize_start_pos = None
+        self.resize_start_geometry = None
+        self._update_cursor(None)
+        super().mouseReleaseEvent(event)
     
     def closeEvent(self, event):
         """Close all popup windows and disconnect from VTT when viewing window closes"""
