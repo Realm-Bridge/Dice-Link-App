@@ -15,6 +15,7 @@ DEBUG_UPNP = True
 DEBUG_WEBSOCKET = True
 DEBUG_SERVER = True
 DEBUG_DRAG = True
+DEBUG_CONNECTION_MONITOR = True
 
 
 def log(category: str, message: str):
@@ -78,6 +79,12 @@ def log_dlc_disconnect(clean: bool = True, error: str = None):
             print(f"[WebSocket DEBUG] WebSocket disconnected (clean disconnect)")
         else:
             print(f"[WebSocket DEBUG] WebSocket error: {error}")
+
+
+def log_connection_monitor(message: str):
+    """Log connection monitoring debug messages."""
+    if DEBUG_ENABLED and DEBUG_CONNECTION_MONITOR:
+        print(f"[Connection Monitor DEBUG] {message}")
 
 
 def log_upnp_device(device_name: str, device_type: str = "unknown"):

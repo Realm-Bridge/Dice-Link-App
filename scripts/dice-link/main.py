@@ -23,7 +23,7 @@ os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
-from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt
+from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt, log_connection_monitor
 from bridge_state import set_bridge
 from custom_window import CustomWindow, CustomTitleBar, ResizeGrip
 
@@ -308,16 +308,19 @@ class DLABridge(QObject):
         self.connection_check_timer.timeout.connect(self.check_connection_status)
         self.connection_check_timer.start(30000)  # 30 seconds
         self.log_vtt("[BRIDGE] Started connection monitoring (30 second interval)")
+        log_connection_monitor("Started connection monitoring (30 second interval)")
         
         # Record initial activity
         import time
         self.last_dlc_activity = time.time()
+        log_connection_monitor(f"Initial last_dlc_activity set to: {self.last_dlc_activity}")
     
     def stop_connection_monitoring(self):
         """Stop the connection status check timer"""
         if self.connection_check_timer:
             self.connection_check_timer.stop()
             self.log_vtt("[BRIDGE] Stopped connection monitoring")
+            log_connection_monitor("Stopped connection monitoring")
     
     def check_connection_status(self):
         """
@@ -326,20 +329,28 @@ class DLABridge(QObject):
         """
         import time
         current_time = time.time()
+        time_since_activity = current_time - self.last_dlc_activity if self.last_dlc_activity else -1
+        
+        log_connection_monitor(f"Check triggered - current_time: {current_time}, last_dlc_activity: {self.last_dlc_activity}, time_since_activity: {time_since_activity:.1f}s")
         
         # If we haven't heard from DLC in 90 seconds, consider it disconnected
         if self.last_dlc_activity and (current_time - self.last_dlc_activity) > 90:
+            log_connection_monitor(f"TIMEOUT TRIGGERED - {time_since_activity:.1f}s > 90s threshold")
             self.log_vtt("[BRIDGE] Connection timeout - no activity from DLC in 90 seconds")
             self.notifyConnectionStatus("disconnected")
             # Notify UI as well
             from bridge_state import send_connection_status_to_ui
             send_connection_status_to_ui(connected=False)
             self.stop_connection_monitoring()
+        else:
+            log_connection_monitor(f"Connection OK - {time_since_activity:.1f}s < 90s threshold")
     
     def update_dlc_activity(self):
         """Called whenever DLC sends something - updates last activity timestamp"""
         import time
+        old_activity = self.last_dlc_activity
         self.last_dlc_activity = time.time()
+        log_connection_monitor(f"Activity updated - old: {old_activity}, new: {self.last_dlc_activity}")
     
     def sendRollComplete(self, roll_data):
         """
