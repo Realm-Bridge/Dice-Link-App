@@ -19,14 +19,13 @@ from core.websocket_handler import (
     send_roll_cancelled,
     send_button_select,
     send_dice_result,
-    send_dice_tray_roll,
     get_webrtc_connection_status,
     log_handshake_step
 )
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS, CONNECTION_METHOD
 from debug import log_dlc_connection, log_dlc_accepted, log_dlc_message, log_dlc_response, log_dlc_disconnect, log_server
-from bridge_state import send_dice_result_to_foundry
+from bridge_state import send_dice_result_to_foundry, send_dice_tray_roll_to_foundry
 
 # Get the base directory (now app.py is at the root of dice-link/)
 BASE_DIR = Path(__file__).resolve().parent
@@ -738,12 +737,12 @@ async def handle_ui_message(message: dict):
         return
     
     if msg_type == "diceTrayRoll":
-        # Dice tray roll from UI - forward to DLC for evaluation
+        # Dice tray roll from UI - forward to DLC via QWebChannel bridge
         formula = message.get("formula", "")
         flavor = message.get("flavor", "Manual Dice Roll")
         log_server(f"Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
         
-        success = await send_dice_tray_roll(formula, flavor)
+        success = send_dice_tray_roll_to_foundry(formula, flavor)
         
         await broadcast_to_ui({
             "type": "diceTrayRollAck",

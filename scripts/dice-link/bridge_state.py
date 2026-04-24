@@ -63,6 +63,29 @@ def send_dice_result_to_foundry(result_data):
     return False
 
 
+def send_dice_tray_roll_to_foundry(formula, flavor):
+    """
+    Send dice tray roll from UI to Foundry through the bridge.
+    Called when Flask receives diceTrayRoll from the UI.
+    Uses diceTrayRollReady signal as DLC expects.
+    """
+    bridge = get_bridge()
+    if bridge:
+        try:
+            dice_tray_data = {
+                "type": "diceTrayRoll",
+                "formula": formula,
+                "flavor": flavor
+            }
+            bridge.sendDiceTrayRoll(dice_tray_data)
+            print(f"[BRIDGE STATE] Sent dice tray roll to Foundry: formula={formula}, flavor={flavor}")
+            return True
+        except Exception as e:
+            print(f"[BRIDGE STATE] Error sending dice tray roll to Foundry: {e}")
+            return False
+    return False
+
+
 def send_connection_status_to_ui(connected, player_name=None):
     """
     Send connection status to the UI controls window.
