@@ -1270,6 +1270,11 @@ body {
   border-radius: 12px;
 }
 
+/* Remove margin when pending-requests is hidden */
+.pending-requests[style*="display: none"] {
+  margin-bottom: 0;
+}
+
 .pending-requests h4 {
   font-size: 24px;
   font-weight: 600;
