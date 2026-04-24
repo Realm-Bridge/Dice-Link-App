@@ -566,6 +566,12 @@ class CustomViewerTitleBar(QWidget):
         self.maximize_btn.setFixedSize(36, 36)
         rubik_font = QFont("Rubik", 11)
         self.maximize_btn.setFont(rubik_font)
+        self.maximize_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 11px;
+                font-weight: normal;
+            }
+        """)
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         layout.addWidget(self.maximize_btn)
         
