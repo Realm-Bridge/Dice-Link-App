@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QObject, QDialog
+from PyQt6.QtWidgets import QDialog
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtCore import QPoint, pyqtSlot, QUrl
+from PyQt6.QtCore import QObject, QPoint, pyqtSlot, QUrl
 
 from dialogs import ConnectionDialog
 from vtt_web import VTTWebView
