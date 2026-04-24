@@ -562,7 +562,7 @@ class CustomViewerTitleBar(QWidget):
         self.minimize_btn.clicked.connect(self.minimize_window)
         layout.addWidget(self.minimize_btn)
         
-        self.maximize_btn = QPushButton("□")
+        self.maximize_btn = QPushButton("◻")
         self.maximize_btn.setFixedSize(72, 72)
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         layout.addWidget(self.maximize_btn)
@@ -581,10 +581,10 @@ class CustomViewerTitleBar(QWidget):
         if self.parent_window:
             if self.parent_window.isMaximized():
                 self.parent_window.showNormal()
-                self.maximize_btn.setText("□")
+                self.maximize_btn.setText("◻")
             else:
                 self.parent_window.showMaximized()
-                self.maximize_btn.setText("❐")
+                self.maximize_btn.setText("⧉")
     
     def close_window(self):
         if self.parent_window:
