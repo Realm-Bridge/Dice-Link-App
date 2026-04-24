@@ -22,11 +22,21 @@ Extract one file at a time, test after each extraction.
 - **Dependencies:** None (only external imports like `re`)
 - **Status:** [ ] Not started
 
+**Testing Criteria:**
+- VTTValidator methods work when called from main.py
+- URL validation produces correct results
+- No import errors
+
 #### 2. ConnectionDialog
 - **Target file:** `dialogs.py`
 - **Purpose:** UI dialog for VTT connection settings
 - **Dependencies:** PyQt6 only, no internal dependencies
 - **Status:** [ ] Not started
+
+**Testing Criteria:**
+- Dialog opens without errors
+- Dialog can be closed
+- VTTValidator still works (if called separately)
 
 ---
 
@@ -37,6 +47,14 @@ Extract one file at a time, test after each extraction.
 - **Purpose:** Handles QWebChannel communication between DLA and DLC
 - **Dependencies:** VTTValidator (for URL validation), PyQt6, bridge_state, debug
 - **Status:** [ ] Not started
+
+**Testing Criteria:**
+- DLC module initializes and connects successfully
+- ConnectionPingReady signal fires every 60 seconds
+- receiveConnectionPong slot receives pong responses
+- All DLA→DLC signals emit correctly (rollResultReady, diceTrayRollReady, etc.)
+- All DLC→DLA slots receive correctly (receiveRollRequest, receiveDiceRequest, etc.)
+- 7+ minute idle test: no false disconnects
 
 ---
 
@@ -53,6 +71,13 @@ Extract one file at a time, test after each extraction.
 - **Dependencies:** PyQt6, DLABridge (for web channel), custom_window
 - **Status:** [ ] Not started
 
+**Testing Criteria:**
+- Foundry VTT loads in viewing window
+- Character sheets open in popup windows
+- Drag-and-drop functionality works in main UI
+- Web pages render correctly with all content visible
+- Console errors are minimal
+
 ---
 
 ### Phase 4 - Window Components
@@ -66,6 +91,15 @@ Extract one file at a time, test after each extraction.
 - **Dependencies:** custom_window.py, VTT Web Components
 - **Status:** [ ] Not started
 
+**Testing Criteria:**
+- Viewing window opens with custom title bar and buttons
+- Popup windows open with custom title bar and buttons
+- Window minimize/maximize/close buttons work
+- Window titles display correctly (e.g., "Kix" for character sheets)
+- Resize functionality works
+- Closing viewing window disconnects from Foundry
+- Closing popup windows does NOT disconnect
+
 ---
 
 ### Phase 5 - Controllers
@@ -75,6 +109,15 @@ Extract one file at a time, test after each extraction.
 - **Purpose:** Manages window lifecycle, VTT connections, popup tracking
 - **Dependencies:** VTT Windows, VTT Web Components, DLABridge, ConnectionDialog
 - **Status:** [ ] Not started
+
+**Testing Criteria:**
+- Application starts without errors
+- VTT connection dialog works
+- Windows are created and managed correctly
+- Popup windows are tracked and managed
+- Connection monitor runs continuously
+- Ping/pong mechanism functions correctly
+- Full end-to-end: connect, load Foundry, roll dice, do nothing for 7+ minutes without disconnect
 
 ---
 
