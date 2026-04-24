@@ -10,13 +10,12 @@ import urllib.request
 import urllib.error
 from urllib.parse import urlparse
 from pathlib import Path
-from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QWidget, QSizePolicy
+from PyQt6.QtGui import QDesktopServices, QPixmap
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
 from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtGui import QDesktopServices
-
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(DICE_LINK_DIR))
@@ -506,6 +505,120 @@ class VTTPopupWindow(QMainWindow):
         self.close()  # This will call closeEvent again, but is_closing flag will allow it
 
 
+class CustomViewerTitleBar(QWidget):
+    """Custom title bar for VTT Viewing Window matching DLA main window style"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.drag_position = None
+        
+        # Set fixed height for title bar
+        self.setFixedHeight(40)
+        
+        # Style matching DLA main window colors
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #0f1419;
+            }
+            QLabel {
+                color: #f0f2f5;
+            }
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                color: #6f2e9a;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 8px 12px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: rgba(139, 92, 246, 0.1);
+            }
+            QPushButton#closeBtn:hover {
+                background-color: rgba(239, 68, 68, 0.2);
+                color: #ef4444;
+            }
+        """)
+        
+        # Create layout
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 0, 8, 0)
+        layout.setSpacing(8)
+        
+        # Dice Link logo (left side)
+        self.dice_link_logo = QLabel()
+        logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
+        if logo_path.exists():
+            pixmap = QPixmap(str(logo_path))
+            scaled_pixmap = pixmap.scaledToHeight(32, Qt.TransformationMode.SmoothTransformation)
+            self.dice_link_logo.setPixmap(scaled_pixmap)
+        layout.addWidget(self.dice_link_logo)
+        
+        # Spacer
+        layout.addStretch()
+        
+        # Realm Bridge logo (center)
+        self.realm_bridge_logo = QLabel()
+        rb_logo_path = DICE_LINK_DIR / "static" / "Logos" / "New_logo.png"
+        if rb_logo_path.exists():
+            rb_pixmap = QPixmap(str(rb_logo_path))
+            scaled_rb_pixmap = rb_pixmap.scaledToHeight(28, Qt.TransformationMode.SmoothTransformation)
+            self.realm_bridge_logo.setPixmap(scaled_rb_pixmap)
+        layout.addWidget(self.realm_bridge_logo)
+        
+        # Spacer
+        layout.addStretch()
+        
+        # Window control buttons (right side)
+        self.minimize_btn = QPushButton("−")
+        self.minimize_btn.setFixedSize(36, 36)
+        self.minimize_btn.clicked.connect(self.minimize_window)
+        layout.addWidget(self.minimize_btn)
+        
+        self.maximize_btn = QPushButton("□")
+        self.maximize_btn.setFixedSize(36, 36)
+        self.maximize_btn.clicked.connect(self.toggle_maximize)
+        layout.addWidget(self.maximize_btn)
+        
+        self.close_btn = QPushButton("×")
+        self.close_btn.setObjectName("closeBtn")
+        self.close_btn.setFixedSize(36, 36)
+        self.close_btn.clicked.connect(self.close_window)
+        layout.addWidget(self.close_btn)
+    
+    def minimize_window(self):
+        if self.parent_window:
+            self.parent_window.showMinimized()
+    
+    def toggle_maximize(self):
+        if self.parent_window:
+            if self.parent_window.isMaximized():
+                self.parent_window.showNormal()
+                self.maximize_btn.setText("□")
+            else:
+                self.parent_window.showMaximized()
+                self.maximize_btn.setText("❐")
+    
+    def close_window(self):
+        if self.parent_window:
+            self.parent_window.close()
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.drag_position = event.globalPosition().toPoint() - self.parent_window.frameGeometry().topLeft()
+            event.accept()
+    
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.MouseButton.LeftButton and self.drag_position:
+            self.parent_window.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()
+    
+    def mouseReleaseEvent(self, event):
+        self.drag_position = None
+
+
 class VTTViewingWindow(QMainWindow):
     """Main viewing window for VTT - closes all popups when closed"""
     
@@ -513,11 +626,28 @@ class VTTViewingWindow(QMainWindow):
         super().__init__()
         self.vtt_view = vtt_view
         
-        self.setWindowTitle("VTT Viewer")
+        # Make window frameless
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setGeometry(100, 100, 1200, 800)
-        self.setCentralWidget(vtt_view)
         
-        log_vtt("[VIEWER] Viewing window created")
+        # Create central widget to hold title bar and content
+        central_widget = QWidget()
+        central_widget.setStyleSheet("background-color: #0f1419;")
+        self.setCentralWidget(central_widget)
+        
+        # Create main layout
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # Add custom title bar
+        self.title_bar = CustomViewerTitleBar(self)
+        main_layout.addWidget(self.title_bar)
+        
+        # Add the VTT view
+        main_layout.addWidget(vtt_view)
+        
+        log_vtt("[VIEWER] Viewing window created with custom title bar")
     
     def closeEvent(self, event):
         """Close all popup windows and disconnect from VTT when viewing window closes"""
