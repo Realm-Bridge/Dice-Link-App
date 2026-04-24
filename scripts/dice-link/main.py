@@ -11,7 +11,7 @@ import urllib.error
 from urllib.parse import urlparse
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QWidget, QSizePolicy
-from PyQt6.QtGui import QDesktopServices, QPixmap
+from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
 from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
@@ -562,22 +562,11 @@ class CustomViewerTitleBar(QWidget):
         self.minimize_btn.clicked.connect(self.minimize_window)
         layout.addWidget(self.minimize_btn)
         
-        self.maximize_btn = QPushButton("[ ]")
+        self.maximize_btn = QPushButton("O")
         self.maximize_btn.setFixedSize(36, 36)
-        self.maximize_btn.setStyleSheet("""
-            QPushButton {
-                color: #6f2e9a;
-                background-color: transparent;
-                border: none;
-                font-size: 28px;
-                font-weight: bold;
-                padding: 8px 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: rgba(139, 92, 246, 0.1);
-            }
-        """)
+        rubik_font = QFont("Rubik", 18)
+        rubik_font.setBold(True)
+        self.maximize_btn.setFont(rubik_font)
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         layout.addWidget(self.maximize_btn)
         
@@ -595,10 +584,10 @@ class CustomViewerTitleBar(QWidget):
         if self.parent_window:
             if self.parent_window.isMaximized():
                 self.parent_window.showNormal()
-                self.maximize_btn.setText("[ ]")
+                self.maximize_btn.setText("O")
             else:
                 self.parent_window.showMaximized()
-                self.maximize_btn.setText("[·]")
+                self.maximize_btn.setText("o")
     
     def close_window(self):
         if self.parent_window:
