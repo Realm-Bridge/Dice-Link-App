@@ -435,7 +435,7 @@ class VTTPopupWindow(CustomWindow):
     """Window container for VTT pop-outs with custom title bar styling"""
     
     def __init__(self, web_view):
-        super().__init__(show_maximize=False, resizable=False)
+        super().__init__(show_maximize=False, resizable=False, title="VTT Pop-out")
         self.web_view = web_view
         self.is_closing = False  # Flag to prevent multiple close attempts
         
@@ -452,6 +452,7 @@ class VTTPopupWindow(CustomWindow):
     def on_title_changed(self, title):
         if title and title != "about:blank":
             self.setWindowTitle(title)
+            self.title_bar.set_title(title)
 
     def closeEvent(self, event):
         """Intercept OS close button - trigger the sheet's own close button instead"""

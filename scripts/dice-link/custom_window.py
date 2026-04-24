@@ -150,7 +150,7 @@ class CustomTitleBar(QWidget):
         Whether to include the maximize/restore button (default True).
     """
 
-    def __init__(self, parent_window, show_maximize: bool = True):
+    def __init__(self, parent_window, show_maximize: bool = True, title: str = ""):
         super().__init__(parent_window)
         self.parent_window = parent_window
         self.show_maximize = show_maximize
@@ -175,7 +175,17 @@ class CustomTitleBar(QWidget):
             self.dice_link_logo.setPixmap(scaled)
         layout.addWidget(self.dice_link_logo)
 
-        layout.addStretch()
+        # Title label (center)
+        self.title_label = QLabel(title)
+        self.title_label.setStyleSheet(f"""
+            QLabel {{
+                color: {COLOR_PURPLE};
+                font-size: 14px;
+                font-weight: normal;
+            }}
+        """)
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.title_label, 1)  # Give it stretch factor
 
         # Minimize button
         self.minimize_btn = MinimizeButton()
@@ -210,12 +220,9 @@ class CustomTitleBar(QWidget):
         if self.maximize_btn:
             self.maximize_btn.set_maximized(self.parent_window.isMaximized())
 
-    def _close(self):
-        self.parent_window.close()
-
-    # ------------------------------------------------------------------
-    # Drag-to-move
-    # ------------------------------------------------------------------
+    def set_title(self, title: str):
+        """Update the title displayed in the title bar."""
+        self.title_label.setText(title)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -298,10 +305,11 @@ class CustomWindow(QMainWindow):
         Whether to add a bottom-right resize grip (default True).
     """
 
-    def __init__(self, show_maximize: bool = True, resizable: bool = True):
+    def __init__(self, show_maximize: bool = True, resizable: bool = True, title: str = ""):
         super().__init__()
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setMinimumSize(400, 300)
+        self.setWindowTitle(title)
 
         # Central widget
         central_widget = QWidget()
@@ -313,7 +321,7 @@ class CustomWindow(QMainWindow):
         main_layout.setSpacing(0)
 
         # Title bar
-        self.title_bar = CustomTitleBar(self, show_maximize=show_maximize)
+        self.title_bar = CustomTitleBar(self, show_maximize=show_maximize, title=title)
         main_layout.addWidget(self.title_bar)
 
         # Content area - subclasses add their widgets here
