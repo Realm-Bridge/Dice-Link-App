@@ -107,7 +107,7 @@ class DLABridge(QObject):
     buttonSelectReady = pyqtSignal(str)  # Emits button selection from UI to DLC
     diceTrayRollReady = pyqtSignal(str)  # Emits dice tray roll result
     playerModesUpdateReady = pyqtSignal(str)  # Emits player mode changes from DLA
-    connectionPing = pyqtSignal()  # Pings DLC to check if it's still responsive
+    connectionPingReady = pyqtSignal()  # Pings DLC to check if it's still responsive
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -340,7 +340,7 @@ class DLABridge(QObject):
         # Send ping to DLC
         log_connection_monitor("Sending ping to DLC, expecting pong within 10 seconds")
         self.pending_pong = True
-        self.connectionPing.emit()
+        self.connectionPingReady.emit()
         
         # Set a 10-second timeout - if no pong arrives before the next check (60s away),
         # the next check will detect pending_pong is still True and disconnect
