@@ -29,7 +29,8 @@ from custom_window import CustomWindow, CustomTitleBar, ResizeGrip
 from vtt_validator import VTTValidator
 from dialogs import ConnectionDialog
 from dla_bridge import DLABridge
-from vtt_web import VTTWebPage, VTTWebView, VTTPopupView, VTTPopupWindow, VTTViewingWindow, DraggableWebEngineView
+from vtt_web import VTTWebPage, VTTWebView, VTTPopupView, DraggableWebEngineView
+from vtt_windows import VTTPopupWindow, VTTViewingWindow
 
 
 
