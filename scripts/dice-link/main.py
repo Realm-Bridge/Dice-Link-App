@@ -562,14 +562,14 @@ class CustomViewerTitleBar(QWidget):
         self.minimize_btn.clicked.connect(self.minimize_window)
         layout.addWidget(self.minimize_btn)
         
-        self.maximize_btn = QPushButton("▢")
+        self.maximize_btn = QPushButton("[ ]")
         self.maximize_btn.setFixedSize(36, 36)
         self.maximize_btn.setStyleSheet("""
             QPushButton {
                 color: #6f2e9a;
                 background-color: transparent;
                 border: none;
-                font-size: 28px;
+                font-size: 20px;
                 font-weight: bold;
                 padding: 8px 12px;
                 border-radius: 4px;
@@ -595,10 +595,10 @@ class CustomViewerTitleBar(QWidget):
         if self.parent_window:
             if self.parent_window.isMaximized():
                 self.parent_window.showNormal()
-                self.maximize_btn.setText("▢")
+                self.maximize_btn.setText("[ ]")
             else:
                 self.parent_window.showMaximized()
-                self.maximize_btn.setText("❐")
+                self.maximize_btn.setText("[·]")
     
     def close_window(self):
         if self.parent_window:
