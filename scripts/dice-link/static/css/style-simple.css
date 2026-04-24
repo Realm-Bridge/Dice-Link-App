@@ -1348,7 +1348,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 32px;
+  gap: 16px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
