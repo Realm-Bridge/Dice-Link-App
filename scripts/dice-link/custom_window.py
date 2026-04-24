@@ -6,7 +6,7 @@ for all frameless windows in the application.
 
 from pathlib import Path
 from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton
-from PyQt6.QtGui import QPixmap, QFont
+from PyQt6.QtGui import QPixmap, QFont, QIcon
 from PyQt6.QtCore import Qt
 
 # Resolve the directory of this file so logo paths work regardless of cwd
@@ -313,6 +313,11 @@ class CustomWindow(QMainWindow):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setMinimumSize(400, 300)
         self.setWindowTitle(title)
+        
+        # Set window icon for taskbar branding
+        logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
+        if logo_path.exists():
+            self.setWindowIcon(QIcon(str(logo_path)))
 
         # Central widget
         central_widget = QWidget()
