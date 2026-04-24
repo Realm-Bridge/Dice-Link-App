@@ -376,8 +376,8 @@ body {
 }
 
 .dice-roll-btn {
-    width: 75px;
-    height: 75px;
+    width: 150px;
+    height: 150px;
     padding: 0;
     font-size: 60px;
     font-weight: 600;
@@ -387,15 +387,15 @@ body {
     border: none;
     background: var(--dlc-success);
     color: white;
-    margin: 0 12px;
+    margin: 0;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .dice-roll-btn {
-    width: 75px;
-    height: 75px;
+    width: 150px;
+    height: 150px;
     padding: 0;
     font-size: 40px;
     font-weight: 600;
@@ -404,6 +404,7 @@ body {
     transition: all var(--transition);
     border: none;
     background: var(--dlc-success);
+    margin: 0;
     display: flex;
     align-items: center;
     justify-content: center;
