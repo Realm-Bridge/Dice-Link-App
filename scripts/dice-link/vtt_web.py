@@ -2,7 +2,8 @@ import json
 from urllib.parse import urlparse
 
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebChannel, QWebEngineSettings, QWebEnginePage
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
+from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtCore import QTimer, QUrl, pyqtSlot
 from PyQt6.QtGui import QPoint
 
