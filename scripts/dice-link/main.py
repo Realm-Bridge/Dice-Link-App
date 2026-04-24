@@ -107,12 +107,13 @@ class DLABridge(QObject):
     buttonSelectReady = pyqtSignal(str)  # Emits button selection from UI to DLC
     diceTrayRollReady = pyqtSignal(str)  # Emits dice tray roll result
     playerModesUpdateReady = pyqtSignal(str)  # Emits player mode changes from DLA
+    connectionPing = pyqtSignal()  # Pings DLC to check if it's still responsive
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.log_vtt = log_vtt  # Store reference to logging function
-        self.last_dlc_activity = None
         self.connection_check_timer = None
+        self.pending_pong = False  # Flag to track if we're waiting for a pong
         self.log_vtt("[BRIDGE] DLABridge created")
     
     @pyqtSlot()
@@ -122,7 +123,6 @@ class DLABridge(QObject):
         DLC uses this to announce it's ready and establish the connection.
         """
         self.log_vtt("[BRIDGE] DLC module has initialized and announced it's ready")
-        self.update_dlc_activity()
         self.start_connection_monitoring()
         
         # Emit connection status as connected (to Foundry/DLC via QWebChannel)
@@ -140,6 +140,15 @@ class DLABridge(QObject):
             "embedded": True
         }))
     
+    @pyqtSlot()
+    def receiveConnectionPong(self):
+        """
+        Called by JavaScript (DLC module) in response to our connectionPing.
+        Used to verify DLC is still responsive.
+        """
+        log_connection_monitor(f"Received pong from DLC - connection is active")
+        self.pending_pong = False
+    
     @pyqtSlot(str)
     def receiveRollRequest(self, data_json):
         """
@@ -148,7 +157,6 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing roll request data
         """
-        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             request_id = data.get('id', 'unknown')
@@ -171,7 +179,6 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing dice request data
         """
-        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             request_id = data.get('id', 'unknown')
@@ -192,7 +199,6 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing player modes data
         """
-        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             self.log_vtt(f"[BRIDGE] Received player modes update")
@@ -231,7 +237,6 @@ class DLABridge(QObject):
         Args:
             data_json: JSON string containing button selection data
         """
-        self.update_dlc_activity()
         try:
             data = json.loads(data_json)
             roll_id = data.get('rollId')
@@ -302,55 +307,43 @@ class DLABridge(QObject):
         self.connectionStatusReady.emit(status)
     
     def start_connection_monitoring(self):
-        """Start periodic connection status check (every 30 seconds)"""
+        """Start periodic ping checks (every 60 seconds)"""
         from PyQt6.QtCore import QTimer
         self.connection_check_timer = QTimer()
-        self.connection_check_timer.timeout.connect(self.check_connection_status)
-        self.connection_check_timer.start(30000)  # 30 seconds
-        self.log_vtt("[BRIDGE] Started connection monitoring (30 second interval)")
-        log_connection_monitor("Started connection monitoring (30 second interval)")
-        
-        # Record initial activity
-        import time
-        self.last_dlc_activity = time.time()
-        log_connection_monitor(f"Initial last_dlc_activity set to: {self.last_dlc_activity}")
+        self.connection_check_timer.timeout.connect(self.send_connection_ping)
+        self.connection_check_timer.start(60000)  # 60 seconds
+        self.log_vtt("[BRIDGE] Started connection monitoring (60 second ping interval)")
+        log_connection_monitor("Started connection monitoring - pinging DLC every 60 seconds")
     
     def stop_connection_monitoring(self):
-        """Stop the connection status check timer"""
+        """Stop the connection check timer"""
         if self.connection_check_timer:
             self.connection_check_timer.stop()
             self.log_vtt("[BRIDGE] Stopped connection monitoring")
             log_connection_monitor("Stopped connection monitoring")
     
-    def check_connection_status(self):
+    def send_connection_ping(self):
         """
-        Periodically check if DLC is still connected.
-        If no activity for too long, assume disconnected.
+        Send a ping to DLC and check if we get a pong back within 10 seconds.
+        If no pong is received, consider the connection dead.
         """
-        import time
-        current_time = time.time()
-        time_since_activity = current_time - self.last_dlc_activity if self.last_dlc_activity else -1
-        
-        log_connection_monitor(f"Check triggered - current_time: {current_time}, last_dlc_activity: {self.last_dlc_activity}, time_since_activity: {time_since_activity:.1f}s")
-        
-        # If we haven't heard from DLC in 90 seconds, consider it disconnected
-        if self.last_dlc_activity and (current_time - self.last_dlc_activity) > 90:
-            log_connection_monitor(f"TIMEOUT TRIGGERED - {time_since_activity:.1f}s > 90s threshold")
-            self.log_vtt("[BRIDGE] Connection timeout - no activity from DLC in 90 seconds")
+        if self.pending_pong:
+            # We already sent a ping and didn't get a pong back - connection is dead
+            log_connection_monitor("TIMEOUT - No pong received from previous ping, connection is dead")
+            self.log_vtt("[BRIDGE] Connection timeout - DLC did not respond to ping")
             self.notifyConnectionStatus("disconnected")
-            # Notify UI as well
             from bridge_state import send_connection_status_to_ui
             send_connection_status_to_ui(connected=False)
             self.stop_connection_monitoring()
-        else:
-            log_connection_monitor(f"Connection OK - {time_since_activity:.1f}s < 90s threshold")
-    
-    def update_dlc_activity(self):
-        """Called whenever DLC sends something - updates last activity timestamp"""
-        import time
-        old_activity = self.last_dlc_activity
-        self.last_dlc_activity = time.time()
-        log_connection_monitor(f"Activity updated - old: {old_activity}, new: {self.last_dlc_activity}")
+            return
+        
+        # Send ping to DLC
+        log_connection_monitor("Sending ping to DLC, expecting pong within 10 seconds")
+        self.pending_pong = True
+        self.connectionPing.emit()
+        
+        # Set a 10-second timeout - if no pong arrives before the next check (60s away),
+        # the next check will detect pending_pong is still True and disconnect
     
     def sendRollComplete(self, roll_data):
         """
