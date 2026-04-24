@@ -618,26 +618,58 @@ class CustomViewerTitleBar(QWidget):
         self.drag_position = None
 
 
+class ResizeGrip(QWidget):
+    """Invisible resize grip widget for handling window resizing"""
+    
+    def __init__(self, parent, resize_direction, grip_size=16):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.resize_direction = resize_direction
+        self.resize_start_pos = None
+        self.resize_start_geometry = None
+        
+        self.setFixedSize(grip_size, grip_size)
+        self.setStyleSheet("background-color: transparent;")
+        self.setCursor(Qt.CursorShape.SizeFDiagCursor if "diagonal" in resize_direction else Qt.CursorShape.ArrowCursor)
+        self.setMouseTracking(True)
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.resize_start_pos = event.globalPosition().toPoint()
+            self.resize_start_geometry = self.parent_window.geometry()
+            event.accept()
+    
+    def mouseMoveEvent(self, event):
+        if self.resize_start_pos:
+            diff = event.globalPosition().toPoint() - self.resize_start_pos
+            geo = self.resize_start_geometry
+            new_geo = self.parent_window.geometry()
+            
+            if "right" in self.resize_direction:
+                new_geo.setRight(geo.right() + diff.x())
+            if "bottom" in self.resize_direction:
+                new_geo.setBottom(geo.bottom() + diff.y())
+            
+            if new_geo.width() >= self.parent_window.minimumWidth() and new_geo.height() >= self.parent_window.minimumHeight():
+                self.parent_window.setGeometry(new_geo)
+            event.accept()
+    
+    def mouseReleaseEvent(self, event):
+        self.resize_start_pos = None
+        self.resize_start_geometry = None
+
+
 class VTTViewingWindow(QMainWindow):
     """Main viewing window for VTT - closes all popups when closed"""
-    
-    # Resize edge detection margin in pixels
-    RESIZE_MARGIN = 8
     
     def __init__(self, vtt_view):
         super().__init__()
         self.vtt_view = vtt_view
-        self.resize_direction = None
-        self.resize_start_pos = None
-        self.resize_start_geometry = None
         
         # Make window frameless
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(400, 300)
-        
-        # Enable mouse tracking for resize cursor changes
-        self.setMouseTracking(True)
         
         # Create central widget to hold title bar and content
         central_widget = QWidget()
@@ -651,101 +683,30 @@ class VTTViewingWindow(QMainWindow):
         
         # Add custom title bar
         self.title_bar = CustomViewerTitleBar(self)
+        # Prevent cursor changes and event propagation for title bar
+        self.title_bar.setCursor(Qt.CursorShape.ArrowCursor)
+        self.title_bar.setMouseTracking(False)
         main_layout.addWidget(self.title_bar)
         
         # Add the VTT view
         main_layout.addWidget(vtt_view)
         
-        log_vtt("[VIEWER] Viewing window created with custom title bar")
-    
-    def _get_resize_direction(self, pos):
-        """Determine which edge/corner the mouse is near for resizing"""
-        rect = self.rect()
-        margin = self.RESIZE_MARGIN
+        # Add invisible resize grip for bottom-right corner
+        self.resize_grip = ResizeGrip(self, "bottom-right-diagonal", grip_size=16)
+        self.resize_grip.raise_()
         
-        left = pos.x() < margin
-        right = pos.x() > rect.width() - margin
-        top = pos.y() < margin
-        bottom = pos.y() > rect.height() - margin
-        
-        if top and left:
-            return "top-left"
-        elif top and right:
-            return "top-right"
-        elif bottom and left:
-            return "bottom-left"
-        elif bottom and right:
-            return "bottom-right"
-        elif left:
-            return "left"
-        elif right:
-            return "right"
-        elif top:
-            return "top"
-        elif bottom:
-            return "bottom"
-        return None
+        log_vtt("[VIEWER] Viewing window created with custom title bar and resize grip")
     
-    def _update_cursor(self, direction):
-        """Update cursor based on resize direction"""
-        from PyQt6.QtGui import QCursor
-        if direction in ("left", "right"):
-            self.setCursor(QCursor(Qt.CursorShape.SizeHorCursor))
-        elif direction in ("top", "bottom"):
-            self.setCursor(QCursor(Qt.CursorShape.SizeVerCursor))
-        elif direction in ("top-left", "bottom-right"):
-            self.setCursor(QCursor(Qt.CursorShape.SizeFDiagCursor))
-        elif direction in ("top-right", "bottom-left"):
-            self.setCursor(QCursor(Qt.CursorShape.SizeBDiagCursor))
-        else:
-            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-    
-    def mousePressEvent(self, event):
-        """Start resize if mouse is on edge"""
-        if event.button() == Qt.MouseButton.LeftButton:
-            direction = self._get_resize_direction(event.pos())
-            if direction:
-                self.resize_direction = direction
-                self.resize_start_pos = event.globalPosition().toPoint()
-                self.resize_start_geometry = self.geometry()
-                event.accept()
-                return
-        super().mousePressEvent(event)
-    
-    def mouseMoveEvent(self, event):
-        """Handle resize or update cursor"""
-        if self.resize_direction and self.resize_start_pos:
-            # Perform resize
-            diff = event.globalPosition().toPoint() - self.resize_start_pos
-            geo = self.resize_start_geometry
-            new_geo = self.geometry()
-            
-            if "left" in self.resize_direction:
-                new_geo.setLeft(geo.left() + diff.x())
-            if "right" in self.resize_direction:
-                new_geo.setRight(geo.right() + diff.x())
-            if "top" in self.resize_direction:
-                new_geo.setTop(geo.top() + diff.y())
-            if "bottom" in self.resize_direction:
-                new_geo.setBottom(geo.bottom() + diff.y())
-            
-            # Enforce minimum size
-            if new_geo.width() >= self.minimumWidth() and new_geo.height() >= self.minimumHeight():
-                self.setGeometry(new_geo)
-            event.accept()
-        else:
-            # Update cursor based on position
-            direction = self._get_resize_direction(event.pos())
-            self._update_cursor(direction)
-        super().mouseMoveEvent(event)
-    
-    def mouseReleaseEvent(self, event):
-        """End resize"""
-        self.resize_direction = None
-        self.resize_start_pos = None
-        self.resize_start_geometry = None
-        self._update_cursor(None)
-        super().mouseReleaseEvent(event)
+    def resizeEvent(self, event):
+        """Reposition resize grip when window is resized"""
+        super().resizeEvent(event)
+        if hasattr(self, 'resize_grip'):
+            # Position grip at bottom-right corner
+            grip_size = self.resize_grip.width()
+            self.resize_grip.move(
+                self.width() - grip_size,
+                self.height() - grip_size
+            )
     
     def closeEvent(self, event):
         """Close all popup windows and disconnect from VTT when viewing window closes"""
