@@ -38,7 +38,7 @@ class MinimizeButton(QPushButton):
                 border: none;
                 color: {COLOR_PURPLE};
                 font-size: 28px;
-                font-weight: bold;
+                font-weight: normal;
                 padding: 8px 12px;
                 border-radius: 4px;
             }}
@@ -50,7 +50,7 @@ class MinimizeButton(QPushButton):
 
 class MaximizeButton(QPushButton):
     """Window maximize/restore button styled to match DLA theme.
-    Uses □ square character with bold styling.
+    Uses □ square character (24px) for maximize and ❐ (18px) for restore.
     """
 
     def __init__(self, parent=None):
@@ -72,8 +72,43 @@ class MaximizeButton(QPushButton):
         """)
 
     def set_maximized(self, is_maximized: bool):
-        """Switch the button character between maximize and restore states."""
-        self.setText("❐" if is_maximized else "□")
+        """Switch the button character between maximize and restore states.
+        Restore character is smaller (18px) to fit in the button.
+        """
+        if is_maximized:
+            self.setText("❐")
+            # Temporarily reduce font size for the wider restore character
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: transparent;
+                    border: none;
+                    color: {COLOR_PURPLE};
+                    font-size: 18px;
+                    font-weight: bold;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {COLOR_BTN_HOVER};
+                }}
+            """)
+        else:
+            self.setText("□")
+            # Restore normal font size for maximize character
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: transparent;
+                    border: none;
+                    color: {COLOR_PURPLE};
+                    font-size: 24px;
+                    font-weight: bold;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {COLOR_BTN_HOVER};
+                }}
+            """)
 
 
 class CloseButton(QPushButton):
@@ -89,7 +124,7 @@ class CloseButton(QPushButton):
                 border: none;
                 color: {COLOR_PURPLE};
                 font-size: 28px;
-                font-weight: bold;
+                font-weight: normal;
                 padding: 8px 12px;
                 border-radius: 4px;
             }}
