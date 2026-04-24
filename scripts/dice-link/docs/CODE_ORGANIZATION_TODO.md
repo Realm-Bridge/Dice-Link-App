@@ -6,80 +6,101 @@ This document tracks code in `main.py` that should be separated into individual 
 
 ## Current State
 
-**main.py** contains ~1161 lines with 10 classes and 2 standalone functions mixed together.
+**main.py** contains ~1166 lines with 10 classes and 2 standalone functions mixed together.
 
 ---
 
-## Classes to Extract
+## Extraction Order (by dependency level)
 
-### 1. VTT Validation
-- **Class:** `VTTValidator` (line 31)
+Extract one file at a time, test after each extraction.
+
+### Phase 1 - No Internal Dependencies
+
+#### 1. VTTValidator
 - **Target file:** `vtt_validator.py`
 - **Purpose:** Validates VTT connections and URLs
+- **Dependencies:** None (only external imports like `re`)
+- **Status:** [ ] Not started
 
-### 2. Bridge/Communication
-- **Class:** `DLABridge` (line 94)
-- **Target file:** `dla_bridge.py`
-- **Purpose:** Handles communication between DLA and VTT
-
-### 3. VTT Web Engine Components
-- **Classes:**
-  - `VTTWebPage` (line 387)
-  - `VTTWebView` (line 551)
-  - `VTTPopupView` (line 775)
-  - `DraggableWebEngineView` (line 954)
-- **Target file:** `vtt_web.py`
-- **Purpose:** Web engine components for rendering VTT content
-
-### 4. VTT Window Components
-- **Classes:**
-  - `VTTPopupWindow` (line 434)
-  - `VTTViewingWindow` (line 507)
-- **Target file:** `vtt_windows.py`
-- **Purpose:** Window containers for VTT views (inherits from CustomWindow)
-
-### 5. Connection Dialog
-- **Class:** `ConnectionDialog` (line 799)
+#### 2. ConnectionDialog
 - **Target file:** `dialogs.py`
 - **Purpose:** UI dialog for VTT connection settings
+- **Dependencies:** PyQt6 only, no internal dependencies
+- **Status:** [ ] Not started
 
-### 6. Window Controller
-- **Class:** `WindowController` (line 879)
+---
+
+### Phase 2 - Depends on Phase 1 or external only
+
+#### 3. DLABridge
+- **Target file:** `dla_bridge.py`
+- **Purpose:** Handles QWebChannel communication between DLA and DLC
+- **Dependencies:** VTTValidator (for URL validation), PyQt6, bridge_state, debug
+- **Status:** [ ] Not started
+
+---
+
+### Phase 3 - Web Engine Components
+
+#### 4. VTT Web Components
+- **Target file:** `vtt_web.py`
+- **Classes to extract:**
+  - `VTTWebPage` - Custom web page class
+  - `VTTWebView` - Main VTT web view
+  - `VTTPopupView` - Popup web view for character sheets etc.
+  - `DraggableWebEngineView` - Main DLA UI browser widget
+- **Purpose:** Web engine components for rendering VTT and UI content
+- **Dependencies:** PyQt6, DLABridge (for web channel), custom_window
+- **Status:** [ ] Not started
+
+---
+
+### Phase 4 - Window Components
+
+#### 5. VTT Windows
+- **Target file:** `vtt_windows.py`
+- **Classes to extract:**
+  - `VTTPopupWindow` - Window container for VTT pop-outs
+  - `VTTViewingWindow` - Main VTT viewing window
+- **Purpose:** Window containers (inherits from CustomWindow)
+- **Dependencies:** custom_window.py, VTT Web Components
+- **Status:** [ ] Not started
+
+---
+
+### Phase 5 - Controllers
+
+#### 6. WindowController
 - **Target file:** `window_controller.py`
-- **Purpose:** Manages window lifecycle and coordination
+- **Purpose:** Manages window lifecycle, VTT connections, popup tracking
+- **Dependencies:** VTT Windows, VTT Web Components, DLABridge, ConnectionDialog
+- **Status:** [ ] Not started
 
 ---
 
 ## What Should Remain in main.py
 
-- `run_server()` function (line 1013)
-- `main()` function (line 1024)
-- App initialization and entry point logic
-- `DLCBridgeApp` class (main application class)
+- `run_server()` function - Starts the FastAPI/Uvicorn server
+- `main()` function - Application entry point
+- App initialization logic (QApplication, browser setup, etc.)
+- Imports from extracted modules
 
 ---
 
 ## Already Separated (Good)
 
 - `custom_window.py` - Generic reusable window components (buttons, title bar, resize grip, CustomWindow base class)
-- `bridge_state.py` - Bridge state management
-- `log_vtt.py` - VTT logging utilities
-
----
-
-## Suggested Extraction Order
-
-1. `vtt_validator.py` - No dependencies on other main.py classes
-2. `dla_bridge.py` - Depends on vtt_validator
-3. `vtt_web.py` - Web engine components
-4. `vtt_windows.py` - Window classes (depends on custom_window.py)
-5. `dialogs.py` - Connection dialog
-6. `window_controller.py` - Window management
+- `bridge_state.py` - Bridge state management and helper functions
+- `debug.py` - Debug logging utilities
+- `state.py` - Application state management
+- `server.py` - FastAPI server and routes
+- `config.py` - Configuration constants
 
 ---
 
 ## Notes
 
-- When extracting, update imports in main.py
+- When extracting, update imports in main.py to import from new modules
 - Test after each extraction to ensure nothing breaks
-- Keep circular import dependencies in mind
+- Watch for circular import issues - may need to reorganize some dependencies
+- Each extracted file should have its own imports at the top
