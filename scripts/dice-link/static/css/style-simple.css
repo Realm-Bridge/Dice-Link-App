@@ -1167,7 +1167,7 @@ body {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  height: 390px;
+  height: 414px;
   overflow: hidden;
 }
 
@@ -1254,7 +1254,7 @@ body {
   width: 32px;
   height: 32px;
   background-color: transparent;
-  border: 4px solid #a78bfa;
+  border: 4px solid #34d399;
   border-radius: 2px;
 }
 
@@ -1336,7 +1336,7 @@ body {
 }
 
 .player-card.is-gm {
-  border: 4px solid #1e3a5f;
+  border: 4px solid #34d399;
 }
 
 .player-info {
