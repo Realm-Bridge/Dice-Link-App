@@ -317,10 +317,7 @@ class CustomWindow(QMainWindow):
         # Set window icon for taskbar branding
         logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
         if logo_path.exists():
-            pixmap = QPixmap(str(logo_path))
-            # Scale to 2.5x larger for better taskbar visibility
-            scaled_pixmap = pixmap.scaledToWidth(int(pixmap.width() * 2.5), Qt.TransformationMode.SmoothTransformation)
-            self.setWindowIcon(QIcon(scaled_pixmap))
+            self.setWindowIcon(QIcon(str(logo_path)))
 
         # Central widget
         central_widget = QWidget()

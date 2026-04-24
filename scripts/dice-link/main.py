@@ -129,10 +129,7 @@ def main():
     # Set window icon for taskbar branding
     logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
     if logo_path.exists():
-        pixmap = QPixmap(str(logo_path))
-        # Scale to 2.5x larger for better taskbar visibility
-        scaled_pixmap = pixmap.scaledToWidth(int(pixmap.width() * 2.5), Qt.TransformationMode.SmoothTransformation)
-        browser.setWindowIcon(QIcon(scaled_pixmap))
+        browser.setWindowIcon(QIcon(str(logo_path)))
     
     # Set up web channel for JavaScript-to-Python communication
     channel = QWebChannel()
