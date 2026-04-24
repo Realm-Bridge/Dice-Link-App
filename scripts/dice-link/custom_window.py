@@ -50,21 +50,19 @@ class MinimizeButton(QPushButton):
 
 class MaximizeButton(QPushButton):
     """Window maximize/restore button styled to match DLA theme.
-    Uses Rubik font so that the O character renders as a rounded square.
+    Uses □ square character with bold styling.
     """
 
     def __init__(self, parent=None):
-        super().__init__("O", parent)
+        super().__init__("□", parent)
         self.setFixedSize(36, 36)
-        rubik = QFont("Rubik", 11)
-        self.setFont(rubik)
         self.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
                 border: none;
                 color: {COLOR_PURPLE};
-                font-size: 11px;
-                font-weight: normal;
+                font-size: 24px;
+                font-weight: bold;
                 padding: 8px 12px;
                 border-radius: 4px;
             }}
@@ -75,7 +73,7 @@ class MaximizeButton(QPushButton):
 
     def set_maximized(self, is_maximized: bool):
         """Switch the button character between maximize and restore states."""
-        self.setText("o" if is_maximized else "O")
+        self.setText("❐" if is_maximized else "□")
 
 
 class CloseButton(QPushButton):
