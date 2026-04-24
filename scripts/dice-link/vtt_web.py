@@ -4,9 +4,9 @@ from urllib.parse import urlparse
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtCore import QTimer, QUrl
+from PyQt6.QtCore import QTimer, QUrl, QPoint, Qt
 
-from debug import log_vtt
+from debug import log_vtt, log_drag_start, log_drag_move, log_drag_end
 from bridge_state import set_bridge
 from dla_bridge import DLABridge
 from custom_window import CustomWindow
@@ -421,3 +421,34 @@ class VTTPopupView(QWebEngineView):
         self.popup_windows.append(popup_window)
         
         return popup_view
+
+
+class DraggableWebEngineView(QWebEngineView):
+    """Main DLA UI browser - QWebEngineView that allows drag-and-drop to other applications"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.drag_position = QPoint()
+    
+    def mousePressEvent(self, event):
+        """Capture mouse position when drag starts"""
+        if event.button() == 1:  # Left mouse button
+            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            log_drag_start(f"Drag started at screen position {event.globalPosition().toPoint()}")
+    
+    def mouseMoveEvent(self, event):
+        """Log drag movement"""
+        if event.buttons() == 1:  # Left mouse button is pressed
+            log_drag_move(f"Dragging, position delta: {event.globalPosition().toPoint() - self.drag_position}")
+    
+    def mouseReleaseEvent(self, event):
+        """Log drag end"""
+        if event.button() == 1:  # Left mouse button
+            log_drag_end(f"Drag ended at screen position {event.globalPosition().toPoint()}")
+    
+    def keyPressEvent(self, event):
+        """Handle F12 to open developer tools"""
+        if event.key() == Qt.Key.Key_F12:
+            self.page().triggerAction(17)  # Trigger dev tools
+        else:
+            super().keyPressEvent(event)

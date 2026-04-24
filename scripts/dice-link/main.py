@@ -29,7 +29,7 @@ from custom_window import CustomWindow, CustomTitleBar, ResizeGrip
 from vtt_validator import VTTValidator
 from dialogs import ConnectionDialog
 from dla_bridge import DLABridge
-from vtt_web import VTTWebPage, VTTWebView, VTTPopupView, VTTPopupWindow, VTTViewingWindow
+from vtt_web import VTTWebPage, VTTWebView, VTTPopupView, VTTPopupWindow, VTTViewingWindow, DraggableWebEngineView
 
 
 
@@ -113,63 +113,6 @@ class WindowController(QObject):
         QDesktopServices.openUrl(QUrl(url))
 
 
-class DraggableWebEngineView(QWebEngineView):
-    """Custom QWebEngineView with frameless window dragging support"""
-    
-    def __init__(self):
-        super().__init__()
-        self.drag_position = QPoint()
-        self.is_dragging = False
-        self.window_controller = None  # Will be set after creation
-    
-    def mousePressEvent(self, event):
-        """Handle mouse press for window dragging"""
-        # Check if click is in title bar area (top 80px)
-        if event.position().y() < 80:
-            self.is_dragging = True
-            self.drag_position = event.globalPosition().toPoint() - self.pos()
-            log_drag_start(event.globalPosition(), self.drag_position, self.pos())
-            event.accept()
-        else:
-            super().mousePressEvent(event)
-    
-    def mouseMoveEvent(self, event):
-        """Handle mouse move for window dragging"""
-        if self.is_dragging:
-            global_pos_float = event.globalPosition()
-            global_pos_int = global_pos_float.toPoint()
-            calculated_pos = global_pos_int - self.drag_position
-            current_window_pos = self.pos()
-            log_drag_move(global_pos_float, global_pos_int, self.drag_position, calculated_pos, current_window_pos)
-            self.move(calculated_pos)
-            event.accept()
-        else:
-            super().mouseMoveEvent(event)
-    
-    def mouseReleaseEvent(self, event):
-        """Handle mouse release"""
-        self.is_dragging = False
-        log_drag_end()
-        super().mouseReleaseEvent(event)
-    
-    def keyPressEvent(self, event):
-        """Handle keyboard shortcuts"""
-        # F12 prints DevTools URL to console
-        if event.key() == Qt.Key.Key_F12:
-            print("[DevTools] Open http://localhost:9222 in a browser to debug")
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-    
-    def closeEvent(self, event):
-        """Handle main window close - close all child VTT windows"""
-        if self.window_controller and hasattr(self.window_controller, 'vtt_windows'):
-            # Close all VTT windows
-            for vtt_window in self.window_controller.vtt_windows:
-                vtt_window.close()
-        
-        # Allow the main window to close
-        event.accept()
 
 
 def run_server():
