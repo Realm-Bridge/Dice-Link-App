@@ -431,23 +431,23 @@ class VTTWebPage(QWebEnginePage):
         return False
 
 
-class VTTPopupWindow(QMainWindow):
-    """Window container for VTT pop-outs"""
+class VTTPopupWindow(CustomWindow):
+    """Window container for VTT pop-outs with custom title bar styling"""
     
     def __init__(self, web_view):
-        super().__init__()
+        super().__init__(show_maximize=False, resizable=False)
         self.web_view = web_view
         self.is_closing = False  # Flag to prevent multiple close attempts
         
-        self.setWindowTitle("VTT Pop-out")
         self.resize(600, 700)
         
-        self.setCentralWidget(web_view)
+        # Add the web view to the content area
+        self.content_layout.addWidget(web_view)
         
         # Update title when page title changes
         web_view.page().titleChanged.connect(self.on_title_changed)
         
-        log_vtt("[POPUP] Window created")
+        log_vtt("[POPUP] Window created with custom title bar styling")
     
     def on_title_changed(self, title):
         if title and title != "about:blank":
