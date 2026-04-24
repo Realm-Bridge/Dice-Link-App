@@ -227,6 +227,7 @@ body {
     padding: 37.5px;
     box-shadow: var(--shadow);
     width: 750px;
+    height: 420px;
 }
 
 .dice-tray {
@@ -375,29 +376,39 @@ body {
 }
 
 .dice-roll-btn {
-    padding: 18px 46.5px;
-    font-size: 30px;
+    width: 75px;
+    height: 75px;
+    padding: 0;
+    font-size: 45px;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 50%;
     cursor: pointer;
     transition: all var(--transition);
     border: none;
     background: var(--dlc-success);
     color: white;
     margin: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: scale(1.75);
 }
 
 .dice-roll-btn {
-    padding: 12px 31px;
-    font-size: 20px;
+    width: 75px;
+    height: 75px;
+    padding: 0;
+    font-size: 30px;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 50%;
     cursor: pointer;
     transition: all var(--transition);
     border: none;
     background: var(--dlc-success);
-    color: white;
-    margin: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: scale(1.75);
 }
 
 .dice-roll-btn:hover {
@@ -1163,11 +1174,11 @@ body {
   right: 36px;
   background: var(--dlc-bg-section);
   border: 3px solid var(--dlc-border);
-  border-radius: 8px;
+  border-radius: var(--border-radius-lg);
   padding: 24px;
   display: flex;
   flex-direction: column;
-  height: 480px;
+  height: 420px;
   overflow: hidden;
 }
 
@@ -1194,7 +1205,7 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
 /* ============================================================================
@@ -1203,8 +1214,8 @@ body {
 
 .mode-legend {
   display: flex;
-  gap: 96px;
-  margin-bottom: 24px;
+  gap: 48px;
+  margin-bottom: 8px;
   padding: 12px 20px;
   background: var(--dlc-bg-input);
   border-radius: 8px;
@@ -1216,7 +1227,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-right: 48px;
+  margin-right: 24px;
 }
 
 /* Color dots for mode indication */
@@ -1226,7 +1237,7 @@ body {
   height: 20px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-right: 24px;
+  margin-right: 6px;
 }
 
 .mode-dot.digital {
@@ -1254,7 +1265,7 @@ body {
   width: 32px;
   height: 32px;
   background-color: transparent;
-  border: 4px solid #1e3a5f;
+  border: 4px solid #34d399;
   border-radius: 2px;
 }
 
@@ -1268,6 +1279,11 @@ body {
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid var(--dlc-warning);
   border-radius: 12px;
+}
+
+/* Remove margin when pending-requests is hidden */
+.pending-requests[style*="display: none"] {
+  margin-bottom: 0;
 }
 
 .pending-requests h4 {
@@ -1336,14 +1352,14 @@ body {
 }
 
 .player-card.is-gm {
-  border: 4px solid #1e3a5f;
+  border: 4px solid #34d399;
 }
 
 .player-info {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 32px;
+  gap: 16px;
   flex: 1;
   min-width: 0;
   overflow: hidden;

@@ -6,13 +6,16 @@ import uvicorn
 import sys
 import os
 import json
+import urllib.request
+import urllib.error
+from urllib.parse import urlparse
 from pathlib import Path
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QWidget, QSizePolicy
+from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase, QIcon
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, QEvent
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
+from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtGui import QPainterPath, QRegion, QDesktopServices
-
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(DICE_LINK_DIR))
@@ -20,77 +23,23 @@ os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
-from debug import log_startup, log_server
+from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt, log_connection_monitor
+from bridge_state import set_bridge
+from custom_window import CustomWindow, CustomTitleBar, ResizeGrip
+from vtt_validator import VTTValidator
+from dialogs import ConnectionDialog
+from dla_bridge import DLABridge
+from vtt_web import VTTWebPage, VTTWebView, VTTPopupView, DraggableWebEngineView
+from vtt_windows import VTTPopupWindow, VTTViewingWindow
+from window_controller import WindowController
 
 
-class WindowController(QObject):
-    """Handles window control commands from JavaScript"""
-    
-    def __init__(self, browser):
-        super().__init__()
-        self.browser = browser
-        self.drag_start_pos = QPoint()
-    
-    @pyqtSlot()
-    def minimize(self):
-        """Minimize the window"""
-        self.browser.showMinimized()
-    
-    @pyqtSlot()
-    def close(self):
-        """Close the application"""
-        self.browser.close()
-    
-    @pyqtSlot(int, int)
-    def startDrag(self, x, y):
-        """Start window drag - store initial mouse position relative to window"""
-        self.drag_start_pos = QPoint(x, y)
-    
-    @pyqtSlot(int, int)
-    def doDrag(self, x, y):
-        """Perform window drag - move window based on new mouse position"""
-        if self.drag_start_pos.isNull():
-            return
-        delta = QPoint(x, y) - self.drag_start_pos
-        new_pos = self.browser.pos() + delta
-        self.browser.move(new_pos)
-    
-    @pyqtSlot(str)
-    def openUrl(self, url):
-        """Open URL in system default browser"""
-        QDesktopServices.openUrl(QUrl(url))
 
 
-class DraggableWebEngineView(QWebEngineView):
-    """Custom QWebEngineView with frameless window dragging support"""
-    
-    def __init__(self):
-        super().__init__()
-        self.drag_position = QPoint()
-        self.is_dragging = False
-    
-    def mousePressEvent(self, event):
-        """Handle mouse press for window dragging"""
-        # Check if click is in title bar area (top 80px)
-        if event.y() < 80:
-            self.is_dragging = True
-            self.drag_position = event.globalPos() - self.pos()
-            event.accept()
-        else:
-            super().mousePressEvent(event)
-    
-    def mouseMoveEvent(self, event):
-        """Handle mouse move for window dragging"""
-        if self.is_dragging:
-            self.move(event.globalPos() - self.drag_position)
-            event.accept()
-        else:
-            super().mouseMoveEvent(event)
-    
-    def mouseReleaseEvent(self, event):
-        """Handle mouse release"""
-        self.is_dragging = False
-        super().mouseReleaseEvent(event)
+
+
+
+
 
 
 def run_server():
@@ -153,21 +102,34 @@ def main():
     # Give the server a moment to start
     time.sleep(1.5)
     
-    # Create and display the PyQt5 window
+    # Create and display the PyQt6 window
     app = QApplication(sys.argv)
+    
+    # Enable DevTools via environment variable - must be set before creating the profile
+    os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
+    
+    # Create profile with devtools enabled
+    profile = QWebEngineProfile.defaultProfile()
     
     # Create a draggable web view widget
     browser = DraggableWebEngineView()
+    browser.setPage(browser.page())  # Ensure page is initialized
     
     # Enable transparent background for rounded corners
     browser.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
     
     # Set up window controller for frameless window control
-    window_controller = WindowController(browser)
+    window_controller = WindowController(browser, browser)
+    browser.window_controller = window_controller  # Store reference for closeEvent
     
     # Set window properties
     browser.setWindowTitle(APP_NAME)
     browser.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+    
+    # Set window icon for taskbar branding
+    logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
+    if logo_path.exists():
+        browser.setWindowIcon(QIcon(str(logo_path)))
     
     # Set up web channel for JavaScript-to-Python communication
     channel = QWebChannel()
@@ -175,16 +137,41 @@ def main():
     browser.page().setWebChannel(channel)
     
     # Lock window to fixed size - cannot be resized
+    # Original planned size - will be scaled by device pixel ratio
     fixed_width = 1788
     fixed_height = 1500
-    browser.setFixedSize(fixed_width, fixed_height)
     
-    # Set rounded corners on frameless window
-    corner_radius = 24
-    path = QPainterPath()
-    path.addRoundedRect(0, 0, fixed_width, fixed_height, corner_radius, corner_radius)
-    mask = QRegion(path.toFillPolygon().toPolygon())
-    browser.setMask(mask)
+    # Store fixed size and browser reference for dynamic scaling
+    browser.fixed_width = fixed_width
+    browser.fixed_height = fixed_height
+    
+    # Function to update scaling when DPI changes
+    def update_dpi_scaling():
+        screen = browser.screen()
+        device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
+        
+        # Calculate scaled window size
+        scaled_width = int(browser.fixed_width / device_pixel_ratio)
+        scaled_height = int(browser.fixed_height / device_pixel_ratio)
+        
+        # Update window size
+        browser.setFixedSize(scaled_width, scaled_height)
+        
+        # Update zoom factor - inverse of device ratio so content scales DOWN with window
+        # If device ratio is 2.0 (200% scaling), zoom should be 0.5 to fit content in half-sized window
+        browser.setZoomFactor(1.0 / device_pixel_ratio)
+        
+        print(f"[DPI UPDATE] Device pixel ratio: {device_pixel_ratio}, Window size: {scaled_width}x{scaled_height}")
+    
+    # Initial scaling
+    update_dpi_scaling()
+    
+    # Connect to screen DPI changes
+    screen = browser.screen()
+    if screen:
+        screen.logicalDotsPerInchChanged.connect(update_dpi_scaling)
+        # If window moves to different display, also update scaling
+        screen.geometryChanged.connect(update_dpi_scaling)
     
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST

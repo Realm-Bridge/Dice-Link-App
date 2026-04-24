@@ -19,13 +19,13 @@ from core.websocket_handler import (
     send_roll_cancelled,
     send_button_select,
     send_dice_result,
-    send_dice_tray_roll,
     get_webrtc_connection_status,
     log_handshake_step
 )
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS, CONNECTION_METHOD
 from debug import log_dlc_connection, log_dlc_accepted, log_dlc_message, log_dlc_response, log_dlc_disconnect, log_server
+from bridge_state import send_dice_result_to_foundry, send_dice_tray_roll_to_foundry
 
 # Get the base directory (now app.py is at the root of dice-link/)
 BASE_DIR = Path(__file__).resolve().parent
@@ -737,12 +737,12 @@ async def handle_ui_message(message: dict):
         return
     
     if msg_type == "diceTrayRoll":
-        # Dice tray roll from UI - forward to DLC for evaluation
+        # Dice tray roll from UI - forward to DLC via QWebChannel bridge
         formula = message.get("formula", "")
         flavor = message.get("flavor", "Manual Dice Roll")
         log_server(f"Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
         
-        success = await send_dice_tray_roll(formula, flavor)
+        success = send_dice_tray_roll_to_foundry(formula, flavor)
         
         await broadcast_to_ui({
             "type": "diceTrayRollAck",
@@ -760,6 +760,16 @@ async def handle_ui_message(message: dict):
         success = await send_dice_result(original_roll_id, results)
         log_server(f"Forwarded diceResult to DLC, success={success}")
         
+        # Also send result through QWebChannel bridge to Foundry if available
+        result_data = {
+            "type": "diceResult",
+            "id": original_roll_id,
+            "results": results
+        }
+        bridge_success = send_dice_result_to_foundry(result_data)
+        if bridge_success:
+            log_server(f"Forwarded diceResult to Foundry via bridge (using diceResultReady signal)")
+        
         await broadcast_to_ui({
             "type": "diceResultAck",
             "success": success,
@@ -768,18 +778,33 @@ async def handle_ui_message(message: dict):
         return
     
     if msg_type == "buttonSelect":
-        # Phase A: User selected a button (Advantage/Normal/Disadvantage)
+        # User selected a button (Advantage/Normal/Disadvantage) - forward to DLC via bridge
+        log_server(f"Received buttonSelect from UI: {message}")
         roll_id = message.get("rollId")
         button = message.get("button")
         config_changes = message.get("configChanges", {})
         
+        # Also send through QWebChannel bridge to DLC if available
+        from bridge_state import send_button_select_to_dlc
+        bridge_success = send_button_select_to_dlc({
+            "type": "buttonSelect",
+            "rollId": roll_id,
+            "button": button,
+            "configChanges": config_changes
+        })
+        
+        if bridge_success:
+            log_server(f"Forwarded buttonSelect to DLC via bridge: {button}")
+        
+        # Also try old WebSocket method for backward compatibility
         success = await send_button_select(roll_id, button, config_changes)
         
         await broadcast_to_ui({
             "type": "buttonSelectAck",
-            "success": success,
+            "success": success or bridge_success,
             "rollId": roll_id
         })
+        return
     
     elif msg_type == "submitDiceResult":
         # Phase B: User submitted dice results after diceRequest

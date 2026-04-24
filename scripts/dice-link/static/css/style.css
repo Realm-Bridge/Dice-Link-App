@@ -79,6 +79,10 @@
 
 html, body {
     height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: none;
 }
 
 body {
@@ -106,7 +110,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0 24px 0 24px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: none;
     margin-bottom: 0;
 }
 
@@ -159,6 +163,24 @@ body {
 .icon-btn svg {
     width: 20px;
     height: 20px;
+}
+
+/* Title Bar Button */
+.title-bar-btn {
+    padding: 6px 12px;
+    background-color: var(--dlc-accent);
+    border: 1px solid var(--dlc-accent);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.title-bar-btn:hover {
+    background-color: var(--dlc-accent-hover);
+    border-color: var(--dlc-accent-hover);
 }
 
 /* Connection Status */

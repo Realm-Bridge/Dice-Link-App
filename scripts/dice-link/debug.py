@@ -14,6 +14,8 @@ DEBUG_ENABLED = DEBUG
 DEBUG_UPNP = True
 DEBUG_WEBSOCKET = True
 DEBUG_SERVER = True
+DEBUG_DRAG = True
+DEBUG_CONNECTION_MONITOR = True
 
 
 def log(category: str, message: str):
@@ -79,6 +81,12 @@ def log_dlc_disconnect(clean: bool = True, error: str = None):
             print(f"[WebSocket DEBUG] WebSocket error: {error}")
 
 
+def log_connection_monitor(message: str):
+    """Log connection monitoring debug messages."""
+    if DEBUG_ENABLED and DEBUG_CONNECTION_MONITOR:
+        print(f"[Connection Monitor DEBUG] {message}")
+
+
 def log_upnp_device(device_name: str, device_type: str = "unknown"):
     """Log UPnP device discovery."""
     if DEBUG_ENABLED and DEBUG_UPNP:
@@ -119,3 +127,47 @@ def log_startup(host: str, port: int):
         print(f"[Server DEBUG] WEBSOCKET_HOST configured as: {host}")
         print(f"[Server DEBUG] WEBSOCKET_PORT configured as: {port}")
         print(f"[Server DEBUG] Waiting for connections on /ws/dlc endpoint...")
+
+
+def log_drag(message: str):
+    """Log drag-related debug messages."""
+    if DEBUG_ENABLED and DEBUG_DRAG:
+        print(f"[Drag DEBUG] {message}")
+
+
+def log_drag_start(global_pos_float, drag_position, window_pos):
+    """Log drag start details."""
+    if not (DEBUG_ENABLED and DEBUG_DRAG):
+        return
+    print(f"[Drag DEBUG] === DRAG START ===")
+    print(f"[Drag DEBUG] globalPosition (float): {global_pos_float.x()}, {global_pos_float.y()}")
+    print(f"[Drag DEBUG] drag_position stored: {drag_position.x()}, {drag_position.y()}")
+    print(f"[Drag DEBUG] window pos at start: {window_pos.x()}, {window_pos.y()}")
+
+
+def log_drag_move(global_pos_float, global_pos_int, drag_position, calculated_pos, current_window_pos):
+    """Log drag move details."""
+    if not (DEBUG_ENABLED and DEBUG_DRAG):
+        return
+    print(f"[Drag DEBUG] globalPosition (float): {global_pos_float.x()}, {global_pos_float.y()}")
+    print(f"[Drag DEBUG] globalPosition (int):   {global_pos_int.x()}, {global_pos_int.y()}")
+    print(f"[Drag DEBUG] drag_position: {drag_position.x()}, {drag_position.y()}")
+    print(f"[Drag DEBUG] calculated move pos: {calculated_pos.x()}, {calculated_pos.y()}")
+    print(f"[Drag DEBUG] current window pos: {current_window_pos.x()}, {current_window_pos.y()}")
+    print("---")
+
+
+def log_drag_end():
+    """Log drag end."""
+    if DEBUG_ENABLED and DEBUG_DRAG:
+        print(f"[Drag DEBUG] === DRAG END ===")
+
+
+# VTT debug switch
+DEBUG_VTT = True
+
+
+def log_vtt(message: str):
+    """Log VTT-related debug messages."""
+    if DEBUG_ENABLED and DEBUG_VTT:
+        print(f"[VTT DEBUG] {message}")

@@ -33,6 +33,15 @@ function initWindowControls() {
         // Expose pyqtBridge globally so other elements can use it
         window.pyqtBridge = pyqtBridge;
         
+        // Connect button
+        const connectBtn = document.getElementById('connect-btn');
+        if (connectBtn) {
+            connectBtn.addEventListener('click', () => {
+                console.log('[WindowControl] Connect button clicked');
+                pyqtBridge.openConnectionDialog();
+            });
+        }
+        
         // Minimize button
         minimizeBtn.addEventListener('click', () => {
             console.log('[WindowControl] Minimize button clicked');
@@ -54,13 +63,15 @@ function initWindowControls() {
                 return;
             }
             isDragging = true;
-            console.log('[WindowControl] Drag started at', e.clientX, e.clientY);
-            pyqtBridge.startDrag(e.clientX, e.clientY);
+            // Use screenX/screenY for global screen coordinates (unaffected by zoom)
+            console.log('[WindowControl] Drag started at', e.screenX, e.screenY);
+            pyqtBridge.startDrag(e.screenX, e.screenY);
         });
         
         document.addEventListener('mousemove', (e) => {
             if (isDragging) {
-                pyqtBridge.doDrag(e.clientX, e.clientY);
+                // Use screenX/screenY for global screen coordinates (unaffected by zoom)
+                pyqtBridge.doDrag(e.screenX, e.screenY);
             }
         });
         
