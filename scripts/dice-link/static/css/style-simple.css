@@ -227,6 +227,7 @@ body {
     padding: 37.5px;
     box-shadow: var(--shadow);
     width: 750px;
+    height: 420px;
 }
 
 .dice-tray {
