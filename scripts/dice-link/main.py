@@ -549,39 +549,27 @@ class CustomViewerTitleBar(QWidget):
         logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
         if logo_path.exists():
             pixmap = QPixmap(str(logo_path))
-            scaled_pixmap = pixmap.scaledToHeight(32, Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
             self.dice_link_logo.setPixmap(scaled_pixmap)
         layout.addWidget(self.dice_link_logo)
         
         # Spacer
         layout.addStretch()
         
-        # Realm Bridge logo (center)
-        self.realm_bridge_logo = QLabel()
-        rb_logo_path = DICE_LINK_DIR / "static" / "Logos" / "New_logo.png"
-        if rb_logo_path.exists():
-            rb_pixmap = QPixmap(str(rb_logo_path))
-            scaled_rb_pixmap = rb_pixmap.scaledToHeight(28, Qt.TransformationMode.SmoothTransformation)
-            self.realm_bridge_logo.setPixmap(scaled_rb_pixmap)
-        layout.addWidget(self.realm_bridge_logo)
-        
-        # Spacer
-        layout.addStretch()
-        
         # Window control buttons (right side)
         self.minimize_btn = QPushButton("−")
-        self.minimize_btn.setFixedSize(36, 36)
+        self.minimize_btn.setFixedSize(72, 72)
         self.minimize_btn.clicked.connect(self.minimize_window)
         layout.addWidget(self.minimize_btn)
         
         self.maximize_btn = QPushButton("□")
-        self.maximize_btn.setFixedSize(36, 36)
+        self.maximize_btn.setFixedSize(72, 72)
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         layout.addWidget(self.maximize_btn)
         
         self.close_btn = QPushButton("×")
         self.close_btn.setObjectName("closeBtn")
-        self.close_btn.setFixedSize(36, 36)
+        self.close_btn.setFixedSize(72, 72)
         self.close_btn.clicked.connect(self.close_window)
         layout.addWidget(self.close_btn)
     
