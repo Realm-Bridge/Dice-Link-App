@@ -1194,7 +1194,7 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
 /* ============================================================================
@@ -1204,7 +1204,7 @@ body {
 .mode-legend {
   display: flex;
   gap: 48px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
   padding: 12px 20px;
   background: var(--dlc-bg-input);
   border-radius: 8px;
