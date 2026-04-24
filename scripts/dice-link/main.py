@@ -525,7 +525,7 @@ class CustomViewerTitleBar(QWidget):
                 background-color: transparent;
                 border: none;
                 color: #6f2e9a;
-                font-size: 16px;
+                font-size: 28px;
                 font-weight: bold;
                 padding: 8px 12px;
                 border-radius: 4px;
@@ -558,18 +558,26 @@ class CustomViewerTitleBar(QWidget):
         
         # Window control buttons (right side)
         self.minimize_btn = QPushButton("−")
-        self.minimize_btn.setFixedSize(72, 72)
+        self.minimize_btn.setFixedSize(36, 36)
         self.minimize_btn.clicked.connect(self.minimize_window)
         layout.addWidget(self.minimize_btn)
         
         self.maximize_btn = QPushButton("◻")
-        self.maximize_btn.setFixedSize(72, 72)
+        self.maximize_btn.setFixedSize(36, 36)
+        self.maximize_btn.setStyleSheet("""
+            QPushButton {
+                color: #6f2e9a;
+            }
+            QPushButton:hover {
+                background-color: rgba(139, 92, 246, 0.1);
+            }
+        """)
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         layout.addWidget(self.maximize_btn)
         
         self.close_btn = QPushButton("×")
         self.close_btn.setObjectName("closeBtn")
-        self.close_btn.setFixedSize(72, 72)
+        self.close_btn.setFixedSize(36, 36)
         self.close_btn.clicked.connect(self.close_window)
         layout.addWidget(self.close_btn)
     
