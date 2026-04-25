@@ -954,8 +954,8 @@ body {
 
 .die-option {
     position: relative;
-    width: 79px;
-    height: 79px;
+    width: 82px;
+    height: 82px;
     padding: 0;
     border: none;
     background: transparent;
@@ -979,8 +979,8 @@ body {
 
 .die-face {
     position: relative;
-    width: 79px;
-    height: 79px;
+    width: 82px;
+    height: 82px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -988,16 +988,32 @@ body {
 }
 
 .die-image {
-    width: 97px;
-    height: 97px;
+    width: 100px;
+    height: 100px;
     display: block;
     pointer-events: none;
 }
 
-/* D4 dice fill their buttons already, keep them at 79px */
+/* D4 dice fill their buttons already, keep them at 82px */
 .dice-row[data-type="d4"] .die-image {
+    width: 82px;
+    height: 82px;
+}
+
+/* D20 dice reduced by 3% */
+.dice-row[data-type="d20"] .die-option {
     width: 79px;
     height: 79px;
+}
+
+.dice-row[data-type="d20"] .die-face {
+    width: 79px;
+    height: 79px;
+}
+
+.dice-row[data-type="d20"] .die-image {
+    width: 97px;
+    height: 97px;
 }
 
 
