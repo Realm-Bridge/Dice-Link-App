@@ -38,12 +38,12 @@
             z-index: 10;
         }
 
-        /* Logo in title bar - left aligned, 3x size, overflows into body */
+        /* Logo in title bar - top left corner, 3x size, overflows into body */
         .startup-title-bar-logo {
             height: 120px;
             position: absolute;
-            left: 12px;
-            top: -10px;
+            left: 0;
+            top: 0;
             z-index: 20;
             -webkit-app-region: no-drag;
             pointer-events: none;
@@ -91,13 +91,14 @@
             overflow: hidden;
         }
 
-        /* White title - flows down from title bar area, sits next to logo space */
+        /* "Login" title - centered at top, flows from title bar height */
         .startup-title-text {
             color: var(--text-primary);
             font-size: 22px;
             font-weight: bold;
-            margin: 0 0 16px 140px;
+            margin: 0 0 16px 0;
             padding-top: 8px;
+            text-align: center;
         }
 
         .startup-form {
