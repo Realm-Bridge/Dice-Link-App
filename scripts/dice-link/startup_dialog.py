@@ -57,13 +57,11 @@ class StartupWindowController(WindowController):
     @pyqtSlot(str, str, str, str)
     def login(self, vtt_type: str, vtt_address: str, username: str, password: str):
         """
-        Called by JavaScript when user submits login form.
-        Validates input and emits login_successful signal.
+        Called by JavaScript when user clicks Connect button.
+        Opens main DLA window and closes startup dialog.
         """
-        print(f"[v0] login({vtt_type}, {vtt_address}, {username}, {password}) called from JavaScript")
-        if vtt_type and vtt_address and username and password:
-            print("[v0] Login validation passed, emitting login_successful signal")
-            self.login_successful.emit(vtt_type, vtt_address, username)
+        print(f"[v0] login() called, opening main window")
+        self.login_successful.emit(vtt_type, vtt_address, username)
 
 
 class StartupDialog(DraggableWebEngineView):
