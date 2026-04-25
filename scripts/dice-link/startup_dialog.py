@@ -40,6 +40,36 @@ class StartupDialog(CustomWindow):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
         
+        # ===== LOGO AND TITLE SECTION =====
+        logo_title_layout = QHBoxLayout()
+        logo_title_layout.setSpacing(15)
+        
+        # Dice Link logo
+        dl_logo_label = QLabel()
+        dl_logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background_small.png"
+        if dl_logo_path.exists():
+            logo_pixmap = QPixmap(str(dl_logo_path))
+            scaled_logo = logo_pixmap.scaledToHeight(60, Qt.TransformationMode.SmoothTransformation)
+            dl_logo_label.setPixmap(scaled_logo)
+        
+        # Title
+        title_label = QLabel("Dice Link Login")
+        title_font = QFont("Arial", 16, QFont.Weight.Bold)
+        title_label.setFont(title_font)
+        title_label.setStyleSheet("color: #f0f2f5;")
+        
+        logo_title_layout.addWidget(dl_logo_label)
+        logo_title_layout.addWidget(title_label)
+        logo_title_layout.addStretch()
+        
+        main_layout.addLayout(logo_title_layout)
+        
+        # Separator line
+        separator = QLabel()
+        separator.setStyleSheet("border-bottom: 1px solid #6f2e9a;")
+        separator.setFixedHeight(1)
+        main_layout.addWidget(separator)
+        
         # ===== FORM SECTION =====
         form_layout = QVBoxLayout()
         form_layout.setSpacing(12)
@@ -215,7 +245,7 @@ class StartupDialog(CustomWindow):
         footer_layout.addStretch()
         
         realm_logo_label = QLabel()
-        realm_logo_path = DICE_LINK_DIR / "static" / "Logos" / "rb_logo.png"
+        realm_logo_path = DICE_LINK_DIR / "static" / "Logos" / "New_logo.png"
         if realm_logo_path.exists():
             logo_pixmap = QPixmap(str(realm_logo_path))
             scaled_logo = logo_pixmap.scaledToHeight(24, Qt.TransformationMode.SmoothTransformation)
