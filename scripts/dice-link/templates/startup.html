@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice Link - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style-simple.css">
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <style>
+        /* Startup dialog specific styles */
+        .startup-app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--bg-primary);
+        }
+
+        .startup-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .startup-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .startup-form-group label {
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .startup-form-group input,
+        .startup-form-group select {
+            padding: 12px;
+            border: 2px solid var(--dlc-accent);
+            border-radius: 4px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .startup-button {
+            padding: 12px 24px;
+            background-color: var(--dlc-accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            align-self: center;
+        }
+
+        .startup-button:hover {
+            background-color: var(--dlc-accent-hover);
+        }
+
+        .startup-footer {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .startup-link {
+            color: var(--dlc-accent);
+            text-decoration: none;
+        }
+
+        .startup-link:hover {
+            text-decoration: underline;
+        }
+
+        .realm-bridge-logo {
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="startup-app-container">
+        <!-- Title bar - use reusable _title_bar.html -->
+        {% include "_title_bar.html" %}
+
+        <!-- Main Content -->
+        <div class="startup-content">
+            <!-- Login Form -->
+            <div class="startup-form-group">
+                <label for="vtt-select">Connect me to:</label>
+                <select id="vtt-select">
+                    <option value="">Please Select</option>
+                    <option value="foundry">Foundry VTT</option>
+                    <option value="roll20">Roll20</option>
+                </select>
+            </div>
+
+            <div class="startup-form-group">
+                <label for="vtt-address">VTT Address:</label>
+                <input type="text" id="vtt-address" placeholder="http://localhost:30000 or https://example.com">
+            </div>
+
+            <div class="startup-form-group">
+                <label for="username">User Name:</label>
+                <input type="text" id="username" placeholder="Usually Email">
+            </div>
+
+            <div class="startup-form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password">
+            </div>
+
+            <button class="startup-button">Connect</button>
+        </div>
+
+        <!-- Footer -->
+        <div class="startup-footer">
+            <a href="https://realmbridge.co.uk/" class="startup-link">Create Free Account</a>
+            <img src="/static/Logos/Realm_Bridge_Logo_White.png" alt="Realm Bridge" class="realm-bridge-logo">
+        </div>
+    </div>
+
+    <!-- Window control and settings JS -->
+    <script src="/static/js/ui/window-control.js"></script>
+    <script src="/static/js/ui/settings.js"></script>
+</body>
+</html>
