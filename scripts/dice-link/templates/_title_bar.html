@@ -1,0 +1,26 @@
+<!-- Custom Frameless Title Bar (Reusable Template) -->
+<header class="custom-title-bar" id="title-bar">
+    <div class="title-bar-left">
+        <button id="settings-btn" class="title-bar-icon-btn" title="Settings">
+            <i class="fas fa-cog"></i>
+        </button>
+        <button id="connect-btn" class="title-bar-btn" title="Connect to VTT" style="display: none;">
+            Connect
+        </button>
+        <div id="connection-status" class="connection-status disconnected" style="display: none;">
+            <span class="status-indicator"></span>
+            <span id="connection-status-text" class="status-text">Disconnected</span>
+        </div>
+    </div>
+    <div class="title-bar-centre">
+        <img src="/static/Logos/DL_Logo_No_Background.png" alt="Dice Link" class="title-bar-logo" draggable="false" />
+    </div>
+    <div class="title-bar-right">
+        <button class="title-bar-btn minimize-btn" id="minimize-btn" title="Minimize">
+            <i class="fas fa-minus"></i>
+        </button>
+        <button class="title-bar-btn close-btn" id="close-btn" title="Close">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+</header>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} - Login</title>
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=57">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <style>
+        /* Startup-specific styles */
+        .startup-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        {% include "_title_bar.html" %}
+
+        <!-- Main Content -->
+        <main class="main-content startup-container">
+            <!-- StartupDialog content will be inserted here by PyQt6 -->
+            <div id="startup-content"></div>
+        </main>
+    </div>
+
+    <script src="/static/js/ui/settings.js"></script>
+    <script>
+        // Initialize title bar controls
+        document.getElementById('minimize-btn')?.addEventListener('click', () => {
+            if (window.pybridge) {
+                window.pybridge.minimize_window();
+            }
+        });
+
+        document.getElementById('close-btn')?.addEventListener('click', () => {
+            if (window.pybridge) {
+                window.pybridge.close_window();
+            }
+        });
+    </script>
+</body>
+</html>
