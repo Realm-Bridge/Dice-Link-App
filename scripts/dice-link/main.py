@@ -32,6 +32,7 @@ from dla_bridge import DLABridge
 from vtt_web import VTTWebPage, VTTWebView, VTTPopupView, DraggableWebEngineView
 from vtt_windows import VTTPopupWindow, VTTViewingWindow
 from window_controller import WindowController
+from startup_dialog import StartupDialog
 
 
 
@@ -104,6 +105,14 @@ def main():
     
     # Create and display the PyQt6 window
     app = QApplication(sys.argv)
+    
+    # Show StartupDialog first
+    startup_dialog = StartupDialog()
+    if startup_dialog.exec() != QDialog.DialogCode.Accepted:
+        log_server("Startup cancelled by user")
+        sys.exit(0)
+    
+    log_server("User connected through StartupDialog")
     
     # Enable DevTools via environment variable - must be set before creating the profile
     os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
