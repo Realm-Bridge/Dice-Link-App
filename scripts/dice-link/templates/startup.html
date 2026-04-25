@@ -3,129 +3,600 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dice Link - Login</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/style-simple.css">
+    <title>Dice Link Login</title>
+    
+    <!-- Qt WebChannel for PyQt communication -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="/static/css/style-simple.css">
+    
     <style>
-        /* Startup dialog specific styles */
+        /* ============================================
+           STARTUP DIALOG SPECIFIC STYLES
+           ============================================ */
+        
+        :root {
+            --dlc-bg: #1a1a2e;
+            --dlc-surface: #252542;
+            --dlc-accent: #9d4edd;
+            --dlc-accent-hover: #b366e8;
+            --dlc-text-primary: #ffffff;
+            --dlc-text-secondary: #a0a0b0;
+            --dlc-border: #9d4edd;
+            --dlc-input-bg: #1e1e36;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: transparent;
+        }
+        
+        /* App Container */
         .startup-app-container {
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background-color: var(--bg-primary);
+            background-color: var(--dlc-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
         }
-
+        
+        /* ============================================
+           TITLE BAR
+           ============================================ */
+        
+        .startup-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 40px;
+            min-height: 40px;
+            background-color: var(--dlc-bg);
+            padding: 0 8px;
+            -webkit-app-region: drag;
+            position: relative;
+            z-index: 100;
+        }
+        
+        /* Logo in title bar - top left corner, overflows into body */
+        .startup-title-bar-logo {
+            height: 84px;
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            z-index: 20;
+            -webkit-app-region: no-drag;
+            pointer-events: none;
+        }
+        
+        /* Title bar left section - empty space for logo overflow */
+        .startup-title-bar-left {
+            flex: 0 0 100px;
+        }
+        
+        /* Title bar center section - "Login" text */
+        .startup-title-bar-centre {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .startup-title-bar-title {
+            color: var(--dlc-text-primary);
+            font-size: 22px;
+            font-weight: bold;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Title bar right section - settings, minimize, close */
+        .startup-title-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            -webkit-app-region: no-drag;
+        }
+        
+        .startup-title-bar-btn {
+            background: transparent;
+            border: none;
+            color: var(--dlc-accent);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .startup-title-bar-btn:hover {
+            background-color: rgba(157, 78, 221, 0.2);
+        }
+        
+        .startup-title-bar-btn.close-btn:hover {
+            background-color: rgba(255, 0, 0, 0.3);
+            color: #ff6b6b;
+        }
+        
+        /* ============================================
+           MAIN CONTENT AREA
+           ============================================ */
+        
         .startup-content {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 40px 20px 40px;
             overflow-y: auto;
-            padding: 40px;
+        }
+        
+        /* ============================================
+           LOGIN FORM
+           ============================================ */
+        
+        .startup-form {
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 16px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
         }
-
-        .startup-form-group {
+        
+        .startup-form-row {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            align-items: center;
+            gap: 16px;
         }
-
-        .startup-form-group label {
-            color: var(--text-primary);
-            font-size: 16px;
-        }
-
-        .startup-form-group input,
-        .startup-form-group select {
-            padding: 12px;
-            border: 2px solid var(--dlc-accent);
-            border-radius: 4px;
-            background-color: var(--bg-secondary);
-            color: var(--text-primary);
+        
+        .startup-form-label {
+            flex: 0 0 120px;
+            color: var(--dlc-text-primary);
             font-size: 14px;
+            font-weight: 500;
+            text-align: right;
         }
-
-        .startup-button {
-            padding: 12px 24px;
+        
+        .startup-form-input,
+        .startup-form-select {
+            flex: 1;
+            background-color: var(--dlc-input-bg);
+            border: 1px solid var(--dlc-border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: var(--dlc-text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .startup-form-input::placeholder {
+            color: var(--dlc-text-secondary);
+        }
+        
+        .startup-form-input:focus,
+        .startup-form-select:focus {
+            border-color: var(--dlc-accent-hover);
+            box-shadow: 0 0 0 2px rgba(157, 78, 221, 0.2);
+        }
+        
+        .startup-form-select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239d4edd' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+        
+        .startup-form-select option {
+            background-color: var(--dlc-surface);
+            color: var(--dlc-text-primary);
+        }
+        
+        .startup-form-select option:disabled {
+            color: var(--dlc-text-secondary);
+        }
+        
+        /* Connect Button */
+        .startup-connect-btn {
             background-color: var(--dlc-accent);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
+            padding: 14px 48px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            align-self: center;
+            transition: background-color 0.2s ease;
+            margin: 24px auto 0 auto;
+            display: block;
         }
-
-        .startup-button:hover {
+        
+        .startup-connect-btn:hover {
             background-color: var(--dlc-accent-hover);
         }
-
+        
+        /* ============================================
+           FOOTER
+           ============================================ */
+        
         .startup-footer {
-            padding: 20px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 16px 24px;
+            margin-top: auto;
         }
-
-        .startup-link {
-            color: var(--dlc-accent);
-            text-decoration: none;
-        }
-
-        .startup-link:hover {
+        
+        .startup-create-account {
+            color: #5ca8ff;
             text-decoration: underline;
+            font-size: 14px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: inherit;
         }
-
-        .realm-bridge-logo {
-            height: 40px;
+        
+        .startup-create-account:hover {
+            color: #7dbdff;
+        }
+        
+        .startup-realm-bridge-logo {
+            height: 32px;
+        }
+        
+        /* ============================================
+           SETTINGS OVERLAY
+           ============================================ */
+        
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .settings-overlay.hidden {
+            display: none;
+        }
+        
+        .settings-panel {
+            background-color: var(--dlc-surface);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--dlc-border);
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(157, 78, 221, 0.3);
+        }
+        
+        .settings-header h2 {
+            color: var(--dlc-text-primary);
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .settings-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .settings-section {
+            margin-bottom: 24px;
+        }
+        
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .settings-section-title {
+            color: var(--dlc-accent);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .settings-field {
+            margin-bottom: 16px;
+        }
+        
+        .settings-field:last-child {
+            margin-bottom: 0;
+        }
+        
+        .settings-field label {
+            display: block;
+            color: var(--dlc-text-secondary);
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        
+        .settings-field input,
+        .settings-field select {
+            width: 100%;
+            background-color: var(--dlc-input-bg);
+            border: 1px solid var(--dlc-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: var(--dlc-text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+        }
+        
+        .settings-field input:focus,
+        .settings-field select:focus {
+            border-color: var(--dlc-accent-hover);
+            box-shadow: 0 0 0 2px rgba(157, 78, 221, 0.2);
+        }
+        
+        .settings-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(157, 78, 221, 0.3);
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .settings-footer .btn {
+            background-color: var(--dlc-accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .settings-footer .btn:hover {
+            background-color: var(--dlc-accent-hover);
+        }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--dlc-text-secondary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        
+        .icon-btn:hover {
+            background-color: rgba(157, 78, 221, 0.2);
+            color: var(--dlc-text-primary);
+        }
+        
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
         }
     </style>
 </head>
 <body>
     <div class="startup-app-container">
-        <!-- Title bar - use reusable _title_bar.html -->
-        {% include "_title_bar.html" %}
+        
+        <!-- Title bar -->
+        <header class="startup-title-bar" id="title-bar">
+            <!-- Logo: left corner, overflows into body -->
+            <img src="/static/Logos/DL_Logo_No_Background_small.png" 
+                 alt="Dice Link" 
+                 class="startup-title-bar-logo" 
+                 draggable="false" />
+            
+            <!-- Left section - empty space for logo -->
+            <div class="startup-title-bar-left"></div>
+            
+            <!-- Center - "Login" title -->
+            <div class="startup-title-bar-centre">
+                <h1 class="startup-title-bar-title">Login</h1>
+            </div>
+            
+            <!-- Right side: settings, minimize, close -->
+            <div class="startup-title-bar-right">
+                <button id="settings-btn" class="startup-title-bar-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="startup-title-bar-btn minimize-btn" id="minimize-btn" title="Minimize">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="startup-title-bar-btn close-btn" id="close-btn" title="Close">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </header>
 
         <!-- Main Content -->
         <div class="startup-content">
+            
             <!-- Login Form -->
-            <div class="startup-form-group">
-                <label for="vtt-select">Connect me to:</label>
-                <select id="vtt-select">
-                    <option value="">Please Select</option>
-                    <option value="foundry">Foundry VTT</option>
-                    <option value="roll20">Roll20</option>
-                </select>
-            </div>
-
-            <div class="startup-form-group">
-                <label for="vtt-address">VTT Address:</label>
-                <input type="text" id="vtt-address" placeholder="http://localhost:30000 or https://example.com">
-            </div>
-
-            <div class="startup-form-group">
-                <label for="username">User Name:</label>
-                <input type="text" id="username" placeholder="Usually Email">
-            </div>
-
-            <div class="startup-form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password">
-            </div>
-
-            <button class="startup-button">Connect</button>
+            <form class="startup-form" id="login-form">
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">Connect me to:</label>
+                    <select class="startup-form-select" id="vtt-select">
+                        <option value="" disabled selected>Please Select</option>
+                        <optgroup label="Active">
+                            <option value="foundry">Foundry VTT</option>
+                        </optgroup>
+                        <optgroup label="Road Mapped">
+                            <option value="roll20" disabled>Roll20</option>
+                            <option value="owlbear" disabled>Owlbear Rodeo</option>
+                            <option value="discord" disabled>Discord</option>
+                            <option value="dndbeyond" disabled>DnD Beyond Maps</option>
+                            <option value="fantasygrounds" disabled>Fantasy Grounds</option>
+                            <option value="beyondtabletop" disabled>Beyond Tabletop</option>
+                            <option value="gme" disabled>Game Master Engine</option>
+                            <option value="talespire" disabled>TaleSpire</option>
+                            <option value="tabletopsim" disabled>Tabletop Simulator</option>
+                        </optgroup>
+                    </select>
+                </div>
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">VTT Address:</label>
+                    <input type="text" class="startup-form-input" id="vtt-address" 
+                           placeholder="http://localhost:30000 or https://example.com">
+                </div>
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">User Name:</label>
+                    <input type="text" class="startup-form-input" id="username" 
+                           placeholder="Usually Email">
+                </div>
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">Password:</label>
+                    <input type="password" class="startup-form-input" id="password">
+                </div>
+                
+                <button type="submit" class="startup-connect-btn">Connect</button>
+                
+            </form>
+            
         </div>
-
+        
         <!-- Footer -->
-        <div class="startup-footer">
-            <a href="https://realmbridge.co.uk/" class="startup-link">Create Free Account</a>
-            <img src="/static/Logos/Realm_Bridge_Logo_White.png" alt="Realm Bridge" class="realm-bridge-logo">
+        <footer class="startup-footer">
+            <a href="https://realmbridge.co.uk/" target="_blank" class="startup-create-account">
+                Create Free Account
+            </a>
+            <img src="/static/Logos/RB_Logo_No_Background.png" alt="Realm Bridge" class="startup-realm-bridge-logo" />
+        </footer>
+        
+    </div>
+
+    <!-- Settings Panel Overlay -->
+    <div id="settings-overlay" class="settings-overlay hidden">
+        <div id="settings-panel" class="settings-panel">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button id="settings-close" class="icon-btn" title="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Connection</h3>
+                    <div class="settings-field">
+                        <label for="settings-host">WebSocket Host</label>
+                        <input type="text" id="settings-host" value="localhost" placeholder="localhost">
+                    </div>
+                    <div class="settings-field">
+                        <label for="settings-port">WebSocket Port</label>
+                        <input type="number" id="settings-port" value="8765" min="1" max="65535">
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Appearance</h3>
+                    <div class="settings-field">
+                        <label for="settings-theme">Theme</label>
+                        <select id="settings-theme">
+                            <option value="dark" selected>Dark</option>
+                            <option value="light" disabled>Light (Coming Soon)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="settings-save" class="btn btn-primary">Save Settings</button>
+            </div>
         </div>
     </div>
 
-    <!-- Window control and settings JS -->
-    <script src="/static/js/ui/window-control.js"></script>
-    <script src="/static/js/ui/settings.js"></script>
+    <!-- Core Modules -->
+    <script src="/static/js/debug.js?v=1"></script>
+    <script src="/static/js/utils.js?v=1"></script>
+    
+    <!-- UI Modules -->
+    <script src="/static/js/ui/settings.js?v=1"></script>
+    <script src="/static/js/ui/window-control.js?v=1"></script>
+    
+    <script>
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize settings UI
+            if (typeof initSettingsUI === 'function') {
+                initSettingsUI();
+            }
+            
+            // Initialize window controls
+            if (typeof initWindowControls === 'function') {
+                initWindowControls();
+            }
+            
+            // Handle form submission
+            const form = document.getElementById('login-form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const vttSelect = document.getElementById('vtt-select').value;
+                    const vttAddress = document.getElementById('vtt-address').value;
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    
+                    // Send to PyQt via bridge
+                    if (typeof pyqtBridge !== 'undefined' && pyqtBridge.login) {
+                        pyqtBridge.login(vttSelect, vttAddress, username, password);
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
