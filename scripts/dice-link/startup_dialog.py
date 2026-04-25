@@ -22,10 +22,31 @@ class StartupWindowController(WindowController):
     Extends WindowController with login functionality for the startup dialog.
     Inherits: minimize(), close(), startDrag(), doDrag() from WindowController.
     Adds: login() for form submission.
+    Re-declares inherited methods with @pyqtSlot for JavaScript access.
     """
     
     # Signal emitted when user successfully logs in
     login_successful = pyqtSignal(str, str, str)  # vtt_type, vtt_address, username
+    
+    @pyqtSlot()
+    def minimize(self):
+        """Minimize the window."""
+        super().minimize()
+    
+    @pyqtSlot()
+    def close(self):
+        """Close the window."""
+        super().close()
+    
+    @pyqtSlot(int, int)
+    def startDrag(self, pos_x: int, pos_y: int):
+        """Start dragging the window."""
+        super().startDrag(pos_x, pos_y)
+    
+    @pyqtSlot(int, int)
+    def doDrag(self, pos_x: int, pos_y: int):
+        """Continue dragging the window."""
+        super().doDrag(pos_x, pos_y)
     
     @pyqtSlot(str, str, str, str)
     def login(self, vtt_type: str, vtt_address: str, username: str, password: str):
