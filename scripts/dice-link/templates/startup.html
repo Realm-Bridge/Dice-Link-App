@@ -8,53 +8,54 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <style>
-        /* Startup-specific styles */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+        }
+
         .startup-app-container {
             width: 450px;
             height: 520px;
             overflow: hidden;
             border-radius: 12px;
             background-color: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
 
+        /* Title bar - same height as main window, no title text */
         .startup-title-bar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 8px 16px;
             height: 40px;
             background-color: var(--bg-primary);
+            position: relative;
+            flex-shrink: 0;
             -webkit-app-region: drag;
+            z-index: 10;
         }
 
-        .startup-title-bar-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        /* Logo in title bar - left aligned, 3x size, overflows into body */
+        .startup-title-bar-logo {
+            height: 120px;
+            position: absolute;
+            left: 12px;
+            top: -10px;
+            z-index: 20;
             -webkit-app-region: no-drag;
+            pointer-events: none;
         }
 
-        .startup-title-bar-centre {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-            justify-content: center;
-        }
-
-        .startup-title-bar-centre img {
-            height: 30px;
-        }
-
-        .startup-title-bar-centre span {
-            color: var(--dlc-accent);
-            font-size: 14px;
-        }
-
+        /* Right side buttons */
         .startup-title-bar-right {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
+            margin-left: auto;
+            padding-right: 8px;
             -webkit-app-region: no-drag;
         }
 
@@ -81,34 +82,28 @@
             color: #ef4444;
         }
 
+        /* Content area */
         .startup-content {
-            padding: 20px;
+            padding: 0 20px 20px 20px;
             display: flex;
             flex-direction: column;
-            height: calc(100% - 40px);
+            flex: 1;
+            overflow: hidden;
         }
 
-        .startup-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .startup-header img {
-            height: 60px;
-        }
-
-        .startup-header h1 {
+        /* White title - flows down from title bar area, sits next to logo space */
+        .startup-title-text {
             color: var(--text-primary);
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
+            margin: 0 0 16px 140px;
+            padding-top: 8px;
         }
 
         .startup-form {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 14px;
             flex: 1;
         }
 
@@ -123,12 +118,13 @@
             color: var(--text-primary);
             font-size: 14px;
             text-align: right;
+            flex-shrink: 0;
         }
 
         .form-row input,
         .form-row select {
             flex: 1;
-            padding: 10px;
+            padding: 8px 10px;
             background-color: var(--bg-input);
             border: 1px solid var(--dlc-border);
             border-radius: 4px;
@@ -140,11 +136,6 @@
         .form-row select:focus {
             outline: none;
             border-color: var(--dlc-accent-pink);
-        }
-
-        .form-row select option {
-            background-color: var(--bg-input);
-            color: var(--text-primary);
         }
 
         .form-row select option:disabled {
@@ -160,7 +151,7 @@
         .connect-btn-container {
             display: flex;
             justify-content: center;
-            margin-top: 10px;
+            margin-top: 6px;
         }
 
         .connect-btn {
@@ -184,7 +175,7 @@
             justify-content: space-between;
             align-items: center;
             margin-top: auto;
-            padding-top: 15px;
+            padding-top: 12px;
         }
 
         .create-account-link {
@@ -194,6 +185,7 @@
             cursor: pointer;
             background: none;
             border: none;
+            padding: 0;
         }
 
         .create-account-link:hover {
@@ -207,18 +199,20 @@
 </head>
 <body>
     <div class="startup-app-container">
-        <!-- Custom Title Bar for Startup -->
+
+        <!-- Title bar - logo overflows downward, buttons on right -->
         <header class="startup-title-bar" id="title-bar">
-            <div class="startup-title-bar-left">
+            <!-- Logo: left corner, 3x size, overflows into body -->
+            <img src="/static/Logos/DL_Logo_No_Background.png" 
+                 alt="Dice Link" 
+                 class="startup-title-bar-logo" 
+                 draggable="false" />
+
+            <!-- Right side: settings, minimize, close -->
+            <div class="startup-title-bar-right">
                 <button id="settings-btn" class="startup-title-bar-btn" title="Settings">
                     <i class="fas fa-cog"></i>
                 </button>
-            </div>
-            <div class="startup-title-bar-centre">
-                <img src="/static/Logos/DL_Logo_No_Background.png" alt="Dice Link" draggable="false" />
-                <span>Dice Link Login</span>
-            </div>
-            <div class="startup-title-bar-right">
                 <button class="startup-title-bar-btn minimize-btn" id="minimize-btn" title="Minimize">
                     <i class="fas fa-minus"></i>
                 </button>
@@ -230,11 +224,9 @@
 
         <!-- Main Content -->
         <div class="startup-content">
-            <!-- Logo and Title -->
-            <div class="startup-header">
-                <img src="/static/Logos/DL_Logo_No_Background.png" alt="Dice Link" draggable="false" />
-                <h1>Dice Link Login</h1>
-            </div>
+
+            <!-- White title text sits next to where logo overflows -->
+            <h1 class="startup-title-text">Dice Link Login</h1>
 
             <!-- Login Form -->
             <form class="startup-form" id="startup-form">
@@ -287,55 +279,30 @@
         </div>
     </div>
 
-    <!-- Settings Panel Overlay (reuse from main app) -->
-    {% include "_settings_panel.html" ignore missing %}
-
+    <!-- Reuse existing window control and settings JS -->
+    <script src="/static/js/ui/window-control.js"></script>
+    <script src="/static/js/ui/settings.js"></script>
     <script>
-        // Initialize PyQt bridge
-        let pyqtBridge = null;
-        
-        new QWebChannel(qt.webChannelTransport, function(channel) {
-            pyqtBridge = channel.objects.pyqtBridge;
-            window.pyqtBridge = pyqtBridge;
-        });
-
-        // Title bar controls
-        document.getElementById('minimize-btn')?.addEventListener('click', () => {
-            if (pyqtBridge) {
-                pyqtBridge.minimizeWindow();
-            }
-        });
-
-        document.getElementById('close-btn')?.addEventListener('click', () => {
-            if (pyqtBridge) {
-                pyqtBridge.closeWindow();
-            }
-        });
-
-        // Settings button
-        document.getElementById('settings-btn')?.addEventListener('click', () => {
-            // TODO: Open settings panel
-            console.log('Settings clicked');
-        });
-
         // Create account link
-        document.getElementById('create-account-link')?.addEventListener('click', () => {
-            if (pyqtBridge) {
-                pyqtBridge.openUrl('https://realmbridge.co.uk/');
-            }
-        });
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('create-account-link')?.addEventListener('click', () => {
+                if (window.pyqtBridge) {
+                    window.pyqtBridge.openUrl('https://realmbridge.co.uk/');
+                }
+            });
 
-        // Form submission
-        document.getElementById('startup-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const vtt = document.getElementById('vtt-select').value;
-            const address = document.getElementById('vtt-address').value;
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            // Form submission
+            document.getElementById('startup-form')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const vtt = document.getElementById('vtt-select').value;
+                const address = document.getElementById('vtt-address').value;
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
 
-            if (pyqtBridge) {
-                pyqtBridge.connect(vtt, address, username, password);
-            }
+                if (window.pyqtBridge) {
+                    window.pyqtBridge.connect(vtt, address, username, password);
+                }
+            });
         });
     </script>
 </body>
