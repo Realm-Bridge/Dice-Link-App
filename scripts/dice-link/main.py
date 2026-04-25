@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHB
 from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase, QIcon
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
-from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
+from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer, QEventLoop
 from PyQt6.QtWebChannel import QWebChannel
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -32,6 +32,7 @@ from dla_bridge import DLABridge
 from vtt_web import VTTWebPage, VTTWebView, VTTPopupView, DraggableWebEngineView
 from vtt_windows import VTTPopupWindow, VTTViewingWindow
 from window_controller import WindowController
+from startup_dialog import StartupDialog
 
 
 
@@ -105,6 +106,33 @@ def main():
     # Create and display the PyQt6 window
     app = QApplication(sys.argv)
     
+    # Show StartupDialog first
+    startup_dialog = StartupDialog(server_port=WEBSOCKET_PORT)
+    
+    # Track if user connected successfully
+    user_connected = False
+    
+    def on_connect_success(vtt_type, vtt_address, username):
+        nonlocal user_connected
+        user_connected = True
+        log_server(f"User connected through StartupDialog: {vtt_type} at {vtt_address}")
+        startup_dialog.close()
+        startup_dialog.deleteLater()
+    
+    startup_dialog.connect_successful.connect(on_connect_success)
+    startup_dialog.show()
+    
+    # Wait for dialog to close
+    loop = QEventLoop()
+    startup_dialog.destroyed.connect(loop.quit)
+    loop.exec()
+    
+    if not user_connected:
+        log_server("Startup cancelled by user")
+        sys.exit(0)
+    
+    log_server("Proceeding with main application")
+    
     # Enable DevTools via environment variable - must be set before creating the profile
     os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
     
@@ -127,7 +155,7 @@ def main():
     browser.setWindowFlags(Qt.WindowType.FramelessWindowHint)
     
     # Set window icon for taskbar branding
-    logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
+    logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background_small.ico"
     if logo_path.exists():
         browser.setWindowIcon(QIcon(str(logo_path)))
     

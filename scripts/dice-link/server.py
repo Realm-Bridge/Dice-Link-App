@@ -62,6 +62,19 @@ async def index(request: Request):
     )
 
 
+@app.get("/startup")
+async def startup(request: Request):
+    """Serve the startup/login dialog"""
+    return templates.TemplateResponse(
+        request=request,
+        name="startup.html",
+        context={
+            "app_name": APP_NAME,
+            "app_version": APP_VERSION
+        }
+    )
+
+
 @app.get("/test-webrtc")
 async def test_webrtc_page():
     """Simple HTML page for testing WebRTC handshake manually"""

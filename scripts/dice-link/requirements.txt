@@ -8,3 +8,4 @@ PyQt6-WebEngine>=6.6.0
 opencv-python>=4.8.0
 numpy>=1.24.0
 upnpy>=1.1.8
+aiortc>=1.6.0

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice Link Login</title>
+    
+    <!-- Qt WebChannel for PyQt communication -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Main Stylesheet (reuse existing styles) -->
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=57">
+    
+    <style>
+        /* Startup-specific overrides only */
+        
+        /* Override app-container size for startup dialog */
+        .app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Override title bar buttons to correct size for startup dialog */
+        .title-bar-icon-btn {
+            width: 40px;
+            height: 40px;
+            padding: 8px;
+            font-size: 20px;
+        }
+        
+        .title-bar-btn {
+            width: 40px;
+            height: 40px;
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        /* Center Login title in title bar - large and bold */
+        .title-bar-centre {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+        }
+
+        .startup-title-bar-logo {
+            height: 84px;
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            z-index: 20;
+            -webkit-app-region: no-drag;
+            pointer-events: none;
+        }
+        
+        .startup-title-bar-left {
+            flex: 0 0 116px;
+        }
+        
+        .startup-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 40px 20px 40px;
+            overflow-y: auto;
+        }
+        
+        .startup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .startup-form-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .startup-form-label {
+            flex: 0 0 120px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            text-align: right;
+        }
+        
+        .startup-form-input,
+        .startup-form-select {
+            flex: 1;
+            background-color: var(--surface-dark);
+            border: 1px solid var(--dlc-accent);
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .startup-form-input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .startup-form-input:focus,
+        .startup-form-select:focus {
+            border-color: var(--dlc-accent-hover);
+            box-shadow: 0 0 0 2px rgba(157, 78, 221, 0.2);
+        }
+        
+        .startup-form-select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239d4edd' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+        
+        .startup-form-select option,
+        .startup-form-select optgroup {
+            background-color: #1a1a2e;
+            color: var(--text-primary);
+        }
+        
+        .startup-form-select option:disabled {
+            color: var(--text-secondary);
+        }
+        
+        .startup-connect-btn {
+            background-color: var(--dlc-accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 14px 48px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin: 24px auto 0 auto;
+            display: block;
+        }
+        
+        .startup-connect-btn:hover {
+            background-color: var(--dlc-accent-hover);
+        }
+        
+        .startup-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            margin-top: auto;
+        }
+        
+        .startup-create-account {
+            color: #5ca8ff;
+            text-decoration: underline;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .startup-create-account:hover {
+            color: #7dbdff;
+        }
+        
+        .startup-realm-bridge-logo {
+            height: 32px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Title bar -->
+        <header class="custom-title-bar" id="title-bar">
+            <!-- Logo: left corner, overflows into body -->
+            <img src="/static/Logos/DL_Logo_No_Background_small.png" 
+                 alt="Dice Link" 
+                 class="startup-title-bar-logo" 
+                 draggable="false" />
+            
+            <!-- Left section - empty space for logo -->
+            <div class="startup-title-bar-left"></div>
+            
+            <!-- Center - "Login" title -->
+            <div class="title-bar-centre">
+                <span class="title-bar-title">Login</span>
+            </div>
+            
+            <!-- Right side: settings, minimize, close -->
+            <div class="title-bar-right">
+                <button id="settings-btn" class="title-bar-icon-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="title-bar-btn minimize-btn" id="minimize-btn" title="Minimize">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="title-bar-btn close-btn" id="close-btn" title="Close">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="startup-content">
+            
+            <!-- Login Form -->
+            <form class="startup-form" id="login-form">
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">Connect me to:</label>
+                    <select class="startup-form-select" id="vtt-select">
+                        <option value="" disabled selected>Please Select</option>
+                        <optgroup label="Active">
+                            <option value="foundry">Foundry VTT</option>
+                        </optgroup>
+                        <optgroup label="Road Mapped">
+                            <option value="roll20" disabled>Roll20</option>
+                            <option value="owlbear" disabled>Owlbear Rodeo</option>
+                            <option value="discord" disabled>Discord</option>
+                            <option value="dndbeyond" disabled>DnD Beyond Maps</option>
+                            <option value="fantasygrounds" disabled>Fantasy Grounds</option>
+                            <option value="beyondtabletop" disabled>Beyond Tabletop</option>
+                            <option value="gme" disabled>Game Master Engine</option>
+                            <option value="talespire" disabled>TaleSpire</option>
+                            <option value="tabletopsim" disabled>Tabletop Simulator</option>
+                        </optgroup>
+                    </select>
+                </div>
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">VTT Address:</label>
+                    <input type="text" class="startup-form-input" id="vtt-address" 
+                           placeholder="http://localhost:30000 or https://example.com">
+                </div>
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">User Name:</label>
+                    <input type="text" class="startup-form-input" id="username" 
+                           placeholder="Usually Email">
+                </div>
+                
+                <div class="startup-form-row">
+                    <label class="startup-form-label">Password:</label>
+                    <input type="password" class="startup-form-input" id="password">
+                </div>
+                
+                <button type="submit" class="startup-connect-btn">Connect</button>
+                
+            </form>
+            
+        </div>
+        
+        <!-- Footer -->
+        <footer class="startup-footer">
+            <a href="https://realmbridge.co.uk/" target="_blank" class="startup-create-account">
+                Create Free Account
+            </a>
+            <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="startup-realm-bridge-logo" />
+        </footer>
+        
+    </div>
+
+    <!-- Settings Panel Overlay (reuse same structure as index.html) -->
+    <div id="settings-overlay" class="settings-overlay hidden">
+        <div id="settings-panel" class="settings-panel">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button id="settings-close" class="icon-btn" title="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Connection</h3>
+                    <div class="settings-field">
+                        <label for="settings-host">WebSocket Host</label>
+                        <input type="text" id="settings-host" value="localhost" placeholder="localhost">
+                    </div>
+                    <div class="settings-field">
+                        <label for="settings-port">WebSocket Port</label>
+                        <input type="number" id="settings-port" value="8765" min="1" max="65535">
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Appearance</h3>
+                    <div class="settings-field">
+                        <label for="settings-theme">Theme</label>
+                        <select id="settings-theme">
+                            <option value="dark" selected>Dark</option>
+                            <option value="light" disabled>Light (Coming Soon)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="settings-save" class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reuse existing JS modules -->
+    <script src="/static/js/debug.js?v=1"></script>
+    <script src="/static/js/utils.js?v=1"></script>
+    <script src="/static/js/ui/settings.js?v=1"></script>
+    <script src="/static/js/ui/window-control.js?v=1"></script>
+    
+    <script>
+        // Initialize settings and form when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize settings button
+            if (typeof initSettingsUI === 'function') {
+                initSettingsUI();
+            }
+            
+            // Handle form submission
+            const form = document.getElementById('login-form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('[v0] Form submit triggered');
+                    const vttSelect = document.getElementById('vtt-select').value;
+                    const vttAddress = document.getElementById('vtt-address').value;
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    
+                    console.log('[v0] Form values:', vttSelect, vttAddress, username, password);
+                    console.log('[v0] pyqtBridge:', window.pyqtBridge);
+                    console.log('[v0] pyqtBridge.login:', window.pyqtBridge ? window.pyqtBridge.login : 'N/A');
+                    
+                    if (typeof window.pyqtBridge !== 'undefined' && window.pyqtBridge.login) {
+                        console.log('[v0] Calling pyqtBridge.login...');
+                        window.pyqtBridge.login(vttSelect, vttAddress, username, password);
+                    } else {
+                        console.log('[v0] pyqtBridge or login method not available');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
