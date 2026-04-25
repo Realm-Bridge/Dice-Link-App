@@ -91,14 +91,19 @@
             overflow: hidden;
         }
 
-        /* "Login" title - centered at top, flows from title bar height */
+        /* "Login" title - centered at top in title bar */
         .startup-title-text {
             color: var(--text-primary);
             font-size: 22px;
             font-weight: bold;
-            margin: 0 0 16px 0;
-            padding-top: 8px;
+            margin: 0;
+            padding: 0;
             text-align: center;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-app-region: drag;
         }
 
         .startup-form {
@@ -209,6 +214,9 @@
                  class="startup-title-bar-logo" 
                  draggable="false" />
 
+            <!-- Center title "Login" -->
+            <h1 class="startup-title-text">Login</h1>
+
             <!-- Right side: settings, minimize, close -->
             <div class="startup-title-bar-right">
                 <button id="settings-btn" class="startup-title-bar-btn" title="Settings">
@@ -225,9 +233,6 @@
 
         <!-- Main Content -->
         <div class="startup-content">
-
-            <!-- White title text - centered, says only "Login" -->
-            <h1 class="startup-title-text">Login</h1>
 
             <!-- Login Form -->
             <form class="startup-form" id="startup-form">
