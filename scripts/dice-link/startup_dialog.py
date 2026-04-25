@@ -31,21 +31,25 @@ class StartupWindowController(WindowController):
     @pyqtSlot()
     def minimize(self):
         """Minimize the window."""
+        print("[v0] minimize() called from JavaScript")
         super().minimize()
     
     @pyqtSlot()
     def close(self):
         """Close the window."""
+        print("[v0] close() called from JavaScript")
         super().close()
     
     @pyqtSlot(int, int)
     def startDrag(self, pos_x: int, pos_y: int):
         """Start dragging the window."""
+        print(f"[v0] startDrag({pos_x}, {pos_y}) called from JavaScript")
         super().startDrag(pos_x, pos_y)
     
     @pyqtSlot(int, int)
     def doDrag(self, pos_x: int, pos_y: int):
         """Continue dragging the window."""
+        print(f"[v0] doDrag({pos_x}, {pos_y}) called from JavaScript")
         super().doDrag(pos_x, pos_y)
     
     @pyqtSlot(str, str, str, str)
@@ -54,7 +58,9 @@ class StartupWindowController(WindowController):
         Called by JavaScript when user submits login form.
         Validates input and emits login_successful signal.
         """
+        print(f"[v0] login({vtt_type}, {vtt_address}, {username}, {password}) called from JavaScript")
         if vtt_type and vtt_address and username and password:
+            print("[v0] Login validation passed, emitting login_successful signal")
             self.login_successful.emit(vtt_type, vtt_address, username)
 
 
