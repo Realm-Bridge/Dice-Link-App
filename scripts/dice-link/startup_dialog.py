@@ -6,7 +6,7 @@ Uses identical architecture to main.py - DraggableWebEngineView as the window it
 """
 
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt
+from PyQt6.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QTimer
 from PyQt6.QtGui import QIcon
 from pathlib import Path
 
@@ -105,10 +105,13 @@ class StartupDialog(DraggableWebEngineView):
             self.setWindowIcon(QIcon(str(logo_path)))
         
         # Set up web channel for JavaScript-to-Python communication (same as main.py lines 172-174)
-        channel = QWebChannel()
-        channel.registerObject("pyqtBridge", self.window_controller)
-        self.page().setWebChannel(channel)
+        self.channel = QWebChannel()
+        self.channel.registerObject("pyqtBridge", self.window_controller)
+        self.page().setWebChannel(self.channel)
         print("[v0] WebChannel set up with pyqtBridge")
+        
+        # Connect loadFinished to inject qwebchannel.js (same pattern as VTTWebView)
+        self.page().loadFinished.connect(self.on_page_loaded)
         
         # Set fixed size for startup dialog
         self.setFixedSize(550, 650)
@@ -116,6 +119,87 @@ class StartupDialog(DraggableWebEngineView):
         # Load the startup HTML page from the server (same as main.py line 194)
         self.load(QUrl(f"http://localhost:{self.server_port}/startup"))
         print("[v0] StartupDialog.__init__ complete, URL loading")
+    
+    def on_page_loaded(self, ok):
+        """Called when page finishes loading - inject qwebchannel.js"""
+        if not ok:
+            print("[v0] Page load failed")
+            return
+        
+        print("[v0] Page loaded, injecting QWebChannel.js...")
+        
+        # Inject the qwebchannel.js library dynamically
+        load_qwebchannel_js = """
+        (function() {
+            return new Promise(function(resolve, reject) {
+                var script = document.createElement('script');
+                script.src = 'qrc:///qtwebchannel/qwebchannel.js';
+                script.onload = function() {
+                    resolve('QWebChannel.js loaded');
+                };
+                script.onerror = function() {
+                    reject('Failed to load qwebchannel.js');
+                };
+                document.head.appendChild(script);
+            });
+        })();
+        """
+        
+        def on_qwebchannel_loaded(result):
+            print(f"[v0] QWebChannel.js load result: {result}")
+            self.attempt_initialize_webchannel(attempt=1, max_attempts=10)
+        
+        self.page().runJavaScript(load_qwebchannel_js, on_qwebchannel_loaded)
+    
+    def attempt_initialize_webchannel(self, attempt=1, max_attempts=10):
+        """Try to initialize QWebChannel. Retry with backoff if not ready."""
+        check_script = "typeof QWebChannel !== 'undefined'"
+        
+        def on_check_result(is_available):
+            if is_available:
+                print(f"[v0] QWebChannel detected (attempt {attempt}), initializing...")
+                self.initialize_webchannel()
+            elif attempt < max_attempts:
+                wait_ms = min(50 * attempt, 500)
+                print(f"[v0] QWebChannel not ready (attempt {attempt}/{max_attempts}), retrying in {wait_ms}ms...")
+                
+                timer = QTimer()
+                timer.setSingleShot(True)
+                timer.timeout.connect(lambda: self.attempt_initialize_webchannel(attempt + 1, max_attempts))
+                timer.start(wait_ms)
+                
+                if not hasattr(self, '_init_timers'):
+                    self._init_timers = []
+                self._init_timers.append(timer)
+            else:
+                print(f"[v0] ERROR: QWebChannel still not available after {max_attempts} attempts")
+        
+        self.page().runJavaScript(check_script, on_check_result)
+    
+    def initialize_webchannel(self):
+        """Initialize the QWebChannel connection from JavaScript side"""
+        init_script = """
+        (function() {
+            if (typeof QWebChannel === 'undefined') {
+                return 'QWebChannel not defined';
+            }
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                window.pyqtBridge = channel.objects.pyqtBridge;
+                console.log('[StartupDialog] pyqtBridge connected:', window.pyqtBridge);
+                
+                // Trigger any pending initialization
+                if (typeof initWindowControls === 'function') {
+                    initWindowControls();
+                }
+            });
+            return 'QWebChannel initialization started';
+        })();
+        """
+        
+        def on_init_result(result):
+            print(f"[v0] WebChannel init result: {result}")
+        
+        self.page().runJavaScript(init_script, on_init_result)
     
     def _on_login_successful(self, vtt_type: str, vtt_address: str, username: str):
         """Forward login success to connect_successful signal."""
