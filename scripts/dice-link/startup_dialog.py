@@ -6,9 +6,11 @@ Uses identical architecture to main.py - DraggableWebEngineView as the window it
 """
 
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QTimer
+from PyQt6.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QTimer, QEventLoop
 from PyQt6.QtGui import QIcon
+from PyQt6.QtWebEngineCore import QWebEngineProfile
 from pathlib import Path
+import os
 
 from vtt_web import DraggableWebEngineView
 from window_controller import WindowController
@@ -202,5 +204,54 @@ class StartupDialog(DraggableWebEngineView):
         self.page().runJavaScript(init_script, on_init_result)
     
     def _on_login_successful(self, vtt_type: str, vtt_address: str, username: str):
-        """Forward login success to connect_successful signal."""
+        """
+        Called when user logs in successfully.
+        Creates and shows the main DLA window, then closes this startup dialog.
+        """
+        print(f"[v0] Login successful: {vtt_type} at {vtt_address} as {username}")
+        
+        # Enable DevTools via environment variable - must be set before creating the profile
+        os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
+        
+        # Create profile with devtools enabled
+        profile = QWebEngineProfile.defaultProfile()
+        
+        # Create a draggable web view widget for the main window
+        browser = DraggableWebEngineView()
+        browser.setPage(browser.page())
+        browser.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        
+        # Set up window controller for frameless window control
+        window_controller = WindowController(browser, browser)
+        browser.window_controller = window_controller
+        
+        # Set window properties
+        browser.setWindowTitle("Dice Link - Realm Bridge")
+        browser.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        
+        # Set window icon
+        logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background_small.ico"
+        if logo_path.exists():
+            browser.setWindowIcon(QIcon(str(logo_path)))
+        
+        # Set up web channel for main window
+        channel = QWebChannel()
+        channel.registerObject("pyqtBridge", window_controller)
+        browser.page().setWebChannel(channel)
+        
+        # Set window size (1788x1200)
+        browser.setFixedSize(1788, 1200)
+        
+        # Load the main application
+        server_port = self.server_port
+        browser.load(QUrl(f"http://localhost:{server_port}"))
+        
+        # Show the main window
+        browser.show()
+        
+        # Emit the signal for main.py (if it's listening)
         self.connect_successful.emit(vtt_type, vtt_address, username)
+        
+        # Close this startup dialog
+        self.close()
+        print("[v0] Main window launched, startup dialog closed")
