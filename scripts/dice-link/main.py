@@ -107,7 +107,7 @@ def main():
     app = QApplication(sys.argv)
     
     # Show StartupDialog first
-    startup_dialog = StartupDialog()
+    startup_dialog = StartupDialog(server_port=WEBSOCKET_PORT)
     
     # Track if user connected successfully
     user_connected = False
