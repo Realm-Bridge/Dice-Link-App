@@ -330,11 +330,6 @@
     <script>
         // Initialize settings and form when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[v0] DOMContentLoaded fired');
-            console.log('[v0] qt defined:', typeof qt !== 'undefined');
-            console.log('[v0] initSettingsUI defined:', typeof initSettingsUI === 'function');
-            console.log('[v0] initWindowControls defined:', typeof initWindowControls === 'function');
-            
             // Initialize settings button
             if (typeof initSettingsUI === 'function') {
                 initSettingsUI();
