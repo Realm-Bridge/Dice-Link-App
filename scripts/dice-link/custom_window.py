@@ -135,6 +135,28 @@ class CloseButton(QPushButton):
         """)
 
 
+class SettingsButton(QPushButton):
+    """Settings button styled to match DLA theme"""
+
+    def __init__(self, parent=None):
+        super().__init__("⚙", parent)
+        self.setFixedSize(36, 36)
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                border: none;
+                color: {COLOR_PURPLE};
+                font-size: 20px;
+                font-weight: normal;
+                padding: 8px 12px;
+                border-radius: 4px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLOR_BTN_HOVER};
+            }}
+        """)
+
+
 # ---------------------------------------------------------------------------
 # Reusable custom title bar
 # ---------------------------------------------------------------------------
@@ -186,6 +208,10 @@ class CustomTitleBar(QWidget):
         """)
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.title_label, 1)  # Give it stretch factor
+
+        # Settings button
+        self.settings_btn = SettingsButton()
+        layout.addWidget(self.settings_btn)
 
         # Minimize button
         self.minimize_btn = MinimizeButton()
