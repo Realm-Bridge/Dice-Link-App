@@ -9,40 +9,332 @@
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <style>
         /* Startup-specific styles */
-        .startup-container {
+        .startup-app-container {
+            width: 450px;
+            height: 520px;
+            overflow: hidden;
+            border-radius: 12px;
+            background-color: var(--bg-primary);
+        }
+
+        .startup-title-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            height: 40px;
+            background-color: var(--bg-primary);
+            -webkit-app-region: drag;
+        }
+
+        .startup-title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+
+        .startup-title-bar-centre {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .startup-title-bar-centre img {
+            height: 30px;
+        }
+
+        .startup-title-bar-centre span {
+            color: var(--dlc-accent);
+            font-size: 14px;
+        }
+
+        .startup-title-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+
+        .startup-title-bar-btn {
+            width: 28px;
+            height: 28px;
+            background-color: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--dlc-accent);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .startup-title-bar-btn:hover {
+            background-color: rgba(139, 92, 246, 0.1);
+        }
+
+        .startup-title-bar-btn.close-btn:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .startup-content {
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            height: calc(100% - 40px);
+        }
+
+        .startup-header {
+            display: flex;
             align-items: center;
-            height: 100%;
-            padding: 20px;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .startup-header img {
+            height: 60px;
+        }
+
+        .startup-header h1 {
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .startup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .form-row label {
+            width: 110px;
+            color: var(--text-primary);
+            font-size: 14px;
+            text-align: right;
+        }
+
+        .form-row input,
+        .form-row select {
+            flex: 1;
+            padding: 10px;
+            background-color: var(--bg-input);
+            border: 1px solid var(--dlc-border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 12px;
+        }
+
+        .form-row input:focus,
+        .form-row select:focus {
+            outline: none;
+            border-color: var(--dlc-accent-pink);
+        }
+
+        .form-row select option {
+            background-color: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        .form-row select option:disabled {
+            color: var(--text-muted);
+        }
+
+        .form-row select optgroup {
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-style: normal;
+        }
+
+        .connect-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .connect-btn {
+            width: 160px;
+            height: 40px;
+            background-color: var(--dlc-accent);
+            border: none;
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .connect-btn:hover {
+            background-color: var(--dlc-accent-pink);
+        }
+
+        .startup-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 15px;
+        }
+
+        .create-account-link {
+            color: #0066cc;
+            font-size: 12px;
+            text-decoration: underline;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .create-account-link:hover {
+            color: #0080ff;
+        }
+
+        .realm-bridge-logo {
+            height: 19px;
         }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        {% include "_title_bar.html" %}
+    <div class="startup-app-container">
+        <!-- Custom Title Bar for Startup -->
+        <header class="startup-title-bar" id="title-bar">
+            <div class="startup-title-bar-left">
+                <button id="settings-btn" class="startup-title-bar-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+            <div class="startup-title-bar-centre">
+                <img src="/static/Logos/DL_Logo_No_Background.png" alt="Dice Link" draggable="false" />
+                <span>Dice Link Login</span>
+            </div>
+            <div class="startup-title-bar-right">
+                <button class="startup-title-bar-btn minimize-btn" id="minimize-btn" title="Minimize">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="startup-title-bar-btn close-btn" id="close-btn" title="Close">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </header>
 
         <!-- Main Content -->
-        <main class="main-content startup-container">
-            <!-- StartupDialog content will be inserted here by PyQt6 -->
-            <div id="startup-content"></div>
-        </main>
+        <div class="startup-content">
+            <!-- Logo and Title -->
+            <div class="startup-header">
+                <img src="/static/Logos/DL_Logo_No_Background.png" alt="Dice Link" draggable="false" />
+                <h1>Dice Link Login</h1>
+            </div>
+
+            <!-- Login Form -->
+            <form class="startup-form" id="startup-form">
+                <div class="form-row">
+                    <label for="vtt-select">Connect me to:</label>
+                    <select id="vtt-select">
+                        <option value="" disabled selected>Please Select</option>
+                        <optgroup label="Active">
+                            <option value="foundry">Foundry VTT</option>
+                        </optgroup>
+                        <optgroup label="Road Mapped">
+                            <option value="beyond-tabletop" disabled>Beyond Tabletop</option>
+                            <option value="discord" disabled>Discord</option>
+                            <option value="dnd-beyond-maps" disabled>DnD Beyond Maps</option>
+                            <option value="fantasy-grounds" disabled>Fantasy Grounds</option>
+                            <option value="game-master-engine" disabled>Game Master Engine</option>
+                            <option value="owlbear-rodeo" disabled>Owlbear Rodeo</option>
+                            <option value="roll20" disabled>Roll20</option>
+                            <option value="tabletop-simulator" disabled>Tabletop Simulator</option>
+                            <option value="tale-spire" disabled>Tale Spire</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label for="vtt-address">VTT Address:</label>
+                    <input type="text" id="vtt-address" placeholder="http://localhost:30000 or https://example.com" />
+                </div>
+
+                <div class="form-row">
+                    <label for="username">User Name:</label>
+                    <input type="text" id="username" placeholder="Usually Email" />
+                </div>
+
+                <div class="form-row">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" />
+                </div>
+
+                <div class="connect-btn-container">
+                    <button type="submit" class="connect-btn">Connect</button>
+                </div>
+            </form>
+
+            <!-- Footer -->
+            <div class="startup-footer">
+                <button class="create-account-link" id="create-account-link">Create Free Account</button>
+                <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="realm-bridge-logo" draggable="false" />
+            </div>
+        </div>
     </div>
 
-    <script src="/static/js/ui/settings.js"></script>
+    <!-- Settings Panel Overlay (reuse from main app) -->
+    {% include "_settings_panel.html" ignore missing %}
+
     <script>
-        // Initialize title bar controls
+        // Initialize PyQt bridge
+        let pyqtBridge = null;
+        
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            pyqtBridge = channel.objects.pyqtBridge;
+            window.pyqtBridge = pyqtBridge;
+        });
+
+        // Title bar controls
         document.getElementById('minimize-btn')?.addEventListener('click', () => {
-            if (window.pybridge) {
-                window.pybridge.minimize_window();
+            if (pyqtBridge) {
+                pyqtBridge.minimizeWindow();
             }
         });
 
         document.getElementById('close-btn')?.addEventListener('click', () => {
-            if (window.pybridge) {
-                window.pybridge.close_window();
+            if (pyqtBridge) {
+                pyqtBridge.closeWindow();
+            }
+        });
+
+        // Settings button
+        document.getElementById('settings-btn')?.addEventListener('click', () => {
+            // TODO: Open settings panel
+            console.log('Settings clicked');
+        });
+
+        // Create account link
+        document.getElementById('create-account-link')?.addEventListener('click', () => {
+            if (pyqtBridge) {
+                pyqtBridge.openUrl('https://realmbridge.co.uk/');
+            }
+        });
+
+        // Form submission
+        document.getElementById('startup-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const vtt = document.getElementById('vtt-select').value;
+            const address = document.getElementById('vtt-address').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (pyqtBridge) {
+                pyqtBridge.connect(vtt, address, username, password);
             }
         });
     </script>
