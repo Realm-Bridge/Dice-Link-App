@@ -1356,10 +1356,10 @@ body {
 .dice-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
   max-height: 180px;
   overflow-y: auto;
-  padding: 4px;
+  padding: 2px;
 }
 
 /* Custom scrollbar for dice options */
