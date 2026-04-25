@@ -25,12 +25,27 @@
             flex-direction: column;
         }
         
-        /* Override title bar buttons for startup dialog - proportional to 550px window */
+        /* Override title bar buttons to correct size for startup dialog */
         .title-bar-icon-btn {
-            width: 40px;
-            height: 40px;
-            padding: 8px;
-            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            padding: 4px;
+            font-size: 16px;
+        }
+        
+        .title-bar-btn {
+            width: 32px;
+            height: 32px;
+            padding: 4px;
+            font-size: 14px;
+        }
+
+        /* Center Login title in title bar */
+        .title-bar-centre {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
         }
         
         .title-bar-btn {
@@ -40,23 +55,6 @@
             font-size: 16px;
         }
 
-        /* Login title - large, bold, positioned at top of title bar */
-        .title-bar-centre {
-            position: absolute;
-            left: 50%;
-            top: 8px;
-            transform: translateX(-50%);
-        }
-        
-        .title-bar-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: 0.5px;
-            margin: 0;
-            padding: 0;
-        }
-        
         .startup-title-bar-logo {
             height: 84px;
             position: absolute;
