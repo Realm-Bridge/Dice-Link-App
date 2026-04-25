@@ -117,6 +117,7 @@ def main():
         user_connected = True
         log_server(f"User connected through StartupDialog: {vtt_type} at {vtt_address}")
         startup_dialog.close()
+        startup_dialog.deleteLater()
     
     startup_dialog.connect_successful.connect(on_connect_success)
     startup_dialog.show()
