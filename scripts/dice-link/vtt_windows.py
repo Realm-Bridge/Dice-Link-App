@@ -79,7 +79,7 @@ class VTTViewingWindow(CustomWindow):
     """Main viewing window for VTT - closes all popups when closed"""
     
     def __init__(self, vtt_view):
-        super().__init__(show_maximize=True, resizable=True, title="DLA Viewer")
+        super().__init__(show_maximize=True, resizable=True, title="Theater")
         self.vtt_view = vtt_view
         
         self.setGeometry(100, 100, 1200, 800)
