@@ -76,11 +76,13 @@ class StartupDialog(DraggableWebEngineView):
     
     def __init__(self, server_port: int = 8765):
         super().__init__()
+        print("[v0] StartupDialog.__init__ started")
         
         self.server_port = server_port
         
         # Ensure page is initialized (same as main.py line 157)
         self.setPage(self.page())
+        print("[v0] Page initialized")
         
         # Enable transparent background for rounded corners (same as main.py line 160)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -88,6 +90,7 @@ class StartupDialog(DraggableWebEngineView):
         # Set up window controller for frameless window control (same as main.py lines 162-163)
         # Uses StartupWindowController which extends WindowController with login()
         self.window_controller = StartupWindowController(self, self)
+        print("[v0] WindowController created")
         
         # Connect login signal to our connect_successful signal
         self.window_controller.login_successful.connect(self._on_login_successful)
@@ -105,12 +108,14 @@ class StartupDialog(DraggableWebEngineView):
         channel = QWebChannel()
         channel.registerObject("pyqtBridge", self.window_controller)
         self.page().setWebChannel(channel)
+        print("[v0] WebChannel set up with pyqtBridge")
         
         # Set fixed size for startup dialog
         self.setFixedSize(550, 650)
         
         # Load the startup HTML page from the server (same as main.py line 194)
         self.load(QUrl(f"http://localhost:{self.server_port}/startup"))
+        print("[v0] StartupDialog.__init__ complete, URL loading")
     
     def _on_login_successful(self, vtt_type: str, vtt_address: str, username: str):
         """Forward login success to connect_successful signal."""
