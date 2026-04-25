@@ -25,25 +25,32 @@
             flex-direction: column;
         }
         
-        /* Override title bar buttons to correct size for startup dialog */
+        /* Override title bar buttons for startup dialog */
         .title-bar-icon-btn {
-            width: 32px;
-            height: 32px;
-            padding: 4px;
-            font-size: 16px;
+            width: 48px;
+            height: 48px;
+            padding: 8px;
+            font-size: 24px;
         }
         
         .title-bar-btn {
-            width: 32px;
-            height: 32px;
-            padding: 4px;
-            font-size: 14px;
+            width: 48px;
+            height: 48px;
+            padding: 8px;
+            font-size: 20px;
         }
 
-        /* Center Login title in title bar */
+        /* Login title - large, bold, positioned higher, can overflow into body */
         .title-bar-centre {
-            font-size: 18px;
-            font-weight: 400;
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+        
+        .title-bar-title {
+            font-size: 28px;
+            font-weight: 700;
             color: var(--text-primary);
             letter-spacing: 0.5px;
         }
@@ -319,8 +326,14 @@
     <script src="/static/js/ui/window-control.js?v=1"></script>
     
     <script>
-        // Handle form submission
+        // Initialize settings and form when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize settings button
+            if (typeof initSettingsUI === 'function') {
+                initSettingsUI();
+            }
+            
+            // Handle form submission
             const form = document.getElementById('login-form');
             if (form) {
                 form.addEventListener('submit', function(e) {
