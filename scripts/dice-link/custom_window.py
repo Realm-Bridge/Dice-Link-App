@@ -148,8 +148,9 @@ class SettingsButton(QPushButton):
                 color: {COLOR_PURPLE};
                 font-size: 20px;
                 font-weight: normal;
-                padding: 8px 12px;
+                padding: 0px;
                 border-radius: 4px;
+                overflow: visible;
             }}
             QPushButton:hover {{
                 background-color: {COLOR_BTN_HOVER};
@@ -211,6 +212,7 @@ class CustomTitleBar(QWidget):
 
         # Settings button
         self.settings_btn = SettingsButton()
+        self.settings_btn.clicked.connect(self._open_settings)
         layout.addWidget(self.settings_btn)
 
         # Minimize button
@@ -248,6 +250,11 @@ class CustomTitleBar(QWidget):
 
     def _close(self):
         self.parent_window.close()
+
+    def _open_settings(self):
+        """Handle settings button click"""
+        # TODO: Implement settings panel
+        pass
 
     def set_title(self, title: str):
         """Update the title displayed in the title bar."""
