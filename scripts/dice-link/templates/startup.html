@@ -25,18 +25,41 @@
             flex-direction: column;
         }
         
+        /* Override title bar buttons to correct size for startup dialog */
+        .title-bar-icon-btn {
+            width: 32px;
+            height: 32px;
+            padding: 4px;
+            font-size: 16px;
+        }
+        
+        .title-bar-btn {
+            width: 32px;
+            height: 32px;
+            padding: 4px;
+            font-size: 14px;
+        }
+
+        /* Center Login title in title bar */
+        .title-bar-centre {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+        }
+        
         .startup-title-bar-logo {
             height: 84px;
             position: absolute;
-            left: 8px;
-            top: 8px;
+            left: 16px;
+            top: 16px;
             z-index: 20;
             -webkit-app-region: no-drag;
             pointer-events: none;
         }
         
         .startup-title-bar-left {
-            flex: 0 0 100px;
+            flex: 0 0 116px;
         }
         
         .startup-content {
@@ -103,8 +126,9 @@
             padding-right: 40px;
         }
         
-        .startup-form-select option {
-            background-color: var(--surface);
+        .startup-form-select option,
+        .startup-form-select optgroup {
+            background-color: #1a1a2e;
             color: var(--text-primary);
         }
         
@@ -242,7 +266,7 @@
             <a href="https://realmbridge.co.uk/" target="_blank" class="startup-create-account">
                 Create Free Account
             </a>
-            <img src="/static/Logos/RB_Logo_No_Background.png" alt="Realm Bridge" class="startup-realm-bridge-logo" />
+            <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="startup-realm-bridge-logo" />
         </footer>
         
     </div>
@@ -295,16 +319,8 @@
     <script src="/static/js/ui/window-control.js?v=1"></script>
     
     <script>
-        // Initialize when DOM is ready
+        // Handle form submission
         document.addEventListener('DOMContentLoaded', function() {
-            if (typeof initSettingsUI === 'function') {
-                initSettingsUI();
-            }
-            if (typeof initWindowControls === 'function') {
-                initWindowControls();
-            }
-            
-            // Handle form submission
             const form = document.getElementById('login-form');
             if (form) {
                 form.addEventListener('submit', function(e) {
@@ -314,8 +330,8 @@
                     const username = document.getElementById('username').value;
                     const password = document.getElementById('password').value;
                     
-                    if (typeof pyqtBridge !== 'undefined' && pyqtBridge.login) {
-                        pyqtBridge.login(vttSelect, vttAddress, username, password);
+                    if (typeof window.pyqtBridge !== 'undefined' && window.pyqtBridge.login) {
+                        window.pyqtBridge.login(vttSelect, vttAddress, username, password);
                     }
                 });
             }
