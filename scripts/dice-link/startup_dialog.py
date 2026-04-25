@@ -48,8 +48,9 @@ class StartupDialog(QMainWindow):
         self.setCentralWidget(self.web_view)
         
         # Set up web channel for JavaScript-to-Python communication
+        # Pass self (QMainWindow) as browser so minimize/close/drag act on the window
         from window_controller import WindowController
-        self.window_controller = WindowController(self, self.web_view)
+        self.window_controller = WindowController(self)
         channel = QWebChannel()
         channel.registerObject("pyqtBridge", self.window_controller)
         self.web_view.page().setWebChannel(channel)
