@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHB
 from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase, QIcon
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
-from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer
+from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer, QEventLoop
 from PyQt6.QtWebChannel import QWebChannel
 # Add the current directory to Python path so uvicorn can find app module
 DICE_LINK_DIR = Path(__file__).resolve().parent
@@ -108,11 +108,29 @@ def main():
     
     # Show StartupDialog first
     startup_dialog = StartupDialog()
-    if startup_dialog.exec() != QDialog.DialogCode.Accepted:
+    
+    # Track if user connected successfully
+    user_connected = False
+    
+    def on_connect_success(vtt_type, vtt_address, username):
+        nonlocal user_connected
+        user_connected = True
+        log_server(f"User connected through StartupDialog: {vtt_type} at {vtt_address}")
+        startup_dialog.close()
+    
+    startup_dialog.connect_successful.connect(on_connect_success)
+    startup_dialog.show()
+    
+    # Wait for dialog to close
+    loop = QEventLoop()
+    startup_dialog.destroyed.connect(loop.quit)
+    loop.exec()
+    
+    if not user_connected:
         log_server("Startup cancelled by user")
         sys.exit(0)
     
-    log_server("User connected through StartupDialog")
+    log_server("Proceeding with main application")
     
     # Enable DevTools via environment variable - must be set before creating the profile
     os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"

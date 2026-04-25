@@ -6,7 +6,7 @@ Initial login and VTT selection dialog shown on application startup
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-    QComboBox, QPasswordEdit
+    QComboBox
 )
 from PyQt6.QtGui import QPixmap, QFont, QIcon
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -25,8 +25,8 @@ class StartupDialog(CustomWindow):
     # Signal emitted when user successfully connects
     connect_successful = pyqtSignal(str, str, str)  # vtt_type, vtt_address, username
     
-    def __init__(self, parent=None):
-        super().__init__(show_maximize=False, resizable=False, title="Dice Link Login", parent=parent)
+    def __init__(self):
+        super().__init__(show_maximize=False, resizable=False, title="Dice Link Login")
         
         # Set window size
         self.setFixedSize(550, 600)
