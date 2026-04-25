@@ -148,7 +148,7 @@ class SettingsButton(QPushButton):
                 color: {COLOR_PURPLE};
                 font-size: 20px;
                 font-weight: normal;
-                padding: 0px;
+                padding: 8px 12px;
                 border-radius: 4px;
                 overflow: visible;
             }}
