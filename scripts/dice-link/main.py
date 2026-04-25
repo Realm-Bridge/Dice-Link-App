@@ -127,7 +127,7 @@ def main():
     browser.setWindowFlags(Qt.WindowType.FramelessWindowHint)
     
     # Set window icon for taskbar branding
-    logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
+    logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background_small.ico"
     if logo_path.exists():
         browser.setWindowIcon(QIcon(str(logo_path)))
     
