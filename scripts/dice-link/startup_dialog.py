@@ -96,10 +96,9 @@ class StartupDialog(DraggableWebEngineView):
             self.setWindowIcon(QIcon(str(logo_path)))
         
         # Set up web channel for JavaScript-to-Python communication (same as main.py lines 172-174)
-        # IMPORTANT: Store channel as instance variable to prevent garbage collection
-        self.channel = QWebChannel()
-        self.channel.registerObject("pyqtBridge", self.window_controller)
-        self.page().setWebChannel(self.channel)
+        channel = QWebChannel()
+        channel.registerObject("pyqtBridge", self.window_controller)
+        self.page().setWebChannel(channel)
         
         # Set fixed size for startup dialog
         self.setFixedSize(550, 650)
