@@ -31,7 +31,6 @@ class StartupDialog(DraggableWebEngineView):
         super().__init__()
         
         self.server_port = server_port
-        self.login_successful = False
         
         # Ensure page is initialized (same as main.py line 157)
         self.setPage(self.page())
@@ -53,7 +52,7 @@ class StartupDialog(DraggableWebEngineView):
         
         # Set up web channel for JavaScript-to-Python communication (same as main.py lines 172-174)
         channel = QWebChannel()
-        channel.registerObject("pyqtBridge", self.window_controller)
+        channel.registerObject("pyqtBridge", self)
         self.page().setWebChannel(channel)
         
         # Set fixed size for startup dialog
@@ -62,7 +61,13 @@ class StartupDialog(DraggableWebEngineView):
         # Load the startup HTML page from the server (same as main.py line 194)
         self.load(QUrl(f"http://localhost:{self.server_port}/startup"))
     
-    def exec(self) -> bool:
-        """Show dialog and return True if login was successful."""
-        self.show()
-        return self.login_successful
+    def login(self, vtt_type: str, vtt_address: str, username: str, password: str):
+        """
+        Called by JavaScript when user submits login form.
+        Validates input and emits connect_successful signal.
+        """
+        if vtt_type and vtt_address and username and password:
+            self.connect_successful.emit(vtt_type, vtt_address, username)
+        else:
+            # Validation failed - could log error or show message
+            pass
