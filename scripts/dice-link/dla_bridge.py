@@ -223,6 +223,7 @@ class DLABridge(QObject):
     def start_connection_monitoring(self):
         """Start periodic ping checks (every 60 seconds)"""
         from PyQt6.QtCore import QTimer
+        self.pending_pong = False  # Reset pending pong state from any previous connection
         self.connection_check_timer = QTimer()
         self.connection_check_timer.timeout.connect(self.send_connection_ping)
         self.connection_check_timer.start(60000)  # 60 seconds
