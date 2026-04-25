@@ -28,8 +28,8 @@ class StartupDialog(CustomWindow):
     def __init__(self):
         super().__init__(show_maximize=False, resizable=False, title="Dice Link Login")
         
-        # Set window size - 450px wide
-        self.setFixedSize(450, 520)
+        # Set window size
+        self.setFixedSize(550, 600)
         
         # Create main content widget
         content_widget = QWidget()
@@ -38,11 +38,41 @@ class StartupDialog(CustomWindow):
         # Create main layout for content
         main_layout = QVBoxLayout(content_widget)
         main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(12)
+        main_layout.setSpacing(15)
+        
+        # ===== LOGO AND TITLE SECTION =====
+        logo_title_layout = QHBoxLayout()
+        logo_title_layout.setSpacing(15)
+        
+        # Dice Link logo
+        dl_logo_label = QLabel()
+        dl_logo_path = DICE_LINK_DIR / "static" / "Logos" / "DL_Logo_No_Background.png"
+        if dl_logo_path.exists():
+            logo_pixmap = QPixmap(str(dl_logo_path))
+            scaled_logo = logo_pixmap.scaledToHeight(60, Qt.TransformationMode.SmoothTransformation)
+            dl_logo_label.setPixmap(scaled_logo)
+        
+        # Title
+        title_label = QLabel("Dice Link Login")
+        title_font = QFont("Arial", 16, QFont.Weight.Bold)
+        title_label.setFont(title_font)
+        title_label.setStyleSheet("color: #f0f2f5;")
+        
+        logo_title_layout.addWidget(dl_logo_label)
+        logo_title_layout.addWidget(title_label)
+        logo_title_layout.addStretch()
+        
+        main_layout.addLayout(logo_title_layout)
+        
+        # Separator line
+        separator = QLabel()
+        separator.setStyleSheet("border-bottom: 1px solid #6f2e9a;")
+        separator.setFixedHeight(1)
+        main_layout.addWidget(separator)
         
         # ===== FORM SECTION =====
         form_layout = QVBoxLayout()
-        form_layout.setSpacing(12)
+        form_layout.setSpacing(15)
         
         # --- VTT Selection Row ---
         vtt_row = QHBoxLayout()
@@ -58,7 +88,7 @@ class StartupDialog(CustomWindow):
                 border: 1px solid #6f2e9a;
                 border-radius: 4px;
                 padding: 5px;
-                font-size: 11px;
+                font-size: 10px;
             }
             QComboBox:hover {
                 border: 1px solid #8b5cf6;
@@ -95,7 +125,7 @@ class StartupDialog(CustomWindow):
                 border: 1px solid #6f2e9a;
                 border-radius: 4px;
                 padding: 5px;
-                font-size: 11px;
+                font-size: 10px;
             }
             QLineEdit:focus {
                 border: 2px solid #8b5cf6;
@@ -120,7 +150,7 @@ class StartupDialog(CustomWindow):
                 border: 1px solid #6f2e9a;
                 border-radius: 4px;
                 padding: 5px;
-                font-size: 11px;
+                font-size: 10px;
             }
             QLineEdit:focus {
                 border: 2px solid #8b5cf6;
@@ -145,7 +175,7 @@ class StartupDialog(CustomWindow):
                 border: 1px solid #6f2e9a;
                 border-radius: 4px;
                 padding: 5px;
-                font-size: 11px;
+                font-size: 10px;
             }
             QLineEdit:focus {
                 border: 2px solid #8b5cf6;
@@ -159,16 +189,17 @@ class StartupDialog(CustomWindow):
         
         # ===== ERROR MESSAGE LABEL =====
         self.error_label = QLabel()
-        self.error_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
+        self.error_label.setStyleSheet("color: #ff6b6b; font-size: 10px;")
         self.error_label.setVisible(False)
         self.error_label.setWordWrap(True)
         main_layout.addWidget(self.error_label)
         
-        # ===== CONNECT BUTTON - centered, not full width =====
-        connect_row = QHBoxLayout()
-        connect_row.addStretch()
+        # ===== SPACER =====
+        main_layout.addStretch()
+        
+        # ===== CONNECT BUTTON =====
         self.connect_btn = QPushButton("Connect")
-        self.connect_btn.setFixedSize(160, 40)
+        self.connect_btn.setMinimumHeight(40)
         self.connect_btn.setStyleSheet("""
             QPushButton {
                 background-color: #6f2e9a;
@@ -186,9 +217,7 @@ class StartupDialog(CustomWindow):
             }
         """)
         self.connect_btn.clicked.connect(self.on_connect_clicked)
-        connect_row.addWidget(self.connect_btn)
-        connect_row.addStretch()
-        main_layout.addLayout(connect_row)
+        main_layout.addWidget(self.connect_btn)
         
         # ===== FOOTER SECTION =====
         footer_layout = QHBoxLayout()
@@ -199,14 +228,14 @@ class StartupDialog(CustomWindow):
         self.create_account_link.setFlat(True)
         self.create_account_link.setStyleSheet("""
             QPushButton {
-                color: #0066cc;
+                color: #8b5cf6;
                 background: transparent;
                 border: none;
                 text-decoration: underline;
-                font-size: 12px;
+                font-size: 10px;
             }
             QPushButton:hover {
-                color: #0080ff;
+                color: #a78bfa;
             }
         """)
         self.create_account_link.clicked.connect(self.on_create_account_clicked)
@@ -219,7 +248,7 @@ class StartupDialog(CustomWindow):
         realm_logo_path = DICE_LINK_DIR / "static" / "Logos" / "New_logo.png"
         if realm_logo_path.exists():
             logo_pixmap = QPixmap(str(realm_logo_path))
-            scaled_logo = logo_pixmap.scaledToHeight(19, Qt.TransformationMode.SmoothTransformation)
+            scaled_logo = logo_pixmap.scaledToHeight(24, Qt.TransformationMode.SmoothTransformation)
             realm_logo_label.setPixmap(scaled_logo)
         else:
             # Placeholder text if logo doesn't exist
@@ -251,10 +280,6 @@ class StartupDialog(CustomWindow):
             "Tabletop Simulator",
             "Tale Spire"
         ]
-        
-        # Add placeholder as first item
-        self.vtt_dropdown.addItem("Please Select")
-        self.vtt_dropdown.model().item(0).setEnabled(False)
         
         # Add active VTTs
         for vtt in active_vtt:
