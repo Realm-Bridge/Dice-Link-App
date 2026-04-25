@@ -331,13 +331,21 @@
             if (form) {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
+                    console.log('[v0] Form submit triggered');
                     const vttSelect = document.getElementById('vtt-select').value;
                     const vttAddress = document.getElementById('vtt-address').value;
                     const username = document.getElementById('username').value;
                     const password = document.getElementById('password').value;
                     
+                    console.log('[v0] Form values:', vttSelect, vttAddress, username, password);
+                    console.log('[v0] pyqtBridge:', window.pyqtBridge);
+                    console.log('[v0] pyqtBridge.login:', window.pyqtBridge ? window.pyqtBridge.login : 'N/A');
+                    
                     if (typeof window.pyqtBridge !== 'undefined' && window.pyqtBridge.login) {
+                        console.log('[v0] Calling pyqtBridge.login...');
                         window.pyqtBridge.login(vttSelect, vttAddress, username, password);
+                    } else {
+                        console.log('[v0] pyqtBridge or login method not available');
                     }
                 });
             }
