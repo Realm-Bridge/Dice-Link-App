@@ -25,34 +25,36 @@
             flex-direction: column;
         }
         
-        /* Override title bar buttons for startup dialog */
+        /* Override title bar buttons for startup dialog - proportional to 550px window */
         .title-bar-icon-btn {
-            width: 48px;
-            height: 48px;
-            padding: 8px;
-            font-size: 24px;
-        }
-        
-        .title-bar-btn {
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
             padding: 8px;
             font-size: 20px;
         }
+        
+        .title-bar-btn {
+            width: 40px;
+            height: 40px;
+            padding: 8px;
+            font-size: 16px;
+        }
 
-        /* Login title - large, bold, positioned higher, can overflow into body */
+        /* Login title - large, bold, positioned at top of title bar */
         .title-bar-centre {
             position: absolute;
             left: 50%;
-            top: 0;
+            top: 8px;
             transform: translateX(-50%);
         }
         
         .title-bar-title {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
             color: var(--text-primary);
             letter-spacing: 0.5px;
+            margin: 0;
+            padding: 0;
         }
         
         .startup-title-bar-logo {
@@ -328,6 +330,11 @@
     <script>
         // Initialize settings and form when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('[v0] DOMContentLoaded fired');
+            console.log('[v0] qt defined:', typeof qt !== 'undefined');
+            console.log('[v0] initSettingsUI defined:', typeof initSettingsUI === 'function');
+            console.log('[v0] initWindowControls defined:', typeof initWindowControls === 'function');
+            
             // Initialize settings button
             if (typeof initSettingsUI === 'function') {
                 initSettingsUI();
