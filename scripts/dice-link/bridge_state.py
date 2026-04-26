@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from debug import log_bridge_state
 
 # Reference to the DLABridge object, set when the viewing window is created
 dla_bridge = None
@@ -28,7 +29,7 @@ def send_roll_request_to_ui(roll_request_data):
     """
     if dla_bridge:
         roll_request_data['type'] = 'rollRequest'
-        
+
         # Broadcast to UI via WebSocket
         try:
             from state import app_state
@@ -37,10 +38,10 @@ def send_roll_request_to_ui(roll_request_data):
             asyncio.set_event_loop(loop)
             from core.websocket_handler import broadcast_to_ui
             loop.run_until_complete(broadcast_to_ui(roll_request_data))
-            print(f"[BRIDGE STATE] Broadcast roll request to UI: {roll_request_data.get('id')}")
+            log_bridge_state(f"Broadcast roll request to UI: {roll_request_data.get('id')}")
             return True
         except Exception as e:
-            print(f"[BRIDGE STATE] Error broadcasting roll request to UI: {e}")
+            log_bridge_state(f"Error broadcasting roll request to UI: {e}")
             return False
     return False
 
@@ -55,10 +56,10 @@ def send_dice_result_to_foundry(result_data):
     if bridge:
         try:
             bridge.sendDiceResult(result_data)
-            print(f"[BRIDGE STATE] Sent dice result to Foundry: {result_data.get('id')}")
+            log_bridge_state(f"Sent dice result to Foundry: {result_data.get('id')}")
             return True
         except Exception as e:
-            print(f"[BRIDGE STATE] Error sending dice result to Foundry: {e}")
+            log_bridge_state(f"Error sending dice result to Foundry: {e}")
             return False
     return False
 
@@ -78,10 +79,10 @@ def send_dice_tray_roll_to_foundry(formula, flavor):
                 "flavor": flavor
             }
             bridge.sendDiceTrayRoll(dice_tray_data)
-            print(f"[BRIDGE STATE] Sent dice tray roll to Foundry: formula={formula}, flavor={flavor}")
+            log_bridge_state(f"Sent dice tray roll to Foundry: formula={formula}, flavor={flavor}")
             return True
         except Exception as e:
-            print(f"[BRIDGE STATE] Error sending dice tray roll to Foundry: {e}")
+            log_bridge_state(f"Error sending dice tray roll to Foundry: {e}")
             return False
     return False
 
@@ -93,21 +94,21 @@ def send_connection_status_to_ui(connected, player_name=None):
     """
     try:
         from core.websocket_handler import broadcast_to_ui
-        
+
         status_message = {
             'type': 'connectionStatus',
             'connected': connected,
             'playerName': player_name or 'Foundry VTT'
         }
-        
+
         # Use asyncio to run the async broadcast function from a sync context
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(broadcast_to_ui(status_message))
-        print(f"[BRIDGE STATE] Broadcast connection status to UI: connected={connected}, player={player_name}")
+        log_bridge_state(f"Broadcast connection status to UI: connected={connected}, player={player_name}")
         return True
     except Exception as e:
-        print(f"[BRIDGE STATE] Error broadcasting connection status to UI: {e}")
+        log_bridge_state(f"Error broadcasting connection status to UI: {e}")
         return False
 
 
@@ -115,7 +116,7 @@ def update_connection_player_name(player_name):
     """Update the stored player name from player modes data."""
     global current_player_name
     current_player_name = player_name
-    print(f"[BRIDGE STATE] Updated player name: {player_name}")
+    log_bridge_state(f"Updated player name: {player_name}")
 
 
 def get_current_player_name():
@@ -127,12 +128,12 @@ def send_player_modes_to_ui(player_modes_data):
     """
     Send player modes data from DLC to the UI controls window.
     Called when DLC broadcasts player modes update via QWebChannel.
-    
+
     Converts DLC data format (object with numeric keys) to UI expected format (array).
     """
     try:
         from core.websocket_handler import broadcast_to_ui
-        
+
         # Convert player modes data from DLC format to UI format
         # DLC format: {"0": {"id": "...", "name": "...", "mode": "..."}, ...}
         # UI format: [{"id": "...", "name": "...", "mode": "..."}, ...]
@@ -141,20 +142,20 @@ def send_player_modes_to_ui(player_modes_data):
             for key, player_data in player_modes_data.items():
                 if isinstance(player_data, dict):
                     players_array.append(player_data)
-        
+
         message = {
             'type': 'playerModesUpdate',
             'players': players_array
         }
-        
+
         # Use asyncio to run the async broadcast function from a sync context
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(broadcast_to_ui(message))
-        print(f"[BRIDGE STATE] Broadcast player modes to UI: {len(players_array)} players")
+        log_bridge_state(f"Broadcast player modes to UI: {len(players_array)} players")
         return True
     except Exception as e:
-        print(f"[BRIDGE STATE] Error broadcasting player modes to UI: {e}")
+        log_bridge_state(f"Error broadcasting player modes to UI: {e}")
         return False
 
 
@@ -167,10 +168,10 @@ def send_button_select_to_dlc(button_data):
     if bridge:
         try:
             bridge.receiveButtonSelect(json.dumps(button_data))
-            print(f"[BRIDGE STATE] Sent button select to DLC: {button_data.get('button')}")
+            log_bridge_state(f"Sent button select to DLC: {button_data.get('button')}")
             return True
         except Exception as e:
-            print(f"[BRIDGE STATE] Error sending button select to DLC: {e}")
+            log_bridge_state(f"Error sending button select to DLC: {e}")
             return False
     return False
 
@@ -183,16 +184,15 @@ def send_dice_request_to_ui(dice_request_data):
     """
     try:
         from core.websocket_handler import broadcast_to_ui
-        
+
         dice_request_data['type'] = 'diceRequest'
-        
+
         # Use asyncio to run the async broadcast function from a sync context
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(broadcast_to_ui(dice_request_data))
-        print(f"[BRIDGE STATE] Broadcast dice request to UI: {dice_request_data.get('id')}")
+        log_bridge_state(f"Broadcast dice request to UI: {dice_request_data.get('id')}")
         return True
     except Exception as e:
-        print(f"[BRIDGE STATE] Error broadcasting dice request to UI: {e}")
+        log_bridge_state(f"Error broadcasting dice request to UI: {e}")
         return False
-

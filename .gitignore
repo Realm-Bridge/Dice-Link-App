@@ -14,3 +14,10 @@ next.user-config.*
 node_modules
 .next/
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+logs/

@@ -23,7 +23,7 @@ os.chdir(DICE_LINK_DIR)
 
 from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
-from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt, log_connection_monitor
+from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt, log_connection_monitor, log_dpi
 from bridge_state import set_bridge
 from custom_window import CustomWindow, CustomTitleBar, ResizeGrip
 from vtt_validator import VTTValidator
@@ -189,7 +189,7 @@ def main():
         # If device ratio is 2.0 (200% scaling), zoom should be 0.5 to fit content in half-sized window
         browser.setZoomFactor(1.0 / device_pixel_ratio)
         
-        print(f"[DPI UPDATE] Device pixel ratio: {device_pixel_ratio}, Window size: {scaled_width}x{scaled_height}")
+        log_dpi(f"Device pixel ratio: {device_pixel_ratio}, Window size: {scaled_width}x{scaled_height}")
     
     # Initial scaling
     update_dpi_scaling()
