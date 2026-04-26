@@ -884,12 +884,12 @@ async def handle_ui_message(message: dict):
 async def websocket_dlc(websocket: WebSocket):
     """
     WebSocket endpoint for DLC connections.
-    DISABLED when CONNECTION_METHOD = "webrtc" - kept as fallback only.
+    DISABLED when CONNECTION_METHOD = "qwebchannel" - kept as fallback only.
     To re-enable: set CONNECTION_METHOD = "websocket" in config.py
     """
-    if CONNECTION_METHOD == "webrtc":
-        log_server("ws/dlc: Connection attempt rejected - WebSocket is disabled (CONNECTION_METHOD=webrtc)")
-        await websocket.close(code=1013, reason="WebSocket disabled - use WebRTC connection method")
+    if CONNECTION_METHOD == "qwebchannel":
+        log_server("ws/dlc: Connection attempt rejected - WebSocket is disabled (CONNECTION_METHOD=qwebchannel)")
+        await websocket.close(code=1013, reason="WebSocket disabled - DLC communicates via QWebChannel")
         return
     
     # Debug logging via centralized debug module

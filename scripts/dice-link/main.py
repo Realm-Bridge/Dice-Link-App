@@ -68,15 +68,14 @@ def main():
     log_server(f"UI available at http://localhost:{WEBSOCKET_PORT}")
     
     # Show connection method info
-    if CONNECTION_METHOD == "webrtc":
-        log_server(f"Connection method: WebRTC (bypasses browser security restrictions)")
-        log_server(f"DLC connects via WebRTC handshake at http://localhost:{WEBSOCKET_PORT}/api/receive-offer")
+    if CONNECTION_METHOD == "qwebchannel":
+        log_server(f"Connection method: QWebChannel (DLC runs inside embedded Foundry browser)")
     else:
         log_server(f"Connection method: WebSocket (fallback mode)")
         log_server(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
-    
+
     # UPnP is only relevant for WebSocket fallback mode (remote connections)
-    # For WebRTC on localhost, no port forwarding is needed
+    # QWebChannel runs inside the embedded browser so no port forwarding is needed
     upnp_success = False
     external_ip = None
     if CONNECTION_METHOD == "websocket":

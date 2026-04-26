@@ -1,8 +1,8 @@
 """Configuration settings for Dice Link"""
 
-# Connection method: "webrtc" (primary) or "websocket" (fallback)
-# WebRTC bypasses Chrome's Private Network Access restrictions on HTTP pages
-CONNECTION_METHOD = "webrtc"
+# Connection method: "qwebchannel" (current) or "websocket" (fallback)
+# qwebchannel uses Qt's embedded browser bridge - DLC runs inside DLA's embedded Foundry view
+CONNECTION_METHOD = "qwebchannel"
 
 # Server settings (used for both WebRTC signaling and WebSocket fallback)
 WEBSOCKET_HOST = "0.0.0.0"
