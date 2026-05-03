@@ -41,7 +41,7 @@ class CameraManager:
 
     def _check_motion(self, frame: np.ndarray):
         """Compare current frame to previous to detect movement in the tray."""
-        if self._prev_motion_frame is None:
+        if self._prev_motion_frame is None or self._prev_motion_frame.shape != frame.shape:
             self._prev_motion_frame = frame.copy()
             return
 
