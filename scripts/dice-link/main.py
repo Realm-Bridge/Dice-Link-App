@@ -235,27 +235,37 @@ def main():
     channel.registerObject("pyqtBridge", window_controller)
     browser.page().setWebChannel(channel)
     
-    # Lock window to fixed size — scaled by device pixel ratio
-    fixed_width = 1788
-    fixed_height = 1500
-    browser.fixed_width = fixed_width
-    browser.fixed_height = fixed_height
+    # Resizable window — zoom tracks window width relative to designed width
+    browser._designed_width = 1788
+    browser._designed_height = 1500
+    browser.setMinimumSize(400, 336)
+
+    from core.storage import load_window_size, save_window_size
+    screen_rect = app.primaryScreen().availableGeometry()
+    saved_size = load_window_size()
+    if saved_size:
+        browser.resize(saved_size[0], saved_size[1])
+    else:
+        initial_width = int(screen_rect.width() * 0.4)
+        initial_height = int(initial_width * 1500 / 1788)
+        browser.resize(initial_width, initial_height)
 
     def update_dpi_scaling():
         screen = browser.screen()
-        device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
-        scaled_width = int(browser.fixed_width / device_pixel_ratio)
-        scaled_height = int(browser.fixed_height / device_pixel_ratio)
-        browser.setFixedSize(scaled_width, scaled_height)
-        browser.setZoomFactor(1.0 / device_pixel_ratio)
-        log_dpi(f"Device pixel ratio: {device_pixel_ratio}, Window size: {scaled_width}x{scaled_height}")
-
-    update_dpi_scaling()
+        dpr = screen.devicePixelRatio() if screen else 1.0
+        if browser._designed_width and browser.width() > 0:
+            browser.setZoomFactor(browser.width() / browser._designed_width)
+        log_dpi(f"Device pixel ratio: {dpr}")
 
     screen = browser.screen()
     if screen:
         screen.logicalDotsPerInchChanged.connect(update_dpi_scaling)
         screen.geometryChanged.connect(update_dpi_scaling)
+
+    def save_size_on_quit():
+        save_window_size(browser.width(), browser.height())
+
+    app.aboutToQuit.connect(save_size_on_quit)
 
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST
