@@ -11,7 +11,7 @@ import urllib.request
 from urllib.parse import urlparse
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QWidget, QSizePolicy
-from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase, QIcon
+from PyQt6.QtGui import QDesktopServices, QPixmap, QFont, QFontDatabase, QIcon, QCursor
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
 from PyQt6.QtCore import QUrl, Qt, QObject, pyqtSlot, pyqtSignal, QPoint, QEvent, QTimer, QEventLoop
@@ -241,14 +241,19 @@ def main():
     browser.setMinimumSize(400, 336)
 
     from core.storage import load_window_size, save_window_size
-    screen_rect = app.primaryScreen().availableGeometry()
+    cursor_screen = app.screenAt(QCursor.pos()) or app.primaryScreen()
+    screen_rect = cursor_screen.availableGeometry()
     saved_size = load_window_size()
     if saved_size:
-        browser.resize(saved_size[0], saved_size[1])
+        w, h = saved_size[0], saved_size[1]
     else:
-        initial_width = int(screen_rect.width() * 0.4)
-        initial_height = int(initial_width * 1500 / 1788)
-        browser.resize(initial_width, initial_height)
+        w = int(screen_rect.width() * 0.4)
+        h = int(w * 1500 / 1788)
+    browser.resize(w, h)
+    browser.move(
+        screen_rect.center().x() - w // 2,
+        screen_rect.center().y() - h // 2
+    )
 
     def update_dpi_scaling():
         screen = browser.screen()
