@@ -181,11 +181,14 @@ async def phone_camera_offer(request: Request):
     @pc.on("track")
     def on_track(track):
         if track.kind == "video":
+            global dlc_frame_task
             if camera_manager.is_capturing:
                 camera_manager.stop_capture()
             camera_manager.select_camera(-1)
             camera_manager.start_capture()
             asyncio.ensure_future(_feed_camera_manager(track))
+            if dlc_frame_task is None or dlc_frame_task.done():
+                dlc_frame_task = asyncio.ensure_future(dlc_camera_stream_loop())
 
     await pc.setRemoteDescription(offer)
     answer = await pc.createAnswer()
