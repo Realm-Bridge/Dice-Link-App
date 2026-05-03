@@ -125,7 +125,7 @@ async def websocket_camera(websocket: WebSocket):
     frame_interval = 1.0 / CAMERA_FPS
     try:
         while True:
-            if camera_manager.is_capturing and not camera_manager.phone_camera_mode:
+            if camera_manager.is_capturing:
                 raw = camera_manager.get_raw_rgba_bytes()
                 if raw:
                     await websocket.send_bytes(raw)
