@@ -319,7 +319,6 @@ function stopCameraDisplayLoop() {
 // ── Camera Start / Stop ─────────────────────────────────────────────────────
 
 async function startCamera() {
-    trayBbox = null;
     try {
         const response = await fetch('/api/camera/start', { method: 'POST' });
         const data = await response.json();
@@ -397,7 +396,7 @@ function updateMotionLabel(isMotion) {
 
 let trayPoints = [];
 
-function startTrayDefinition() {
+async function startTrayDefinition() {
     if (!cameraActive) {
         showCameraStatus('Start camera first');
         return;
@@ -418,6 +417,16 @@ function startTrayDefinition() {
     document.getElementById('camera-controls-normal').classList.add('hidden');
     document.getElementById('camera-controls-define').classList.remove('hidden');
     updateCameraButtons('define');
+
+    // Load existing tray points from server so user can see the current boundary
+    try {
+        const response = await fetch('/api/camera/tray-region');
+        const data = await response.json();
+        if (data.points && data.points.length >= 3) {
+            trayPoints = data.points;
+            drawTrayPolygon();
+        }
+    } catch (e) {}
 }
 
 function onTrayCanvasClick(e) {

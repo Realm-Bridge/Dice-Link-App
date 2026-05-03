@@ -250,7 +250,7 @@ async def phone_camera_page():
                 status.className = 'status waiting';
                 status.textContent = 'Requesting camera access…';
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } },
+                    video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 }, resizeMode: 'none' },
                     audio: false
                 });
                 video.srcObject = stream;
