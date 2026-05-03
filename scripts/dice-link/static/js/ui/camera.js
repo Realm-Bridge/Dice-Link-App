@@ -43,10 +43,13 @@ function updateCameraButtons(state) {
     });
 
     if (state === 'phone') {
-        // Phone camera — connection is initiated by the phone, no manual start needed
+        btns[1].textContent = 'Refresh';
+        btns[1].onclick = loadCameraList;
     } else if (state === 'off') {
         btns[0].textContent = 'Start';
         btns[0].onclick = toggleCamera;
+        btns[1].textContent = 'Refresh';
+        btns[1].onclick = loadCameraList;
     } else if (state === 'running') {
         btns[0].textContent = 'Stop';
         btns[0].onclick = toggleCamera;
@@ -153,6 +156,8 @@ async function selectCamera(index) {
         if (cameraActive) {
             await stopCamera();
             await startCamera();
+        } else {
+            updateCameraButtons('off');
         }
     } catch (error) {
         debugError('Failed to select camera', error);
@@ -265,20 +270,24 @@ function startCameraDisplayLoop() {
         }
 
         if (source && sourceW > 0 && sourceH > 0) {
-            let sx = 0, sy = 0, sw = sourceW, sh = sourceH;
-            if (trayBbox && !inTrayDefinitionMode) {
-                sx = trayBbox.x0 * sourceW;
-                sy = trayBbox.y0 * sourceH;
-                sw = (trayBbox.x1 - trayBbox.x0) * sourceW;
-                sh = (trayBbox.y1 - trayBbox.y0) * sourceH;
-            }
-            const scale = Math.min(canvas.width / sw, canvas.height / sh);
-            const dw = sw * scale;
-            const dh = sh * scale;
-            const dx = (canvas.width - dw) / 2;
-            const dy = (canvas.height - dh) / 2;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh);
+            if (trayBbox && !inTrayDefinitionMode) {
+                const tw = (trayBbox.x1 - trayBbox.x0) * sourceW;
+                const th = (trayBbox.y1 - trayBbox.y0) * sourceH;
+                const cx = (trayBbox.x0 + trayBbox.x1) / 2 * sourceW;
+                const cy = (trayBbox.y0 + trayBbox.y1) / 2 * sourceH;
+                const scale = Math.min(canvas.width / tw, canvas.height / th);
+                const dx = canvas.width / 2 - cx * scale;
+                const dy = canvas.height / 2 - cy * scale;
+                ctx.drawImage(source, 0, 0, sourceW, sourceH, dx, dy, sourceW * scale, sourceH * scale);
+            } else {
+                const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
+                const dw = sourceW * scale;
+                const dh = sourceH * scale;
+                const dx = (canvas.width - dw) / 2;
+                const dy = (canvas.height - dh) / 2;
+                ctx.drawImage(source, 0, 0, sourceW, sourceH, dx, dy, dw, dh);
+            }
         } else {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
@@ -409,12 +418,25 @@ function startTrayDefinition() {
 function onTrayCanvasClick(e) {
     const canvas = document.getElementById('tray-canvas');
     if (!canvas || !canvas.classList.contains('define-mode')) return;
+    if (!usbFrameCanvas || usbFrameCanvas.width === 0 || usbFrameCanvas.height === 0) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-    trayPoints.push([x, y]);
+    const sourceW = usbFrameCanvas.width;
+    const sourceH = usbFrameCanvas.height;
+    const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
+    const dw = sourceW * scale;
+    const dh = sourceH * scale;
+    const dx = (canvas.width - dw) / 2;
+    const dy = (canvas.height - dh) / 2;
+
+    const fx = (clickX - dx) / dw;
+    const fy = (clickY - dy) / dh;
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
+
+    trayPoints.push([fx, fy]);
     drawTrayPolygon();
 }
 
@@ -426,14 +448,23 @@ function drawTrayPolygon() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (trayPoints.length === 0) return;
+    if (!usbFrameCanvas || usbFrameCanvas.width === 0 || usbFrameCanvas.height === 0) return;
 
-    const w = canvas.width;
-    const h = canvas.height;
+    const sourceW = usbFrameCanvas.width;
+    const sourceH = usbFrameCanvas.height;
+    const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
+    const dw = sourceW * scale;
+    const dh = sourceH * scale;
+    const dx = (canvas.width - dw) / 2;
+    const dy = (canvas.height - dh) / 2;
+    const toCanvas = pt => [dx + pt[0] * dw, dy + pt[1] * dh];
 
     ctx.beginPath();
-    ctx.moveTo(trayPoints[0][0] * w, trayPoints[0][1] * h);
+    const [x0, y0] = toCanvas(trayPoints[0]);
+    ctx.moveTo(x0, y0);
     for (let i = 1; i < trayPoints.length; i++) {
-        ctx.lineTo(trayPoints[i][0] * w, trayPoints[i][1] * h);
+        const [x, y] = toCanvas(trayPoints[i]);
+        ctx.lineTo(x, y);
     }
     if (trayPoints.length >= 3) ctx.closePath();
     ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
@@ -441,8 +472,9 @@ function drawTrayPolygon() {
     ctx.stroke();
 
     trayPoints.forEach(pt => {
+        const [x, y] = toCanvas(pt);
         ctx.beginPath();
-        ctx.arc(pt[0] * w, pt[1] * h, 5, 0, Math.PI * 2);
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
         ctx.fillStyle = '#FFD700';
         ctx.fill();
     });
