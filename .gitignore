@@ -21,3 +21,6 @@ __pycache__/
 
 # Logs
 logs/
+
+# Phone camera certs (downloaded at runtime, contain private key)
+scripts/dice-link/certs/

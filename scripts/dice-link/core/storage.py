@@ -137,6 +137,24 @@ def get_current_model_path():
     return get_models_dir() / f'dice_detection_v{model_version}.onnx'
 
 
+def load_window_size():
+    """Return saved (width, height) tuple, or None if not previously saved."""
+    config = load_config()
+    w = config.get('window_width')
+    h = config.get('window_height')
+    if w and h:
+        return (int(w), int(h))
+    return None
+
+
+def save_window_size(width, height):
+    """Persist the main window size to config.json."""
+    config = load_config()
+    config['window_width'] = width
+    config['window_height'] = height
+    save_config(config)
+
+
 # Future: SQLite session history functions
 def init_session_db():
     """Initialize SQLite database for session history (v1.1+)."""

@@ -5,6 +5,7 @@ Uses HTML/CSS rendered via QWebEngineView for consistent styling with main windo
 Uses identical architecture to main.py - DraggableWebEngineView as the window itself.
 """
 
+from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QTimer
 from PyQt6.QtGui import QIcon
@@ -112,8 +113,20 @@ class StartupDialog(DraggableWebEngineView):
         # Connect loadFinished to inject qwebchannel.js (same pattern as VTTWebView)
         self.page().loadFinished.connect(self.on_page_loaded)
 
-        # Set fixed size for startup dialog
-        self.setFixedSize(550, 650)
+        # Set designed dimensions — zoom and aspect ratio are derived from these
+        self._designed_width = 550
+        self._designed_height = 650
+        self.setMinimumSize(300, 354)  # maintains 550:650 ratio at minimum width
+
+        # Open at designed size if it fits the screen; otherwise scale to 30% of screen width
+        screen = QApplication.primaryScreen()
+        screen_rect = screen.availableGeometry()
+        if screen_rect.width() >= 550 and screen_rect.height() >= 650:
+            self.resize(550, 650)
+        else:
+            initial_width = int(screen_rect.width() * 0.3)
+            initial_height = int(initial_width * 650 / 550)
+            self.resize(initial_width, initial_height)
 
         # Load the startup HTML page from the server (same as main.py line 194)
         self.load(QUrl(f"http://localhost:{self.server_port}/startup"))

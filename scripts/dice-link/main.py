@@ -6,8 +6,8 @@ import uvicorn
 import sys
 import os
 import json
+import socket
 import urllib.request
-import urllib.error
 from urllib.parse import urlparse
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QWidget, QSizePolicy
@@ -21,8 +21,7 @@ DICE_LINK_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(DICE_LINK_DIR))
 os.chdir(DICE_LINK_DIR)
 
-from config import WEBSOCKET_HOST, WEBSOCKET_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
-from upnp import setup_upnp_port_forward, remove_upnp_port_forward, get_external_ip
+from config import WEBSOCKET_HOST, WEBSOCKET_PORT, PHONE_CAMERA_PORT, APP_NAME, DEBUG, CONNECTION_METHOD
 from debug import log_startup, log_server, log_drag_start, log_drag_move, log_drag_end, log_vtt, log_connection_monitor, log_dpi
 from bridge_state import set_bridge
 from custom_window import CustomWindow, CustomTitleBar, ResizeGrip
@@ -41,6 +40,97 @@ from startup_dialog import StartupDialog
 
 
 
+
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+def setup_phone_camera_certs():
+    """Download local-ip.co certs for phone camera HTTPS. Returns (cert_path, key_path) or (None, None)."""
+    certs_dir = DICE_LINK_DIR / "certs"
+    certs_dir.mkdir(exist_ok=True)
+    cert_file = certs_dir / "local-ip.pem"
+    key_file = certs_dir / "local-ip.key"
+    if cert_file.exists() and key_file.exists():
+        return cert_file, key_file
+    try:
+        log_server("Downloading local-ip.co certs for phone camera...")
+        with urllib.request.urlopen("http://local-ip.co/cert/server.pem", timeout=10) as r:
+            server_pem = r.read()
+        with urllib.request.urlopen("http://local-ip.co/cert/chain.pem", timeout=10) as r:
+            chain_pem = r.read()
+        cert_file.write_bytes(server_pem + b'\n' + chain_pem)
+        with urllib.request.urlopen("http://local-ip.co/cert/server.key", timeout=10) as r:
+            key_file.write_bytes(r.read())
+        log_server("Phone camera certs ready")
+        return cert_file, key_file
+    except Exception as e:
+        log_server(f"Could not download phone camera certs: {e}")
+        return None, None
+
+
+def run_phone_camera_server(cert_file, key_file):
+    """HTTPS reverse proxy for phone camera — gives the phone a secure context for getUserMedia."""
+    import ssl
+    import http.server
+
+    backend = f"http://127.0.0.1:{WEBSOCKET_PORT}"
+
+    class ProxyHandler(http.server.BaseHTTPRequestHandler):
+        def _proxy(self, method, body=None):
+            try:
+                headers = {k: v for k, v in self.headers.items()
+                           if k.lower() not in ('host', 'content-length')}
+                req = urllib.request.Request(backend + self.path, data=body,
+                                             headers=headers, method=method)
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    resp_body = resp.read()
+                self.send_response(resp.status)
+                for key, value in resp.headers.items():
+                    if key.lower() not in ('transfer-encoding', 'connection'):
+                        self.send_header(key, value)
+                self.end_headers()
+                self.wfile.write(resp_body)
+            except Exception as e:
+                log_server(f"Phone camera proxy error: {e}")
+                self.send_response(502)
+                self.end_headers()
+
+        def do_GET(self):
+            self._proxy('GET')
+
+        def do_POST(self):
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length) if length else None
+            self._proxy('POST', body)
+
+        def do_OPTIONS(self):
+            self.send_response(204)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
+    try:
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(str(cert_file), str(key_file))
+        server = http.server.HTTPServer(('0.0.0.0', PHONE_CAMERA_PORT), ProxyHandler)
+        server.socket = ctx.wrap_socket(server.socket, server_side=True)
+        log_server(f"Phone camera HTTPS proxy ready on port {PHONE_CAMERA_PORT}")
+        server.serve_forever()
+    except Exception as e:
+        log_server(f"Phone camera HTTPS server failed to start: {e}")
 
 
 def run_server():
@@ -67,39 +157,21 @@ def main():
     log_server(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
     log_server(f"UI available at http://localhost:{WEBSOCKET_PORT}")
     
-    # Show connection method info
-    if CONNECTION_METHOD == "qwebchannel":
-        log_server(f"Connection method: QWebChannel (DLC runs inside embedded Foundry browser)")
-    else:
-        log_server(f"Connection method: WebSocket (fallback mode)")
-        log_server(f"DLC module connects to ws://[hostname]:{WEBSOCKET_PORT}/ws/dlc")
-
-    # UPnP is only relevant for WebSocket fallback mode (remote connections)
-    # QWebChannel runs inside the embedded browser so no port forwarding is needed
-    upnp_success = False
-    external_ip = None
-    if CONNECTION_METHOD == "websocket":
-        # Attempt UPnP port forwarding for remote connections
-        upnp_success, external_ip = setup_upnp_port_forward(WEBSOCKET_PORT)
-        if upnp_success:
-            log_server("Remote connections enabled!")
-            log_server(f"Players should configure DLC to connect to: {external_ip}")
-        else:
-            if external_ip:
-                log_server("Automatic port forwarding unavailable")
-                log_server(f"Your external IP is: {external_ip}")
-                log_server(f"For remote connections, manually forward port {WEBSOCKET_PORT} in your router")
-            else:
-                log_server("Could not determine external IP or set up port forwarding")
-                log_server("Remote connections may require manual router configuration")
-    else:
-        log_server("UPnP skipped (not needed for localhost WebRTC connections)")
+    log_server(f"Connection method: QWebChannel (DLC runs inside embedded Foundry browser)")
     
     # Start the FastAPI server in a background thread
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
-    
-    # Give the server a moment to start
+
+    # Start HTTPS server for phone camera
+    cert_file, key_file = setup_phone_camera_certs()
+    if cert_file and key_file:
+        phone_server_thread = threading.Thread(target=run_phone_camera_server, args=(cert_file, key_file), daemon=True)
+        phone_server_thread.start()
+    else:
+        log_server("Phone camera HTTPS server not started — cert download failed")
+
+    # Give the servers a moment to start
     time.sleep(1.5)
     
     # Create and display the PyQt6 window
@@ -163,58 +235,39 @@ def main():
     channel.registerObject("pyqtBridge", window_controller)
     browser.page().setWebChannel(channel)
     
-    # Lock window to fixed size - cannot be resized
-    # Original planned size - will be scaled by device pixel ratio
+    # Lock window to fixed size — scaled by device pixel ratio
     fixed_width = 1788
     fixed_height = 1500
-    
-    # Store fixed size and browser reference for dynamic scaling
     browser.fixed_width = fixed_width
     browser.fixed_height = fixed_height
-    
-    # Function to update scaling when DPI changes
+
     def update_dpi_scaling():
         screen = browser.screen()
         device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
-        
-        # Calculate scaled window size
         scaled_width = int(browser.fixed_width / device_pixel_ratio)
         scaled_height = int(browser.fixed_height / device_pixel_ratio)
-        
-        # Update window size
         browser.setFixedSize(scaled_width, scaled_height)
-        
-        # Update zoom factor - inverse of device ratio so content scales DOWN with window
-        # If device ratio is 2.0 (200% scaling), zoom should be 0.5 to fit content in half-sized window
         browser.setZoomFactor(1.0 / device_pixel_ratio)
-        
         log_dpi(f"Device pixel ratio: {device_pixel_ratio}, Window size: {scaled_width}x{scaled_height}")
-    
-    # Initial scaling
+
     update_dpi_scaling()
-    
-    # Connect to screen DPI changes
+
     screen = browser.screen()
     if screen:
         screen.logicalDotsPerInchChanged.connect(update_dpi_scaling)
-        # If window moves to different display, also update scaling
         screen.geometryChanged.connect(update_dpi_scaling)
-    
+
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST
     url = f"http://{browser_host}:{WEBSOCKET_PORT}"
     browser.load(QUrl(url))
-    
+
     # Show the window and start the application
     browser.show()
-    
+    log_server(f"Main window shown — pos: {browser.pos()}, size: {browser.size()}, visible: {browser.isVisible()}")
+
     # Run the application
     exit_code = app.exec()
-    
-    # Clean up UPnP port forwarding on exit
-    if upnp_success:
-        log_server("Cleaning up port forwarding...")
-        remove_upnp_port_forward(WEBSOCKET_PORT)
     
     sys.exit(exit_code)
 

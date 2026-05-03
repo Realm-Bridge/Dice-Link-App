@@ -188,10 +188,18 @@ function handleMessage(message) {
         case 'cameraFrame':
             // handleCameraFrame(message.frame);
             break;
-            
+
         case 'cameraStreamStatus':
             setCameraStreamActive(message.active);
             debugLog(`Camera stream ${message.active ? 'started' : 'stopped'}`);
+            break;
+
+        case 'phone_camera_connected':
+            onPhoneCameraConnected();
+            break;
+
+        case 'phone_camera_disconnected':
+            onPhoneCameraDisconnected();
             break;
             
         default:

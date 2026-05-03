@@ -1,12 +1,12 @@
 """Configuration settings for Dice Link"""
 
-# Connection method: "qwebchannel" (current) or "websocket" (fallback)
-# qwebchannel uses Qt's embedded browser bridge - DLC runs inside DLA's embedded Foundry view
+# Communication via QWebChannel — DLC runs inside DLA's embedded Foundry browser
 CONNECTION_METHOD = "qwebchannel"
 
-# Server settings (used for both WebRTC signaling and WebSocket fallback)
+# FastAPI server settings
 WEBSOCKET_HOST = "0.0.0.0"
 WEBSOCKET_PORT = 8765
+PHONE_CAMERA_PORT = 8766
 
 # Application settings
 APP_NAME = "Dice Link"

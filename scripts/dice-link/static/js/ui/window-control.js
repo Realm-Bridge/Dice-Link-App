@@ -32,7 +32,7 @@ function initWindowControls() {
         
         // Expose pyqtBridge globally so other elements can use it
         window.pyqtBridge = pyqtBridge;
-        
+
         // Connect button
         const connectBtn = document.getElementById('connect-btn');
         if (connectBtn) {
@@ -56,32 +56,53 @@ function initWindowControls() {
         
         // Window dragging from title bar
         let isDragging = false;
-        
+        let isResizing = false;
+
         titleBar.addEventListener('mousedown', (e) => {
-            // Ignore clicks on buttons
-            if (e.target.closest('button')) {
-                return;
-            }
+            if (e.target.closest('button')) return;
             isDragging = true;
-            // Use screenX/screenY for global screen coordinates (unaffected by zoom)
-            console.log('[WindowControl] Drag started at', e.screenX, e.screenY);
             pyqtBridge.startDrag(e.screenX, e.screenY);
         });
-        
+
+        // Resize grip - injected into the page so it renders inside the web content
+        const resizeGrip = document.createElement('div');
+        resizeGrip.id = 'resize-grip';
+        resizeGrip.style.cssText = [
+            'position:fixed',
+            'bottom:0',
+            'right:0',
+            'width:16px',
+            'height:16px',
+            'cursor:nwse-resize',
+            'z-index:9999',
+            'background:linear-gradient(135deg, transparent 50%, rgba(111,46,154,0.5) 50%)'
+        ].join(';');
+        document.body.appendChild(resizeGrip);
+
+        resizeGrip.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            pyqtBridge.startResize(e.screenX, e.screenY);
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // Combined mousemove and mouseup for both drag and resize
         document.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                // Use screenX/screenY for global screen coordinates (unaffected by zoom)
-                pyqtBridge.doDrag(e.screenX, e.screenY);
-            }
+            if (isDragging) pyqtBridge.doDrag(e.screenX, e.screenY);
+            if (isResizing) pyqtBridge.doResize(e.screenX, e.screenY);
         });
-        
+
         document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                console.log('[WindowControl] Drag ended');
-                isDragging = false;
-            }
+            isDragging = false;
+            isResizing = false;
         });
-        
+
+        // Reset drag/resize state when Windows takes over the mouse (e.g. during snap)
+        window.addEventListener('blur', () => {
+            isDragging = false;
+            isResizing = false;
+        });
+
         console.log('[WindowControl] Window controls initialized successfully');
     });
 }

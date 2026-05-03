@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=57">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=59">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
@@ -113,7 +113,7 @@
                 <div class="section-header">
                     <h3><i class="fas fa-users"></i> Player Modes</h3>
                 </div>
-                
+
                 <div class="section-content">
                     <!-- Legend -->
                     <div class="mode-legend">
@@ -121,7 +121,7 @@
                         <span class="legend-item"><span class="mode-dot manual"></span>Manual</span>
                         <span class="legend-item"><span class="mode-dot pending"></span>Pending</span>
                     </div>
-                    
+
                     <!-- Pending Requests (GM only) -->
                     <div class="pending-requests" id="pending-requests" style="display: none;">
                         <h4><i class="fas fa-clock"></i> Pending Requests (<span id="pending-count">0</span>)</h4>
@@ -129,14 +129,72 @@
                             <!-- Populated dynamically -->
                         </div>
                     </div>
-                    
+
                     <!-- Player Grid -->
                     <div class="players-grid" id="players-grid">
                         <!-- Populated dynamically -->
                     </div>
-                    
+
                     <!-- No Players Message -->
                     <p class="no-players" id="no-players" style="display: none;">No players connected.</p>
+                </div>
+            </div>
+
+            <!-- Bottom Section -->
+            <div class="bottom-section">
+
+                <!-- VTT Chat Log -->
+                <div class="panel-section vtt-chat-log-panel">
+                    <div class="panel-section-header">
+                        <h3><i class="fas fa-comments"></i> VTT Chat Log</h3>
+                    </div>
+                    <div class="panel-section-content" id="vtt-chat-log">
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="bottom-right">
+
+                    <!-- Top Row: Camera + Controls -->
+                    <div class="bottom-right-top">
+                        <div class="panel-section camera-window-panel">
+                            <div class="camera-controls" id="camera-controls-normal">
+                                <select id="camera-select" class="camera-select"></select>
+                            </div>
+                            <div class="camera-controls hidden" id="camera-controls-define">
+                                <span class="camera-define-hint">Click points along the tray edge</span>
+                            </div>
+                            <div class="panel-section-header camera-panel-header">
+                                <h3><i class="fas fa-camera"></i> Camera</h3>
+                            </div>
+                            <div class="panel-section-content" id="camera-window"></div>
+                            <canvas id="camera-display"></canvas>
+                            <div id="phone-qr-container" class="phone-qr-container hidden">
+                                <p class="phone-qr-hint">Scan with your phone to connect</p>
+                                <img id="phone-qr-img" src="" alt="QR Code" class="phone-qr-img" />
+                            </div>
+                            <canvas id="tray-canvas" class="tray-canvas"></canvas>
+                            <span id="camera-status" class="camera-status"></span>
+                            <span id="camera-motion" class="camera-motion"></span>
+                        </div>
+
+                        <div class="user-controls-panel" id="user-controls">
+                            <button class="user-control-btn"></button>
+                            <button class="user-control-btn"></button>
+                            <button class="user-control-btn"></button>
+                            <button class="user-control-btn"></button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row: Dice Roll Stats -->
+                    <div class="panel-section dice-roll-stats-panel">
+                        <div class="panel-section-header">
+                            <h3><i class="fas fa-chart-bar"></i> Dice Roll Stats</h3>
+                        </div>
+                        <div class="panel-section-content" id="dice-roll-stats">
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </main>
@@ -232,6 +290,7 @@
     <script src="/static/js/ui/dice-entry.js?v=2"></script>
     <script src="/static/js/ui/player-modes.js?v=1"></script>
     <script src="/static/js/ui/window-control.js?v=1"></script>
+    <script src="/static/js/ui/camera.js?v=11"></script>
     
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>

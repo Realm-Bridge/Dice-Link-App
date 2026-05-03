@@ -4,9 +4,9 @@ from urllib.parse import urlparse
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtCore import QTimer, QUrl, QPoint, Qt
+from PyQt6.QtCore import QTimer, QUrl, Qt
 
-from debug import log_vtt, log_drag_start, log_drag_move, log_drag_end
+from debug import log_vtt
 from bridge_state import set_bridge
 from dla_bridge import DLABridge
 from vtt_windows import VTTPopupWindow, VTTViewingWindow
@@ -74,7 +74,7 @@ class VTTWebView(QWebEngineView):
         super().__init__(parent)
         self.allowed_origin = allowed_origin
         self.popup_windows = []  # Keep references to prevent garbage collection
-        
+
         # Set custom page for navigation blocking
         self.custom_page = VTTWebPage(self.page().profile(), allowed_origin)
         self.setPage(self.custom_page)
@@ -311,27 +311,26 @@ class VTTPopupView(QWebEngineView):
 
 class DraggableWebEngineView(QWebEngineView):
     """Main DLA UI browser - QWebEngineView that allows drag-and-drop to other applications"""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.drag_position = QPoint()
-    
-    def mousePressEvent(self, event):
-        """Capture mouse position when drag starts"""
-        if event.button() == 1:  # Left mouse button
-            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            log_drag_start(f"Drag started at screen position {event.globalPosition().toPoint()}")
-    
-    def mouseMoveEvent(self, event):
-        """Log drag movement"""
-        if event.buttons() == 1:  # Left mouse button is pressed
-            log_drag_move(f"Dragging, position delta: {event.globalPosition().toPoint() - self.drag_position}")
-    
-    def mouseReleaseEvent(self, event):
-        """Log drag end"""
-        if event.button() == 1:  # Left mouse button
-            log_drag_end(f"Drag ended at screen position {event.globalPosition().toPoint()}")
-    
+        self._designed_width = None
+        self._designed_height = None
+        self._enforcing_ratio = False
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if not self._designed_width:
+            return
+        new_width = event.size().width()
+        self.setZoomFactor(new_width / self._designed_width)
+        if self._designed_height and not self._enforcing_ratio:
+            target_height = int(new_width * self._designed_height / self._designed_width)
+            if event.size().height() != target_height:
+                self._enforcing_ratio = True
+                self.resize(new_width, target_height)
+                self._enforcing_ratio = False
+
     def keyPressEvent(self, event):
         """Handle F12 to open developer tools"""
         if event.key() == Qt.Key.Key_F12:

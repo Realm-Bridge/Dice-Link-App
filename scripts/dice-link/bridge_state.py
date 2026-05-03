@@ -159,6 +159,32 @@ def send_player_modes_to_ui(player_modes_data):
         return False
 
 
+def send_camera_frame_to_dlc(frame_b64: str):
+    """Send a single camera frame to DLC via the bridge."""
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.sendCameraFrame(frame_b64)
+            return True
+        except Exception as e:
+            log_bridge_state(f"Error sending camera frame to DLC: {e}")
+            return False
+    return False
+
+
+def send_camera_stream_end_to_dlc():
+    """Signal DLC that the camera stream has ended."""
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.sendCameraStreamEnd()
+            return True
+        except Exception as e:
+            log_bridge_state(f"Error sending camera stream end to DLC: {e}")
+            return False
+    return False
+
+
 def send_button_select_to_dlc(button_data):
     """
     Send button selection from UI to DLC via the bridge.

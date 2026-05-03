@@ -13,15 +13,14 @@ from config import DEBUG
 DEBUG_ENABLED = DEBUG
 
 # Category-specific switches (all default to DEBUG_ENABLED)
-DEBUG_UPNP = True
-DEBUG_WEBSOCKET = True
 DEBUG_SERVER = True
-DEBUG_DRAG = True
+DEBUG_DRAG = False
 DEBUG_CONNECTION_MONITOR = True
 DEBUG_VTT = True
 DEBUG_BRIDGE_STATE = True
-DEBUG_STARTUP_DIALOG = True
-DEBUG_DPI = True
+DEBUG_STARTUP_DIALOG = False
+DEBUG_DPI = False
+DEBUG_SNAP = False
 
 # --- Log file ---
 _LOG_DIR = Path(__file__).resolve().parent / "logs"
@@ -50,77 +49,10 @@ def log(category: str, message: str):
     _write_log(line)
 
 
-def log_upnp(message: str):
-    """Log UPnP-related debug messages."""
-    if DEBUG_ENABLED and DEBUG_UPNP:
-        line = f"[UPnP] {message}"
-        print(line)
-        _write_log(line)
-
-
-def log_websocket(message: str):
-    """Log WebSocket-related debug messages."""
-    if DEBUG_ENABLED and DEBUG_WEBSOCKET:
-        line = f"[WebSocket DEBUG] {message}"
-        print(line)
-        _write_log(line)
-
-
 def log_server(message: str):
     """Log server-related debug messages."""
     if DEBUG_ENABLED and DEBUG_SERVER:
         line = f"[Server DEBUG] {message}"
-        print(line)
-        _write_log(line)
-
-
-def log_dlc_connection(client_host: str, client_port: int, headers: dict):
-    """Log DLC connection attempt details."""
-    if not (DEBUG_ENABLED and DEBUG_WEBSOCKET):
-        return
-    lines = [
-        f"[WebSocket DEBUG] /ws/dlc connection attempt received",
-        f"[WebSocket DEBUG] Client address: {client_host}:{client_port}",
-        f"[WebSocket DEBUG] Headers: {headers}"
-    ]
-    for line in lines:
-        print(line)
-        _write_log(line)
-
-
-def log_dlc_accepted():
-    """Log DLC connection accepted."""
-    if DEBUG_ENABLED and DEBUG_WEBSOCKET:
-        line = "[WebSocket DEBUG] WebSocket connection ACCEPTED for /ws/dlc"
-        print(line)
-        _write_log(line)
-
-
-def log_dlc_message(data: str):
-    """Log DLC message received."""
-    if DEBUG_ENABLED and DEBUG_WEBSOCKET:
-        truncated = data[:200] + "..." if len(data) > 200 else data
-        line = f"[WebSocket DEBUG] Received message from DLC: {truncated}"
-        print(line)
-        _write_log(line)
-
-
-def log_dlc_response(response: str):
-    """Log DLC response sent."""
-    if DEBUG_ENABLED and DEBUG_WEBSOCKET:
-        truncated = response[:200] + "..." if len(response) > 200 else response
-        line = f"[WebSocket DEBUG] Sending response to DLC: {truncated}"
-        print(line)
-        _write_log(line)
-
-
-def log_dlc_disconnect(clean: bool = True, error: str = None):
-    """Log DLC disconnection."""
-    if DEBUG_ENABLED and DEBUG_WEBSOCKET:
-        if clean:
-            line = "[WebSocket DEBUG] WebSocket disconnected (clean disconnect)"
-        else:
-            line = f"[WebSocket DEBUG] WebSocket error: {error}"
         print(line)
         _write_log(line)
 
@@ -133,60 +65,13 @@ def log_connection_monitor(message: str):
         _write_log(line)
 
 
-def log_upnp_device(device_name: str, device_type: str = "unknown"):
-    """Log UPnP device discovery."""
-    if DEBUG_ENABLED and DEBUG_UPNP:
-        lines = [
-            f"[UPnP DEBUG] Checking device: {device_name}",
-            f"[UPnP DEBUG] Device type: {device_type}"
-        ]
-        for line in lines:
-            print(line)
-            _write_log(line)
-
-
-def log_upnp_services(services: list):
-    """Log available UPnP services."""
-    if DEBUG_ENABLED and DEBUG_UPNP:
-        line = f"[UPnP DEBUG] Available services: {services}"
-        print(line)
-        _write_log(line)
-
-
-def log_upnp_service_detail(service_id: str, service_type: str = None, actions: list = None, error: str = None):
-    """Log UPnP service details."""
-    if not (DEBUG_ENABLED and DEBUG_UPNP):
-        return
-    lines = [f"[UPnP DEBUG] Examining service: {service_id}"]
-    if service_type:
-        lines.append(f"[UPnP DEBUG] Service type string: {service_type}")
-    if actions:
-        lines.append(f"[UPnP DEBUG] Service actions: {actions}")
-    if error:
-        lines.append(f"[UPnP DEBUG] Error accessing service: {error}")
-    for line in lines:
-        print(line)
-        _write_log(line)
-
-
-def log_upnp_error(context: str, error: str, traceback: str = None):
-    """Log UPnP errors with optional traceback."""
-    if DEBUG_ENABLED and DEBUG_UPNP:
-        lines = [f"[UPnP DEBUG] Error {context}: {error}"]
-        if traceback:
-            lines.append(f"[UPnP DEBUG] Traceback: {traceback}")
-        for line in lines:
-            print(line)
-            _write_log(line)
-
-
 def log_startup(host: str, port: int):
     """Log server startup configuration."""
     if DEBUG_ENABLED and DEBUG_SERVER:
         lines = [
             f"[Server DEBUG] WEBSOCKET_HOST configured as: {host}",
             f"[Server DEBUG] WEBSOCKET_PORT configured as: {port}",
-            f"[Server DEBUG] Waiting for connections on /ws/dlc endpoint..."
+            f"[Server DEBUG] Ready for QWebChannel connections from embedded browser..."
         ]
         for line in lines:
             print(line)
@@ -271,3 +156,18 @@ def log_dpi(message: str):
         line = f"[DPI] {message}"
         print(line)
         _write_log(line)
+
+
+def log_snap(message: str):
+    """Log Windows snap/docking native event messages."""
+    if DEBUG_ENABLED and DEBUG_SNAP:
+        line = f"[Snap] {message}"
+        print(line)
+        _write_log(line)
+
+
+def log_flicker():
+    """Log a user-reported flicker marker. Always written regardless of debug settings."""
+    line = "[FLICKER REPORTED] <<<<<<<<<<<<<<<<<<<<<<<<<<"
+    print(line)
+    _write_log(line)

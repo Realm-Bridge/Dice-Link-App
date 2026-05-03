@@ -13,8 +13,10 @@ class WindowController(QObject):
     def __init__(self, browser, main_window=None):
         super().__init__()
         self.browser = browser
-        self.main_window = main_window  # Reference to main application window
-        self.mouse_offset = QPoint()  # Offset from mouse to window corner
+        self.main_window = main_window
+        self.mouse_offset = QPoint()
+        self._resize_start_mouse = None
+        self._resize_start_geometry = None
     
     @pyqtSlot()
     def minimize(self):
@@ -29,23 +31,41 @@ class WindowController(QObject):
     @pyqtSlot(int, int)
     def startDrag(self, x, y):
         """Start window drag - calculate offset from mouse to window corner"""
-        # JavaScript sends screenX/screenY (global screen coordinates)
         global_mouse_pos = QPoint(x, y)
         window_pos = self.browser.pos()
-        # Store offset: how far from window corner the mouse clicked
         self.mouse_offset = window_pos - global_mouse_pos
-    
+
     @pyqtSlot(int, int)
     def doDrag(self, x, y):
         """Perform window drag - move window so mouse stays at same relative position"""
         if self.mouse_offset.isNull():
             return
-        # JavaScript sends screenX/screenY (global screen coordinates)
         global_mouse_pos = QPoint(x, y)
-        # Window position = mouse position + stored offset
         new_window_pos = global_mouse_pos + self.mouse_offset
         self.browser.move(new_window_pos)
-    
+
+    @pyqtSlot(int, int)
+    def startResize(self, x, y):
+        """Start window resize - record initial mouse position and window geometry"""
+        self._resize_start_mouse = QPoint(x, y)
+        self._resize_start_geometry = self.browser.geometry()
+
+    @pyqtSlot(int, int)
+    def doResize(self, x, y):
+        """Resize window - width follows mouse, height derived from aspect ratio"""
+        if self._resize_start_mouse is None or self._resize_start_geometry is None:
+            return
+        diff = QPoint(x, y) - self._resize_start_mouse
+        geo = self._resize_start_geometry
+        new_width = max(geo.width() + diff.x(), self.browser.minimumWidth())
+        designed_w = getattr(self.browser, '_designed_width', None)
+        designed_h = getattr(self.browser, '_designed_height', None)
+        if designed_w and designed_h:
+            new_height = int(new_width * designed_h / designed_w)
+        else:
+            new_height = geo.height() + diff.y()
+        self.browser.resize(new_width, new_height)
+
     @pyqtSlot()
     def openConnectionDialog(self):
         """Open connection dialog to enter VTT server URL"""
