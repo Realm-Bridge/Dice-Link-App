@@ -272,7 +272,13 @@ function startCameraDisplayLoop() {
                 sw = (trayBbox.x1 - trayBbox.x0) * sourceW;
                 sh = (trayBbox.y1 - trayBbox.y0) * sourceH;
             }
-            ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            const scale = Math.min(canvas.width / sw, canvas.height / sh);
+            const dw = sw * scale;
+            const dh = sh * scale;
+            const dx = (canvas.width - dw) / 2;
+            const dy = (canvas.height - dh) / 2;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh);
         } else {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
