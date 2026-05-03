@@ -5,6 +5,7 @@
 
 let cameraActive = false;
 let cameraSource = null; // 'usb' | null
+let suppressSelectChange = false;
 let motionPollInterval = null;
 
 let cameraWS = null;
@@ -22,6 +23,7 @@ function initCameraUI() {
     const cameraSelect = document.getElementById('camera-select');
     if (cameraSelect) {
         cameraSelect.addEventListener('change', async () => {
+            if (suppressSelectChange) return;
             const index = parseInt(cameraSelect.value);
             await selectCamera(index);
         });
@@ -90,6 +92,7 @@ function showCameraStatus(message) {
 }
 
 async function loadCameraList() {
+    suppressSelectChange = true;
     try {
         const response = await fetch('/api/cameras');
         const data = await response.json();
@@ -106,11 +109,13 @@ async function loadCameraList() {
             const option = document.createElement('option');
             option.value = cam.index;
             option.textContent = cam.name;
-            if (cam.index === data.selectedIndex) option.selected = true;
             select.appendChild(option);
         });
+        select.value = data.selectedIndex;
     } catch (error) {
         debugError('Failed to load camera list', error);
+    } finally {
+        suppressSelectChange = false;
     }
 }
 

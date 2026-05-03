@@ -126,7 +126,7 @@ async def websocket_camera(websocket: WebSocket):
     try:
         while True:
             if camera_manager.is_capturing:
-                raw = camera_manager.get_raw_rgba_bytes()
+                raw = camera_manager.get_raw_rgba_bytes(max_height=720)
                 if raw:
                     await websocket.send_bytes(raw)
             await asyncio.sleep(frame_interval)

@@ -310,12 +310,16 @@ class CameraManager:
         _, buffer = cv2.imencode('.png', bgra)
         return buffer.tobytes()
 
-    def get_raw_rgba_bytes(self) -> Optional[bytes]:
+    def get_raw_rgba_bytes(self, max_height: int = None) -> Optional[bytes]:
         """Return current frame as raw RGBA bytes prefixed with 4-byte width/height header."""
         with self.frame_lock:
             if self.current_frame is None:
                 return None
             frame = self.current_frame.copy()
+        if max_height and frame.shape[0] > max_height:
+            scale = max_height / frame.shape[0]
+            new_w = int(frame.shape[1] * scale)
+            frame = cv2.resize(frame, (new_w, max_height))
         frame_rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
         h, w = frame_rgba.shape[:2]
         header = struct.pack('>HH', w, h)
