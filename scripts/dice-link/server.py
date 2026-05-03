@@ -145,13 +145,17 @@ phone_peer_connections: set = set()
 
 async def _feed_camera_manager(track):
     """Decode phone video frames into camera_manager for motion detection and processing."""
+    frame_count = 0
     try:
         while True:
             frame = await track.recv()
             img = frame.to_ndarray(format='bgr24')
             camera_manager.receive_phone_frame(img)
-    except Exception:
-        pass
+            frame_count += 1
+            if frame_count == 1 or frame_count % 30 == 0:
+                log_server(f"Phone camera: {frame_count} frames received, size={img.shape[1]}x{img.shape[0]}")
+    except Exception as e:
+        log_server(f"Phone camera feed stopped after {frame_count} frames: {type(e).__name__}: {e}")
 
 
 @app.post("/api/phone-camera/offer")
