@@ -1,4 +1,4 @@
-"""Camera management for Dice Link - Phase 3"""
+"""Camera management for Dice Link"""
 
 import cv2
 import base64
@@ -12,7 +12,6 @@ from debug import log
 from core.storage import get_appdata_path
 
 PHONE_CAMERA_INDEX = -1
-RESAMPLE_INTERVAL_SECONDS = 30
 
 
 class CameraManager:
@@ -26,17 +25,12 @@ class CameraManager:
         self.current_frame: Optional[np.ndarray] = None
         self.frame_lock = threading.Lock()
         self.capture_thread: Optional[threading.Thread] = None
-        self._resample_thread: Optional[threading.Thread] = None
         self.target_fps: int = 15
         self._stop_event = threading.Event()
-        self.calibration_frame: Optional[np.ndarray] = None
-        self.tray_colour_lower: Optional[np.ndarray] = None  # 5th percentile HSV of empty tray pixels
-        self.tray_colour_upper: Optional[np.ndarray] = None  # 95th percentile HSV of empty tray pixels
         self.tray_polygon: list = []
         self._prev_motion_frame: Optional[np.ndarray] = None
         self._motion_detected: bool = False
         self._still_counter: int = 0
-        self._load_calibration()
         self._load_tray_region()
 
     @property
@@ -66,7 +60,7 @@ class CameraManager:
         changed_pixels = cv2.countNonZero(thresh)
 
         h, w = frame.shape[:2]
-        motion_threshold = max(500, int(h * w * 0.0015))  # 0.15% of frame area
+        motion_threshold = max(500, int(h * w * 0.0015))
 
         if changed_pixels > motion_threshold:
             self._still_counter = 0
@@ -77,38 +71,6 @@ class CameraManager:
                 self._motion_detected = False
 
         self._prev_motion_frame = frame.copy()
-
-    @property
-    def is_calibrated(self) -> bool:
-        return self.calibration_frame is not None
-
-    def _calibration_path(self) -> Path:
-        return get_appdata_path() / 'calibration_baseline.png'
-
-    def _tray_colour_path(self) -> Path:
-        return get_appdata_path() / 'tray_colour.npy'
-
-    def _load_calibration(self):
-        """Load saved calibration baseline and tray colour from disk if they exist."""
-        path = self._calibration_path()
-        if path.exists():
-            frame = cv2.imread(str(path))
-            if frame is not None:
-                self.calibration_frame = frame
-                log("Camera", "Calibration baseline loaded from disk")
-
-        colour_path = self._tray_colour_path()
-        if colour_path.exists():
-            try:
-                bounds = np.load(str(colour_path))
-                if bounds.shape == (2, 3):
-                    self.tray_colour_lower = bounds[0]
-                    self.tray_colour_upper = bounds[1]
-                    log("Camera", f"Tray colour bounds loaded: lower={self.tray_colour_lower} upper={self.tray_colour_upper}")
-                else:
-                    log("Camera", "Tray colour file is old format — recalibration needed")
-            except Exception:
-                log("Camera", "Tray colour file could not be loaded — recalibration needed")
 
     def _tray_region_path(self) -> Path:
         return get_appdata_path() / 'tray_region.json'
@@ -132,70 +94,6 @@ class CameraManager:
         with open(str(path), 'w') as f:
             json.dump(points, f)
         log("Camera", f"Tray region saved ({len(points)} points)")
-        return True
-
-    def _sample_tray_colour(self, frame: np.ndarray):
-        """
-        Sample the actual range of HSV values from inside the tray polygon.
-        Returns (lower, upper) as uint8 arrays, or (None, None) if unavailable.
-        Uses 5th/95th percentiles so the bounds cover actual tray variation.
-        """
-        if not self.tray_polygon or len(self.tray_polygon) < 3:
-            return None, None
-        h, w = frame.shape[:2]
-        pts = np.array(
-            [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
-            dtype=np.int32
-        )
-        mask = np.zeros((h, w), dtype=np.uint8)
-        cv2.fillPoly(mask, [pts], 255)
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        pixels = hsv[mask == 255]
-        if len(pixels) == 0:
-            return None, None
-        # Key on hue and saturation only — standard chroma key practice.
-        # Value (brightness) is intentionally excluded: shadows and highlights
-        # on the felt share the same hue regardless of brightness, so including
-        # value would cause dark/bright tray areas to bleed through.
-        hue_lower = np.percentile(pixels[:, 0], 5)
-        hue_upper = np.percentile(pixels[:, 0], 95)
-        sat_lower = np.percentile(pixels[:, 1], 5)
-
-        lower = np.array([hue_lower, sat_lower, 0], dtype=np.float32)
-        upper = np.array([hue_upper, 255, 255], dtype=np.float32)
-
-        # Small safety margin on hue and saturation lower bound
-        lower[0] = max(0, lower[0] - 3)
-        upper[0] = min(179, upper[0] + 3)
-        lower[1] = max(0, lower[1] - 20)
-
-        return lower.astype(np.uint8), upper.astype(np.uint8)
-
-    def calibrate(self) -> bool:
-        """Capture the current frame as the background baseline and sample the tray colour."""
-        if not self.is_capturing:
-            log("Camera", "Calibration failed — camera not capturing")
-            return False
-
-        with self.frame_lock:
-            if self.current_frame is None:
-                log("Camera", "Calibration failed — no frame available")
-                return False
-            frame = self.current_frame.copy()
-
-        self.calibration_frame = frame
-        cv2.imwrite(str(self._calibration_path()), frame)
-        log("Camera", f"Calibration baseline saved ({frame.shape[1]}x{frame.shape[0]})")
-
-        lower, upper = self._sample_tray_colour(frame)
-        if lower is not None:
-            self.tray_colour_lower = lower
-            self.tray_colour_upper = upper
-            np.save(str(self._tray_colour_path()), np.array([lower, upper]))
-            log("Camera", f"Tray colour bounds sampled: lower={lower} upper={upper}")
-        else:
-            log("Camera", "Tray colour sampling skipped — no tray polygon defined")
-
         return True
 
     def list_cameras(self) -> list:
@@ -260,8 +158,6 @@ class CameraManager:
             self.is_capturing = True
             self.target_fps = fps
             self._stop_event.clear()
-            self._resample_thread = threading.Thread(target=self._resample_loop, daemon=True)
-            self._resample_thread.start()
             log("Camera", "Phone camera mode started — waiting for WebRTC frames")
             return True
 
@@ -279,9 +175,6 @@ class CameraManager:
 
         self.capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
         self.capture_thread.start()
-
-        self._resample_thread = threading.Thread(target=self._resample_loop, daemon=True)
-        self._resample_thread.start()
 
         return True
 
@@ -303,23 +196,6 @@ class CameraManager:
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
-    def _resample_loop(self):
-        """Background thread that periodically re-samples tray colour bounds to adapt to lighting changes."""
-        while not self._stop_event.wait(RESAMPLE_INTERVAL_SECONDS):
-            if self.tray_colour_lower is None:
-                continue
-            if self._motion_detected:
-                continue
-            with self.frame_lock:
-                if self.current_frame is None:
-                    continue
-                frame = self.current_frame.copy()
-            lower, upper = self._sample_tray_colour(frame)
-            if lower is not None:
-                self.tray_colour_lower = lower
-                self.tray_colour_upper = upper
-                log("Camera", f"Tray colour re-sampled: lower={lower} upper={upper}")
-
     def receive_phone_frame(self, frame_bgr: np.ndarray):
         """Store a decoded video frame received from the phone via WebRTC."""
         self._check_motion(frame_bgr)
@@ -337,9 +213,6 @@ class CameraManager:
         if self.capture_thread and self.capture_thread.is_alive():
             self.capture_thread.join(timeout=1.0)
 
-        if self._resample_thread and self._resample_thread.is_alive():
-            self._resample_thread.join(timeout=2.0)
-
         if self.camera:
             self.camera.release()
             self.camera = None
@@ -350,11 +223,8 @@ class CameraManager:
             self.current_frame = None
 
     def get_processed_frame(self) -> Optional[bytes]:
-        """
-        Isolate dice from the tray background using hybrid chroma key + baseline diff.
-        Returns PNG bytes with background fully transparent, dice in colour.
-        Returns None if not capturing, no frame available, or no dice detected.
-        """
+        """Crop the tray region and return it as a BGRA PNG for the Foundry canvas.
+        Everything outside the tray polygon is transparent."""
         if not self.is_capturing:
             return None
 
@@ -363,67 +233,49 @@ class CameraManager:
                 return None
             frame = self.current_frame.copy()
 
+        if not self.tray_polygon or len(self.tray_polygon) < 3:
+            return None
+
         h, w = frame.shape[:2]
+        pts = np.array(
+            [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
+            dtype=np.int32
+        )
 
-        # Build tray polygon mask — everything outside the tray is excluded
-        tray_mask = np.full((h, w), 255, dtype=np.uint8)
-        if self.tray_polygon and len(self.tray_polygon) >= 3:
-            pts = np.array(
-                [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
-                dtype=np.int32
-            )
-            tray_mask = np.zeros((h, w), dtype=np.uint8)
-            cv2.fillPoly(tray_mask, [pts], 255)
+        x, y, bw, bh = cv2.boundingRect(pts)
+        x = max(0, x)
+        y = max(0, y)
+        bw = min(bw, w - x)
+        bh = min(bh, h - y)
 
-        # --- Primary: chroma key ---
-        # Key out pixels whose HSV values fall within the bounds recorded at calibration.
-        # Foreground = pixels outside those bounds (i.e. not tray background).
-        chroma_mask = np.zeros((h, w), dtype=np.uint8)
-        if self.tray_colour_lower is not None and self.tray_colour_upper is not None:
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            hue_lower = int(self.tray_colour_lower[0])
-            hue_upper = int(self.tray_colour_upper[0])
-
-            if hue_lower <= hue_upper:
-                bg_mask = cv2.inRange(hsv, self.tray_colour_lower, self.tray_colour_upper)
-            else:
-                # Hue wraps around 0/179 — split into two ranges
-                upper1 = self.tray_colour_upper.copy()
-                upper1[0] = 179
-                lower2 = self.tray_colour_lower.copy()
-                lower2[0] = 0
-                bg_mask = cv2.bitwise_or(
-                    cv2.inRange(hsv, self.tray_colour_lower, upper1),
-                    cv2.inRange(hsv, lower2, self.tray_colour_upper)
-                )
-
-            chroma_mask = cv2.bitwise_and(cv2.bitwise_not(bg_mask), tray_mask)
-
-        # Diff fallback disabled — phone EIS causes frame shifts that flood the
-        # diff mask and override the chroma key. Chroma key alone is used.
-        if self.tray_colour_lower is None:
-            return None
-        combined = chroma_mask
-
-        # Morphological cleanup: close small holes then open to remove noise
-        kernel = np.ones((3, 3), np.uint8)
-        combined = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel, iterations=2)
-        combined = cv2.morphologyEx(combined, cv2.MORPH_OPEN, kernel, iterations=1)
-
-        # Find significant contours and fill them directly (no convex hull)
-        contours, _ = cv2.findContours(combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        significant = [c for c in contours if cv2.contourArea(c) > 800]
-
-        if not significant:
-            return None
-
-        clean_mask = np.zeros((h, w), dtype=np.uint8)
-        cv2.drawContours(clean_mask, significant, -1, 255, -1)
+        mask = np.zeros((h, w), dtype=np.uint8)
+        cv2.fillPoly(mask, [pts], 255)
 
         bgra = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-        bgra[:, :, 3] = clean_mask
+        bgra[:, :, 3] = mask
+        crop = bgra[y:y + bh, x:x + bw]
 
-        _, buffer = cv2.imencode('.png', bgra)
+        _, buffer = cv2.imencode('.png', crop)
+        return buffer.tobytes()
+
+    def get_boundary_frame(self) -> Optional[bytes]:
+        """Return the current frame with the tray boundary polygon drawn on it, as PNG bytes."""
+        with self.frame_lock:
+            if self.current_frame is None:
+                return None
+            frame = self.current_frame.copy()
+
+        if not self.tray_polygon or len(self.tray_polygon) < 3:
+            return None
+
+        h, w = frame.shape[:2]
+        pts = np.array(
+            [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
+            dtype=np.int32
+        )
+        cv2.polylines(frame, [pts], isClosed=True, color=(0, 255, 0), thickness=3)
+
+        _, buffer = cv2.imencode('.png', frame)
         return buffer.tobytes()
 
     def get_raw_rgba_bytes(self, max_height: int = None) -> Optional[bytes]:

@@ -409,17 +409,6 @@ async def camera_motion():
     return JSONResponse({"motion": camera_manager.is_motion})
 
 
-@app.post("/api/camera/calibrate")
-async def calibrate_camera():
-    """Capture current frame as background baseline"""
-    success = camera_manager.calibrate()
-    return JSONResponse({
-        "success": success,
-        "isCalibrated": camera_manager.is_calibrated
-    })
-
-
-
 @app.websocket("/ws/ui")
 async def websocket_ui(websocket: WebSocket):
     """WebSocket endpoint for browser UI connections"""

@@ -162,7 +162,7 @@
                                 <select id="camera-select" class="camera-select"></select>
                             </div>
                             <div class="camera-controls hidden" id="camera-controls-define">
-                                <span class="camera-define-hint">Click points along the tray edge</span>
+                                <span class="camera-define-hint">Click points around your tray boundary. Include the walls. Make sure the tray is empty.</span>
                             </div>
                             <div class="panel-section-header camera-panel-header">
                                 <h3><i class="fas fa-camera"></i> Camera</h3>
@@ -209,6 +209,25 @@
                 <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="footer-realm-bridge-icon" draggable="false" />
             </a>
         </footer>
+    </div>
+
+    <!-- Boundary Confirmation Popup -->
+    <div id="boundary-popup-overlay" class="boundary-popup-overlay hidden">
+        <div class="boundary-popup-panel">
+            <h2 class="boundary-popup-title" id="boundary-popup-title">Check Your Tray Position</h2>
+            <p id="boundary-popup-instructions">Make sure your camera is in place and viewing your dice tray. Check that the boundary shown matches your tray position. If your tray has moved, move it back into position and click Confirm. Putting the tray back is faster than redrawing — redrawing requires you to do it again next session too.</p>
+            <p id="boundary-popup-define-hint" class="hidden">Click around the edge of your tray to place boundary points. Include the walls. Make sure the tray is empty. Click Confirm when done.</p>
+            <canvas id="boundary-popup-canvas" class="boundary-popup-canvas"></canvas>
+            <div class="boundary-popup-buttons" id="boundary-popup-btns-confirm">
+                <button class="btn btn-secondary" onclick="redrawBoundary()">Redraw</button>
+                <button class="btn btn-primary" onclick="confirmBoundary()">Confirm</button>
+            </div>
+            <div class="boundary-popup-buttons hidden" id="boundary-popup-btns-define">
+                <button class="btn btn-danger" onclick="clearPopupTrayPoints()">Clear</button>
+                <button class="btn btn-secondary" onclick="cancelPopupRedraw()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmPopupRedraw()">Confirm</button>
+            </div>
+        </div>
     </div>
 
     <!-- Settings Panel Overlay -->
@@ -290,7 +309,7 @@
     <script src="/static/js/ui/dice-entry.js?v=2"></script>
     <script src="/static/js/ui/player-modes.js?v=1"></script>
     <script src="/static/js/ui/window-control.js?v=1"></script>
-    <script src="/static/js/ui/camera.js?v=14"></script>
+    <script src="/static/js/ui/camera.js?v=16"></script>
     
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>

@@ -14,7 +14,14 @@ let trayBbox = null;
 let savedTrayBbox = null;
 let usbFrameCanvas = null;
 let usbFrameCtx = null;
-let inTrayDefinitionMode = false;
+let showBoundaryMode = false;
+let savedTrayPoints = []; // Persisted polygon — loaded from server on init
+
+// Popup state
+let boundaryPopupRAF = null;
+let popupDefineMode = false;
+let popupPointsBackup = [];
+let trayPoints = []; // In-progress points during definition
 
 function initCameraUI() {
     loadCameraList();
@@ -28,9 +35,6 @@ function initCameraUI() {
             await selectCamera(index);
         });
     }
-
-    const canvas = document.getElementById('tray-canvas');
-    if (canvas) canvas.addEventListener('click', onTrayCanvasClick);
 
     updateCameraButtons('off');
 }
@@ -55,29 +59,60 @@ function updateCameraButtons(state) {
     } else if (state === 'running') {
         btns[0].textContent = 'Stop';
         btns[0].onclick = toggleCamera;
-        btns[1].textContent = 'Calibrate';
-        btns[1].onclick = calibrateCamera;
+        btns[1].textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
+        btns[1].onclick = toggleShowBoundary;
         btns[3].textContent = 'Define Tray';
         btns[3].onclick = startTrayDefinition;
-    } else if (state === 'define') {
-        btns[0].textContent = 'Clear';
-        btns[0].onclick = clearTrayPoints;
-        btns[1].textContent = 'Confirm';
-        btns[1].onclick = confirmTrayRegion;
-        btns[2].textContent = 'Cancel';
-        btns[2].onclick = exitTrayDefinition;
     }
 }
 
-async function calibrateCamera() {
-    try {
-        const response = await fetch('/api/camera/calibrate', { method: 'POST' });
-        const data = await response.json();
-        showCameraStatus(data.success ? 'Calibrated' : 'Failed — start camera first');
-    } catch (error) {
-        debugError('Failed to calibrate camera', error);
-        showCameraStatus('Error');
+// ── Show Boundary Toggle ────────────────────────────────────────────────────
+
+function toggleShowBoundary() {
+    showBoundaryMode = !showBoundaryMode;
+    const btns = document.querySelectorAll('.user-control-btn');
+    if (btns.length >= 2) {
+        btns[1].textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
     }
+}
+
+// ── Polygon Overlay Helper ──────────────────────────────────────────────────
+
+function drawPolygonOverlay(targetCanvas, points, sourceCanvas) {
+    if (!points || points.length === 0 || !sourceCanvas) return;
+    const sourceW = sourceCanvas.width;
+    const sourceH = sourceCanvas.height;
+    if (!sourceW || !sourceH) return;
+
+    const ctx = targetCanvas.getContext('2d');
+    const scale = Math.min(targetCanvas.width / sourceW, targetCanvas.height / sourceH);
+    const dw = sourceW * scale;
+    const dh = sourceH * scale;
+    const dx = (targetCanvas.width - dw) / 2;
+    const dy = (targetCanvas.height - dh) / 2;
+    const toCanvas = pt => [dx + pt[0] * dw, dy + pt[1] * dh];
+
+    if (points.length >= 2) {
+        ctx.beginPath();
+        const [x0, y0] = toCanvas(points[0]);
+        ctx.moveTo(x0, y0);
+        for (let i = 1; i < points.length; i++) {
+            const [x, y] = toCanvas(points[i]);
+            ctx.lineTo(x, y);
+        }
+        if (points.length >= 3) ctx.closePath();
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+
+    points.forEach(pt => {
+        const [x, y] = toCanvas(pt);
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFD700';
+        ctx.fill();
+    });
 }
 
 function showCameraStatus(message) {
@@ -124,6 +159,7 @@ async function loadTrayRegion() {
         const response = await fetch('/api/camera/tray-region');
         const data = await response.json();
         if (data.points && data.points.length >= 3) {
+            savedTrayPoints = data.points;
             trayBbox = computeTrayBbox(data.points);
         }
     } catch (error) {
@@ -196,9 +232,14 @@ function onPhoneCameraConnected() {
     startCameraDisplayLoop();
     startMotionPolling();
     showCameraStatus('Phone connected');
+
+    if (savedTrayPoints.length >= 3) {
+        showBoundaryPopup();
+    }
 }
 
 function onPhoneCameraDisconnected() {
+    showBoundaryMode = false;
     cameraSource = null;
     cameraActive = false;
     const panel = document.querySelector('.camera-window-panel');
@@ -274,9 +315,11 @@ function startCameraDisplayLoop() {
             }
         }
 
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         if (source && sourceW > 0 && sourceH > 0) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (trayBbox && !inTrayDefinitionMode) {
+            if (trayBbox && !showBoundaryMode) {
+                // Normal operation: zoom to tray bounding box
                 const tw = (trayBbox.x1 - trayBbox.x0) * sourceW;
                 const th = (trayBbox.y1 - trayBbox.y0) * sourceH;
                 const cx = (trayBbox.x0 + trayBbox.x1) / 2 * sourceW;
@@ -286,6 +329,7 @@ function startCameraDisplayLoop() {
                 const dy = canvas.height / 2 - cy * scale;
                 ctx.drawImage(source, 0, 0, sourceW, sourceH, dx, dy, sourceW * scale, sourceH * scale);
             } else {
+                // Full frame: show boundary mode
                 const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
                 const dw = sourceW * scale;
                 const dh = sourceH * scale;
@@ -293,8 +337,10 @@ function startCameraDisplayLoop() {
                 const dy = (canvas.height - dh) / 2;
                 ctx.drawImage(source, 0, 0, sourceW, sourceH, dx, dy, dw, dh);
             }
-        } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (showBoundaryMode && savedTrayPoints.length >= 3) {
+                drawPolygonOverlay(canvas, savedTrayPoints, source);
+            }
         }
 
         cameraDisplayRAF = requestAnimationFrame(draw);
@@ -332,6 +378,10 @@ async function startCamera() {
             startCameraWebSocket();
             startCameraDisplayLoop();
             startMotionPolling();
+
+            if (savedTrayPoints.length >= 3) {
+                showBoundaryPopup();
+            }
         }
     } catch (error) {
         debugError('Failed to start camera', error);
@@ -341,6 +391,7 @@ async function startCamera() {
 async function stopCamera() {
     try {
         await fetch('/api/camera/stop', { method: 'POST' });
+        showBoundaryMode = false;
         cameraActive = false;
         cameraSource = null;
         const panel = document.querySelector('.camera-window-panel');
@@ -392,118 +443,126 @@ function updateMotionLabel(isMotion) {
     label.className = 'camera-motion ' + (isMotion ? 'rolling' : 'still');
 }
 
-// ── Tray region definition ──────────────────────────────────────────────────
+// ── Boundary Confirmation Popup ─────────────────────────────────────────────
 
-let trayPoints = [];
-
-async function startTrayDefinition() {
-    if (!cameraActive) {
-        showCameraStatus('Start camera first');
-        return;
-    }
-
+function showBoundaryPopup() {
+    popupDefineMode = false;
     trayPoints = [];
-    savedTrayBbox = trayBbox;
-    trayBbox = null;
-    inTrayDefinitionMode = true;
 
-    const canvas = document.getElementById('tray-canvas');
+    const overlay = document.getElementById('boundary-popup-overlay');
+    if (!overlay) return;
+
+    document.getElementById('boundary-popup-title').textContent = 'Check Your Tray Position';
+    document.getElementById('boundary-popup-instructions').classList.remove('hidden');
+    document.getElementById('boundary-popup-define-hint').classList.add('hidden');
+    document.getElementById('boundary-popup-btns-confirm').classList.remove('hidden');
+    document.getElementById('boundary-popup-btns-define').classList.add('hidden');
+
+    const canvas = document.getElementById('boundary-popup-canvas');
     if (canvas) {
-        canvas.classList.add('define-mode');
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
+        canvas.style.cursor = '';
+        canvas.removeEventListener('click', onPopupCanvasClick);
     }
 
-    document.getElementById('camera-controls-normal').classList.add('hidden');
-    document.getElementById('camera-controls-define').classList.remove('hidden');
-    updateCameraButtons('define');
-
-    // Load existing tray points from server so user can see the current boundary
-    try {
-        const response = await fetch('/api/camera/tray-region');
-        const data = await response.json();
-        if (data.points && data.points.length >= 3) {
-            trayPoints = data.points;
-            drawTrayPolygon();
-        }
-    } catch (e) {}
+    overlay.classList.remove('hidden');
+    startBoundaryPopupLoop();
 }
 
-function onTrayCanvasClick(e) {
-    const canvas = document.getElementById('tray-canvas');
-    if (!canvas || !canvas.classList.contains('define-mode')) return;
-    if (!usbFrameCanvas || usbFrameCanvas.width === 0 || usbFrameCanvas.height === 0) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
-
-    const sourceW = usbFrameCanvas.width;
-    const sourceH = usbFrameCanvas.height;
-    const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
-    const dw = sourceW * scale;
-    const dh = sourceH * scale;
-    const dx = (canvas.width - dw) / 2;
-    const dy = (canvas.height - dh) / 2;
-
-    const fx = (clickX - dx) / dw;
-    const fy = (clickY - dy) / dh;
-    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
-
-    trayPoints.push([fx, fy]);
-    drawTrayPolygon();
-}
-
-function drawTrayPolygon() {
-    const canvas = document.getElementById('tray-canvas');
+function startBoundaryPopupLoop() {
+    const canvas = document.getElementById('boundary-popup-canvas');
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (trayPoints.length === 0) return;
-    if (!usbFrameCanvas || usbFrameCanvas.width === 0 || usbFrameCanvas.height === 0) return;
+    function draw() {
+        const cw = canvas.offsetWidth;
+        const ch = canvas.offsetHeight;
+        if (cw > 0 && ch > 0 && (canvas.width !== cw || canvas.height !== ch)) {
+            canvas.width = cw;
+            canvas.height = ch;
+        }
 
-    const sourceW = usbFrameCanvas.width;
-    const sourceH = usbFrameCanvas.height;
-    const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
-    const dw = sourceW * scale;
-    const dh = sourceH * scale;
-    const dx = (canvas.width - dw) / 2;
-    const dy = (canvas.height - dh) / 2;
-    const toCanvas = pt => [dx + pt[0] * dw, dy + pt[1] * dh];
-
-    ctx.beginPath();
-    const [x0, y0] = toCanvas(trayPoints[0]);
-    ctx.moveTo(x0, y0);
-    for (let i = 1; i < trayPoints.length; i++) {
-        const [x, y] = toCanvas(trayPoints[i]);
-        ctx.lineTo(x, y);
-    }
-    if (trayPoints.length >= 3) ctx.closePath();
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    trayPoints.forEach(pt => {
-        const [x, y] = toCanvas(pt);
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFD700';
-        ctx.fill();
-    });
-}
-
-function clearTrayPoints() {
-    trayPoints = [];
-    const canvas = document.getElementById('tray-canvas');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (usbFrameCanvas && usbFrameCanvas.width > 0 && usbFrameCanvas.height > 0 && canvas.width > 0 && canvas.height > 0) {
+            const scale = Math.min(canvas.width / usbFrameCanvas.width, canvas.height / usbFrameCanvas.height);
+            const dw = usbFrameCanvas.width * scale;
+            const dh = usbFrameCanvas.height * scale;
+            const dx = (canvas.width - dw) / 2;
+            const dy = (canvas.height - dh) / 2;
+            ctx.drawImage(usbFrameCanvas, 0, 0, usbFrameCanvas.width, usbFrameCanvas.height, dx, dy, dw, dh);
+
+            const pointsToDraw = popupDefineMode ? trayPoints : savedTrayPoints;
+            if (pointsToDraw.length > 0) {
+                drawPolygonOverlay(canvas, pointsToDraw, usbFrameCanvas);
+            }
+        }
+
+        boundaryPopupRAF = requestAnimationFrame(draw);
+    }
+
+    boundaryPopupRAF = requestAnimationFrame(draw);
+}
+
+function stopBoundaryPopupLoop() {
+    if (boundaryPopupRAF) {
+        cancelAnimationFrame(boundaryPopupRAF);
+        boundaryPopupRAF = null;
     }
 }
 
-async function confirmTrayRegion() {
+function confirmBoundary() {
+    const canvas = document.getElementById('boundary-popup-canvas');
+    if (canvas) {
+        canvas.style.cursor = '';
+        canvas.removeEventListener('click', onPopupCanvasClick);
+    }
+    popupDefineMode = false;
+    const overlay = document.getElementById('boundary-popup-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    stopBoundaryPopupLoop();
+}
+
+// Switch popup to define mode — stays open, canvas becomes clickable
+function redrawBoundary() {
+    popupDefineMode = true;
+    popupPointsBackup = [...savedTrayPoints];
+    trayPoints = [...savedTrayPoints]; // Start from existing boundary so user can see it
+
+    document.getElementById('boundary-popup-title').textContent = 'Define Tray Boundary';
+    document.getElementById('boundary-popup-instructions').classList.add('hidden');
+    document.getElementById('boundary-popup-define-hint').classList.remove('hidden');
+    document.getElementById('boundary-popup-btns-confirm').classList.add('hidden');
+    document.getElementById('boundary-popup-btns-define').classList.remove('hidden');
+
+    const canvas = document.getElementById('boundary-popup-canvas');
+    if (canvas) {
+        canvas.style.cursor = 'crosshair';
+        canvas.addEventListener('click', onPopupCanvasClick);
+    }
+}
+
+function clearPopupTrayPoints() {
+    trayPoints = [];
+}
+
+function cancelPopupRedraw() {
+    trayPoints = [...popupPointsBackup];
+    popupDefineMode = false;
+
+    document.getElementById('boundary-popup-title').textContent = 'Check Your Tray Position';
+    document.getElementById('boundary-popup-instructions').classList.remove('hidden');
+    document.getElementById('boundary-popup-define-hint').classList.add('hidden');
+    document.getElementById('boundary-popup-btns-confirm').classList.remove('hidden');
+    document.getElementById('boundary-popup-btns-define').classList.add('hidden');
+
+    const canvas = document.getElementById('boundary-popup-canvas');
+    if (canvas) {
+        canvas.style.cursor = '';
+        canvas.removeEventListener('click', onPopupCanvasClick);
+    }
+}
+
+async function confirmPopupRedraw() {
     if (trayPoints.length < 3) {
         showCameraStatus('Need at least 3 points');
         return;
@@ -517,31 +576,54 @@ async function confirmTrayRegion() {
         });
         const data = await response.json();
         if (data.success) {
+            savedTrayPoints = [...trayPoints];
             trayBbox = computeTrayBbox(trayPoints);
-            savedTrayBbox = null;
-            showCameraStatus('Tray saved');
         }
-        exitTrayDefinition();
     } catch (error) {
         debugError('Failed to save tray region', error);
-        exitTrayDefinition();
     }
+
+    confirmBoundary();
 }
 
-function exitTrayDefinition() {
-    inTrayDefinitionMode = false;
-    if (savedTrayBbox !== null) {
-        trayBbox = savedTrayBbox;
-        savedTrayBbox = null;
+function onPopupCanvasClick(e) {
+    if (!popupDefineMode) return;
+    if (!usbFrameCanvas || usbFrameCanvas.width === 0 || usbFrameCanvas.height === 0) return;
+
+    const canvas = document.getElementById('boundary-popup-canvas');
+    if (!canvas) return;
+
+    const sourceW = usbFrameCanvas.width;
+    const sourceH = usbFrameCanvas.height;
+    const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
+    const dw = sourceW * scale;
+    const dh = sourceH * scale;
+    const dx = (canvas.width - dw) / 2;
+    const dy = (canvas.height - dh) / 2;
+
+    // canvas.width = canvas.offsetWidth so offsetX is already in canvas pixels
+    const fx = (e.offsetX - dx) / dw;
+    const fy = (e.offsetY - dy) / dh;
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
+
+    trayPoints.push([fx, fy]);
+}
+
+// ── Tray Definition (opens popup in define mode) ────────────────────────────
+
+function startTrayDefinition() {
+    if (!cameraActive) {
+        showCameraStatus('Start camera first');
+        return;
     }
 
-    const canvas = document.getElementById('tray-canvas');
-    if (canvas) {
-        canvas.classList.remove('define-mode');
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Open popup if not already open
+    const overlay = document.getElementById('boundary-popup-overlay');
+    if (overlay && overlay.classList.contains('hidden')) {
+        const overlay2 = document.getElementById('boundary-popup-overlay');
+        overlay2.classList.remove('hidden');
+        startBoundaryPopupLoop();
     }
-    document.getElementById('camera-controls-normal').classList.remove('hidden');
-    document.getElementById('camera-controls-define').classList.add('hidden');
-    updateCameraButtons('running');
+
+    redrawBoundary();
 }
