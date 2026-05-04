@@ -30,7 +30,8 @@ class CameraManager:
         self.target_fps: int = 15
         self._stop_event = threading.Event()
         self.calibration_frame: Optional[np.ndarray] = None
-        self.tray_colour: Optional[np.ndarray] = None  # Median HSV of empty tray, sampled at calibration
+        self.tray_colour_lower: Optional[np.ndarray] = None  # 5th percentile HSV of empty tray pixels
+        self.tray_colour_upper: Optional[np.ndarray] = None  # 95th percentile HSV of empty tray pixels
         self.tray_polygon: list = []
         self._prev_motion_frame: Optional[np.ndarray] = None
         self._motion_detected: bool = False
@@ -98,8 +99,16 @@ class CameraManager:
 
         colour_path = self._tray_colour_path()
         if colour_path.exists():
-            self.tray_colour = np.load(str(colour_path))
-            log("Camera", f"Tray colour loaded from disk: HSV {self.tray_colour}")
+            try:
+                bounds = np.load(str(colour_path))
+                if bounds.shape == (2, 3):
+                    self.tray_colour_lower = bounds[0]
+                    self.tray_colour_upper = bounds[1]
+                    log("Camera", f"Tray colour bounds loaded: lower={self.tray_colour_lower} upper={self.tray_colour_upper}")
+                else:
+                    log("Camera", "Tray colour file is old format — recalibration needed")
+            except Exception:
+                log("Camera", "Tray colour file could not be loaded — recalibration needed")
 
     def _tray_region_path(self) -> Path:
         return get_appdata_path() / 'tray_region.json'
@@ -125,10 +134,14 @@ class CameraManager:
         log("Camera", f"Tray region saved ({len(points)} points)")
         return True
 
-    def _sample_tray_colour(self, frame: np.ndarray) -> Optional[np.ndarray]:
-        """Sample the median HSV colour from inside the tray polygon."""
+    def _sample_tray_colour(self, frame: np.ndarray):
+        """
+        Sample the actual range of HSV values from inside the tray polygon.
+        Returns (lower, upper) as uint8 arrays, or (None, None) if unavailable.
+        Uses 5th/95th percentiles so the bounds cover actual tray variation.
+        """
         if not self.tray_polygon or len(self.tray_polygon) < 3:
-            return None
+            return None, None
         h, w = frame.shape[:2]
         pts = np.array(
             [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
@@ -139,8 +152,10 @@ class CameraManager:
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         pixels = hsv[mask == 255]
         if len(pixels) == 0:
-            return None
-        return np.median(pixels, axis=0).astype(np.uint8)
+            return None, None
+        lower = np.percentile(pixels, 5, axis=0).astype(np.uint8)
+        upper = np.percentile(pixels, 95, axis=0).astype(np.uint8)
+        return lower, upper
 
     def calibrate(self) -> bool:
         """Capture the current frame as the background baseline and sample the tray colour."""
@@ -158,11 +173,12 @@ class CameraManager:
         cv2.imwrite(str(self._calibration_path()), frame)
         log("Camera", f"Calibration baseline saved ({frame.shape[1]}x{frame.shape[0]})")
 
-        colour = self._sample_tray_colour(frame)
-        if colour is not None:
-            self.tray_colour = colour
-            np.save(str(self._tray_colour_path()), colour)
-            log("Camera", f"Tray colour sampled: HSV {colour}")
+        lower, upper = self._sample_tray_colour(frame)
+        if lower is not None:
+            self.tray_colour_lower = lower
+            self.tray_colour_upper = upper
+            np.save(str(self._tray_colour_path()), np.array([lower, upper]))
+            log("Camera", f"Tray colour bounds sampled: lower={lower} upper={upper}")
         else:
             log("Camera", "Tray colour sampling skipped — no tray polygon defined")
 
@@ -274,9 +290,9 @@ class CameraManager:
                 time.sleep(sleep_time)
 
     def _resample_loop(self):
-        """Background thread that periodically re-samples tray colour to adapt to lighting changes."""
+        """Background thread that periodically re-samples tray colour bounds to adapt to lighting changes."""
         while not self._stop_event.wait(RESAMPLE_INTERVAL_SECONDS):
-            if self.tray_colour is None:
+            if self.tray_colour_lower is None:
                 continue
             if self._motion_detected:
                 continue
@@ -284,10 +300,11 @@ class CameraManager:
                 if self.current_frame is None:
                     continue
                 frame = self.current_frame.copy()
-            colour = self._sample_tray_colour(frame)
-            if colour is not None:
-                self.tray_colour = colour
-                log("Camera", f"Tray colour re-sampled: HSV {colour}")
+            lower, upper = self._sample_tray_colour(frame)
+            if lower is not None:
+                self.tray_colour_lower = lower
+                self.tray_colour_upper = upper
+                log("Camera", f"Tray colour re-sampled: lower={lower} upper={upper}")
 
     def receive_phone_frame(self, frame_bgr: np.ndarray):
         """Store a decoded video frame received from the phone via WebRTC."""
@@ -345,31 +362,26 @@ class CameraManager:
             cv2.fillPoly(tray_mask, [pts], 255)
 
         # --- Primary: chroma key ---
-        # Key out pixels that match the sampled tray colour in HSV space.
-        # Foreground = pixels that do NOT match the tray colour.
+        # Key out pixels whose HSV values fall within the bounds recorded at calibration.
+        # Foreground = pixels outside those bounds (i.e. not tray background).
         chroma_mask = np.zeros((h, w), dtype=np.uint8)
-        if self.tray_colour is not None:
-            HUE_RANGE = 15
-            SAT_RANGE = 40
-            VAL_RANGE = 40
-            hue = int(self.tray_colour[0])
-            sat = int(self.tray_colour[1])
-            val = int(self.tray_colour[2])
-
+        if self.tray_colour_lower is not None and self.tray_colour_upper is not None:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            lower = np.array([max(0, hue - HUE_RANGE), max(0, sat - SAT_RANGE), max(0, val - VAL_RANGE)])
-            upper = np.array([min(179, hue + HUE_RANGE), min(255, sat + SAT_RANGE), min(255, val + VAL_RANGE)])
-            bg_mask = cv2.inRange(hsv, lower, upper)
+            hue_lower = int(self.tray_colour_lower[0])
+            hue_upper = int(self.tray_colour_upper[0])
 
-            # Handle hue wrap-around at 0/179 boundary
-            if hue - HUE_RANGE < 0:
-                lower2 = np.array([hue - HUE_RANGE + 180, max(0, sat - SAT_RANGE), max(0, val - VAL_RANGE)])
-                upper2 = np.array([179, min(255, sat + SAT_RANGE), min(255, val + VAL_RANGE)])
-                bg_mask = cv2.bitwise_or(bg_mask, cv2.inRange(hsv, lower2, upper2))
-            elif hue + HUE_RANGE > 179:
-                lower2 = np.array([0, max(0, sat - SAT_RANGE), max(0, val - VAL_RANGE)])
-                upper2 = np.array([hue + HUE_RANGE - 180, min(255, sat + SAT_RANGE), min(255, val + VAL_RANGE)])
-                bg_mask = cv2.bitwise_or(bg_mask, cv2.inRange(hsv, lower2, upper2))
+            if hue_lower <= hue_upper:
+                bg_mask = cv2.inRange(hsv, self.tray_colour_lower, self.tray_colour_upper)
+            else:
+                # Hue wraps around 0/179 — split into two ranges
+                upper1 = self.tray_colour_upper.copy()
+                upper1[0] = 179
+                lower2 = self.tray_colour_lower.copy()
+                lower2[0] = 0
+                bg_mask = cv2.bitwise_or(
+                    cv2.inRange(hsv, self.tray_colour_lower, upper1),
+                    cv2.inRange(hsv, lower2, self.tray_colour_upper)
+                )
 
             chroma_mask = cv2.bitwise_and(cv2.bitwise_not(bg_mask), tray_mask)
 
@@ -387,9 +399,9 @@ class CameraManager:
             diff_mask = cv2.bitwise_and(diff_mask, tray_mask)
 
         # Combine: a pixel is foreground if either method says so
-        if self.tray_colour is not None and self.calibration_frame is not None:
+        if self.tray_colour_lower is not None and self.calibration_frame is not None:
             combined = cv2.bitwise_or(chroma_mask, diff_mask)
-        elif self.tray_colour is not None:
+        elif self.tray_colour_lower is not None:
             combined = chroma_mask
         elif self.calibration_frame is not None:
             combined = diff_mask
