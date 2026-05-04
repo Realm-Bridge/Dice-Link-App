@@ -12,6 +12,7 @@ from debug import log
 from core.storage import get_appdata_path
 
 PHONE_CAMERA_INDEX = -1
+RESAMPLE_INTERVAL_SECONDS = 30
 
 
 class CameraManager:
@@ -25,6 +26,7 @@ class CameraManager:
         self.current_frame: Optional[np.ndarray] = None
         self.frame_lock = threading.Lock()
         self.capture_thread: Optional[threading.Thread] = None
+        self._resample_thread: Optional[threading.Thread] = None
         self.target_fps: int = 15
         self._stop_event = threading.Event()
         self.calibration_frame: Optional[np.ndarray] = None
@@ -227,6 +229,9 @@ class CameraManager:
             self.phone_camera_mode = True
             self.is_capturing = True
             self.target_fps = fps
+            self._stop_event.clear()
+            self._resample_thread = threading.Thread(target=self._resample_loop, daemon=True)
+            self._resample_thread.start()
             log("Camera", "Phone camera mode started — waiting for WebRTC frames")
             return True
 
@@ -244,6 +249,9 @@ class CameraManager:
 
         self.capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
         self.capture_thread.start()
+
+        self._resample_thread = threading.Thread(target=self._resample_loop, daemon=True)
+        self._resample_thread.start()
 
         return True
 
@@ -265,6 +273,22 @@ class CameraManager:
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
+    def _resample_loop(self):
+        """Background thread that periodically re-samples tray colour to adapt to lighting changes."""
+        while not self._stop_event.wait(RESAMPLE_INTERVAL_SECONDS):
+            if self.tray_colour is None:
+                continue
+            if self._motion_detected:
+                continue
+            with self.frame_lock:
+                if self.current_frame is None:
+                    continue
+                frame = self.current_frame.copy()
+            colour = self._sample_tray_colour(frame)
+            if colour is not None:
+                self.tray_colour = colour
+                log("Camera", f"Tray colour re-sampled: HSV {colour}")
+
     def receive_phone_frame(self, frame_bgr: np.ndarray):
         """Store a decoded video frame received from the phone via WebRTC."""
         self._check_motion(frame_bgr)
@@ -281,6 +305,9 @@ class CameraManager:
 
         if self.capture_thread and self.capture_thread.is_alive():
             self.capture_thread.join(timeout=1.0)
+
+        if self._resample_thread and self._resample_thread.is_alive():
+            self._resample_thread.join(timeout=2.0)
 
         if self.camera:
             self.camera.release()
