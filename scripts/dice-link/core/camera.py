@@ -153,9 +153,15 @@ class CameraManager:
         pixels = hsv[mask == 255]
         if len(pixels) == 0:
             return None, None
-        lower = np.percentile(pixels, 5, axis=0).astype(np.uint8)
-        upper = np.percentile(pixels, 95, axis=0).astype(np.uint8)
-        return lower, upper
+        lower = np.percentile(pixels, 5, axis=0).astype(np.float32)
+        upper = np.percentile(pixels, 95, axis=0).astype(np.float32)
+        # Add a small safety margin on saturation and value to catch edge pixels
+        # that fall just outside the 5th/95th percentile boundary
+        lower[1] = max(0, lower[1] - 20)
+        lower[2] = max(0, lower[2] - 20)
+        upper[1] = min(255, upper[1] + 20)
+        upper[2] = min(255, upper[2] + 20)
+        return lower.astype(np.uint8), upper.astype(np.uint8)
 
     def calibrate(self) -> bool:
         """Capture the current frame as the background baseline and sample the tray colour."""
@@ -385,28 +391,11 @@ class CameraManager:
 
             chroma_mask = cv2.bitwise_and(cv2.bitwise_not(bg_mask), tray_mask)
 
-        # --- Secondary: baseline diff fallback ---
-        # Catches dice whose colour closely matches the tray (chroma key would miss them).
-        # Only used when baseline resolution exactly matches current frame — resizing
-        # the baseline introduces interpolation artifacts that flood the entire diff mask.
-        diff_mask = np.zeros((h, w), dtype=np.uint8)
-        if self.calibration_frame is not None and self.calibration_frame.shape == frame.shape:
-            baseline = self.calibration_frame
-            diff = cv2.absdiff(frame, baseline)
-            diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-            diff_blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
-            _, diff_mask = cv2.threshold(diff_blur, 45, 255, cv2.THRESH_BINARY)
-            diff_mask = cv2.bitwise_and(diff_mask, tray_mask)
-
-        # Combine: a pixel is foreground if either method says so
-        if self.tray_colour_lower is not None and self.calibration_frame is not None:
-            combined = cv2.bitwise_or(chroma_mask, diff_mask)
-        elif self.tray_colour_lower is not None:
-            combined = chroma_mask
-        elif self.calibration_frame is not None:
-            combined = diff_mask
-        else:
+        # Diff fallback disabled — phone EIS causes frame shifts that flood the
+        # diff mask and override the chroma key. Chroma key alone is used.
+        if self.tray_colour_lower is None:
             return None
+        combined = chroma_mask
 
         # Morphological cleanup: close small holes then open to remove noise
         kernel = np.ones((3, 3), np.uint8)
