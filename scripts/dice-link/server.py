@@ -2,6 +2,7 @@
 
 import json
 import asyncio
+import time
 import base64 as base64_module
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
@@ -345,8 +346,11 @@ async def phone_camera_qr():
 async def dlc_camera_stream_loop():
     """Send processed frames to DLC via bridge when motion is detected during an armed roll."""
     from bridge_state import send_camera_frame_to_dlc, send_camera_stream_end_to_dlc
+    import struct as _struct
     frame_interval = 1.0 / CAMERA_FPS
     was_motion = False
+    frame_count = 0
+    stream_start_time = None
 
     while camera_manager.is_capturing:
         is_motion = camera_manager.is_motion
@@ -355,10 +359,23 @@ async def dlc_camera_stream_loop():
         if is_motion and app_state.camera_stream_armed:
             frame = camera_manager.get_processed_frame()
             if frame:
+                if frame_count == 0:
+                    stream_start_time = time.time()
+                    fw, fh = _struct.unpack('>HH', frame[:4])
+                    log_server(f"Camera stream started — crop {fw}x{fh}")
                 frame_b64 = base64_module.b64encode(frame).decode('utf-8')
                 send_camera_frame_to_dlc(frame_b64)
+                frame_count += 1
+            else:
+                log_server("get_processed_frame returned None during armed roll")
             was_motion = True
         elif was_motion and not is_motion:
+            if stream_start_time and frame_count > 0:
+                elapsed = time.time() - stream_start_time
+                fps = frame_count / elapsed if elapsed > 0 else 0
+                log_server(f"Camera stream ended — {frame_count} frames in {elapsed:.2f}s ({fps:.1f} fps actual)")
+            frame_count = 0
+            stream_start_time = None
             send_camera_stream_end_to_dlc()
             was_motion = False
             app_state.camera_stream_armed = False  # Disarm after roll completes

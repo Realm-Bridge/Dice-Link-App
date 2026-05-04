@@ -229,8 +229,8 @@ class CameraManager:
             self.current_frame = None
 
     def get_processed_frame(self) -> Optional[bytes]:
-        """Crop the tray region and return it as a BGRA PNG for the Foundry canvas.
-        Everything outside the tray polygon is transparent."""
+        """Crop the tray region and return raw RGBA bytes prefixed with a 4-byte (width, height) header.
+        Everything outside the tray polygon is transparent (alpha=0)."""
         if not self.is_capturing:
             return None
 
@@ -240,6 +240,7 @@ class CameraManager:
             frame = self.current_frame.copy()
 
         if not self.tray_polygon or len(self.tray_polygon) < 3:
+            log("Camera", "get_processed_frame: no tray polygon defined")
             return None
 
         h, w = frame.shape[:2]
@@ -261,8 +262,8 @@ class CameraManager:
         bgra[:, :, 3] = mask
         crop = bgra[y:y + bh, x:x + bw]
 
-        _, buffer = cv2.imencode('.png', crop)
-        return buffer.tobytes()
+        rgba_crop = cv2.cvtColor(crop, cv2.COLOR_BGRA2RGBA)
+        return struct.pack('>HH', bw, bh) + rgba_crop.tobytes()
 
     def get_boundary_frame(self) -> Optional[bytes]:
         """Return the current frame with the tray boundary polygon drawn on it, as PNG bytes."""
