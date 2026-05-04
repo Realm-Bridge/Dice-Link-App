@@ -28,6 +28,7 @@ class CameraManager:
         self.target_fps: int = 15
         self._stop_event = threading.Event()
         self.calibration_frame: Optional[np.ndarray] = None
+        self.tray_colour: Optional[np.ndarray] = None  # Median HSV of empty tray, sampled at calibration
         self.tray_polygon: list = []
         self._prev_motion_frame: Optional[np.ndarray] = None
         self._motion_detected: bool = False
@@ -81,14 +82,22 @@ class CameraManager:
     def _calibration_path(self) -> Path:
         return get_appdata_path() / 'calibration_baseline.png'
 
+    def _tray_colour_path(self) -> Path:
+        return get_appdata_path() / 'tray_colour.npy'
+
     def _load_calibration(self):
-        """Load saved calibration baseline from disk if it exists."""
+        """Load saved calibration baseline and tray colour from disk if they exist."""
         path = self._calibration_path()
         if path.exists():
             frame = cv2.imread(str(path))
             if frame is not None:
                 self.calibration_frame = frame
                 log("Camera", "Calibration baseline loaded from disk")
+
+        colour_path = self._tray_colour_path()
+        if colour_path.exists():
+            self.tray_colour = np.load(str(colour_path))
+            log("Camera", f"Tray colour loaded from disk: HSV {self.tray_colour}")
 
     def _tray_region_path(self) -> Path:
         return get_appdata_path() / 'tray_region.json'
@@ -114,8 +123,25 @@ class CameraManager:
         log("Camera", f"Tray region saved ({len(points)} points)")
         return True
 
+    def _sample_tray_colour(self, frame: np.ndarray) -> Optional[np.ndarray]:
+        """Sample the median HSV colour from inside the tray polygon."""
+        if not self.tray_polygon or len(self.tray_polygon) < 3:
+            return None
+        h, w = frame.shape[:2]
+        pts = np.array(
+            [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
+            dtype=np.int32
+        )
+        mask = np.zeros((h, w), dtype=np.uint8)
+        cv2.fillPoly(mask, [pts], 255)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        pixels = hsv[mask == 255]
+        if len(pixels) == 0:
+            return None
+        return np.median(pixels, axis=0).astype(np.uint8)
+
     def calibrate(self) -> bool:
-        """Capture the current frame as the background baseline and save it."""
+        """Capture the current frame as the background baseline and sample the tray colour."""
         if not self.is_capturing:
             log("Camera", "Calibration failed — camera not capturing")
             return False
@@ -127,9 +153,17 @@ class CameraManager:
             frame = self.current_frame.copy()
 
         self.calibration_frame = frame
-        path = self._calibration_path()
-        cv2.imwrite(str(path), frame)
+        cv2.imwrite(str(self._calibration_path()), frame)
         log("Camera", f"Calibration baseline saved ({frame.shape[1]}x{frame.shape[0]})")
+
+        colour = self._sample_tray_colour(frame)
+        if colour is not None:
+            self.tray_colour = colour
+            np.save(str(self._tray_colour_path()), colour)
+            log("Camera", f"Tray colour sampled: HSV {colour}")
+        else:
+            log("Camera", "Tray colour sampling skipped — no tray polygon defined")
+
         return True
 
     def list_cameras(self) -> list:
