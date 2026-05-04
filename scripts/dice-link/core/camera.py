@@ -153,14 +153,22 @@ class CameraManager:
         pixels = hsv[mask == 255]
         if len(pixels) == 0:
             return None, None
-        lower = np.percentile(pixels, 5, axis=0).astype(np.float32)
-        upper = np.percentile(pixels, 95, axis=0).astype(np.float32)
-        # Add a small safety margin on saturation and value to catch edge pixels
-        # that fall just outside the 5th/95th percentile boundary
+        # Key on hue and saturation only — standard chroma key practice.
+        # Value (brightness) is intentionally excluded: shadows and highlights
+        # on the felt share the same hue regardless of brightness, so including
+        # value would cause dark/bright tray areas to bleed through.
+        hue_lower = np.percentile(pixels[:, 0], 5)
+        hue_upper = np.percentile(pixels[:, 0], 95)
+        sat_lower = np.percentile(pixels[:, 1], 5)
+
+        lower = np.array([hue_lower, sat_lower, 0], dtype=np.float32)
+        upper = np.array([hue_upper, 255, 255], dtype=np.float32)
+
+        # Small safety margin on hue and saturation lower bound
+        lower[0] = max(0, lower[0] - 3)
+        upper[0] = min(179, upper[0] + 3)
         lower[1] = max(0, lower[1] - 20)
-        lower[2] = max(0, lower[2] - 20)
-        upper[1] = min(255, upper[1] + 20)
-        upper[2] = min(255, upper[2] + 20)
+
         return lower.astype(np.uint8), upper.astype(np.uint8)
 
     def calibrate(self) -> bool:
