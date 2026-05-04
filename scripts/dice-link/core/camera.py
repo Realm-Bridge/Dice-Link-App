@@ -31,6 +31,7 @@ class CameraManager:
         self._prev_motion_frame: Optional[np.ndarray] = None
         self._motion_detected: bool = False
         self._still_counter: int = 0
+        self._motion_onset_time: Optional[float] = None
         self._load_tray_region()
 
     @property
@@ -64,9 +65,13 @@ class CameraManager:
 
         if changed_pixels > motion_threshold:
             self._still_counter = 0
-            self._motion_detected = True
+            if self._motion_onset_time is None:
+                self._motion_onset_time = time.time()
+            elif time.time() - self._motion_onset_time >= 0.25:
+                self._motion_detected = True
         else:
             self._still_counter += 1
+            self._motion_onset_time = None
             if self._still_counter > 15:
                 self._motion_detected = False
 
@@ -206,6 +211,7 @@ class CameraManager:
         """Stop capturing and release camera"""
         self._motion_detected = False
         self._still_counter = 0
+        self._motion_onset_time = None
         self._prev_motion_frame = None
         self.phone_camera_mode = False
         self._stop_event.set()
