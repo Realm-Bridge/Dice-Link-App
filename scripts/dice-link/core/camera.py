@@ -320,11 +320,11 @@ class CameraManager:
 
     def get_processed_frame(self) -> Optional[bytes]:
         """
-        Compare current frame to calibration baseline.
+        Isolate dice from the tray background using hybrid chroma key + baseline diff.
         Returns PNG bytes with background fully transparent, dice in colour.
-        Returns None if not capturing, not calibrated, or no dice detected.
+        Returns None if not capturing, no frame available, or no dice detected.
         """
-        if not self.is_capturing or self.calibration_frame is None:
+        if not self.is_capturing:
             return None
 
         with self.frame_lock:
@@ -332,38 +332,84 @@ class CameraManager:
                 return None
             frame = self.current_frame.copy()
 
-        baseline = self.calibration_frame
-        if frame.shape != baseline.shape:
-            baseline = cv2.resize(baseline, (frame.shape[1], frame.shape[0]))
+        h, w = frame.shape[:2]
 
-        diff = cv2.absdiff(frame, baseline)
-        diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-        diff_blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
-        _, mask = cv2.threshold(diff_blur, 45, 255, cv2.THRESH_BINARY)
-
-        kernel = np.ones((5, 5), np.uint8)
-        mask = cv2.dilate(mask, kernel, iterations=2)
-        mask = cv2.erode(mask, kernel, iterations=2)
-
+        # Build tray polygon mask — everything outside the tray is excluded
+        tray_mask = np.full((h, w), 255, dtype=np.uint8)
         if self.tray_polygon and len(self.tray_polygon) >= 3:
-            h, w = frame.shape[:2]
             pts = np.array(
                 [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
                 dtype=np.int32
             )
             tray_mask = np.zeros((h, w), dtype=np.uint8)
             cv2.fillPoly(tray_mask, [pts], 255)
-            mask = cv2.bitwise_and(mask, tray_mask)
 
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # --- Primary: chroma key ---
+        # Key out pixels that match the sampled tray colour in HSV space.
+        # Foreground = pixels that do NOT match the tray colour.
+        chroma_mask = np.zeros((h, w), dtype=np.uint8)
+        if self.tray_colour is not None:
+            HUE_RANGE = 15
+            SAT_RANGE = 40
+            VAL_RANGE = 40
+            hue = int(self.tray_colour[0])
+            sat = int(self.tray_colour[1])
+            val = int(self.tray_colour[2])
+
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            lower = np.array([max(0, hue - HUE_RANGE), max(0, sat - SAT_RANGE), max(0, val - VAL_RANGE)])
+            upper = np.array([min(179, hue + HUE_RANGE), min(255, sat + SAT_RANGE), min(255, val + VAL_RANGE)])
+            bg_mask = cv2.inRange(hsv, lower, upper)
+
+            # Handle hue wrap-around at 0/179 boundary
+            if hue - HUE_RANGE < 0:
+                lower2 = np.array([hue - HUE_RANGE + 180, max(0, sat - SAT_RANGE), max(0, val - VAL_RANGE)])
+                upper2 = np.array([179, min(255, sat + SAT_RANGE), min(255, val + VAL_RANGE)])
+                bg_mask = cv2.bitwise_or(bg_mask, cv2.inRange(hsv, lower2, upper2))
+            elif hue + HUE_RANGE > 179:
+                lower2 = np.array([0, max(0, sat - SAT_RANGE), max(0, val - VAL_RANGE)])
+                upper2 = np.array([hue + HUE_RANGE - 180, min(255, sat + SAT_RANGE), min(255, val + VAL_RANGE)])
+                bg_mask = cv2.bitwise_or(bg_mask, cv2.inRange(hsv, lower2, upper2))
+
+            chroma_mask = cv2.bitwise_and(cv2.bitwise_not(bg_mask), tray_mask)
+
+        # --- Secondary: baseline diff fallback ---
+        # Catches dice whose colour closely matches the tray (chroma key would miss them).
+        diff_mask = np.zeros((h, w), dtype=np.uint8)
+        if self.calibration_frame is not None:
+            baseline = self.calibration_frame
+            if frame.shape != baseline.shape:
+                baseline = cv2.resize(baseline, (w, h))
+            diff = cv2.absdiff(frame, baseline)
+            diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            diff_blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
+            _, diff_mask = cv2.threshold(diff_blur, 45, 255, cv2.THRESH_BINARY)
+            diff_mask = cv2.bitwise_and(diff_mask, tray_mask)
+
+        # Combine: a pixel is foreground if either method says so
+        if self.tray_colour is not None and self.calibration_frame is not None:
+            combined = cv2.bitwise_or(chroma_mask, diff_mask)
+        elif self.tray_colour is not None:
+            combined = chroma_mask
+        elif self.calibration_frame is not None:
+            combined = diff_mask
+        else:
+            return None
+
+        # Morphological cleanup: close small holes then open to remove noise
+        kernel = np.ones((3, 3), np.uint8)
+        combined = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel, iterations=2)
+        combined = cv2.morphologyEx(combined, cv2.MORPH_OPEN, kernel, iterations=1)
+
+        # Find significant contours and fill them directly (no convex hull)
+        contours, _ = cv2.findContours(combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         significant = [c for c in contours if cv2.contourArea(c) > 800]
 
         if not significant:
             return None
 
-        hulls = [cv2.convexHull(c) for c in significant]
-        clean_mask = np.zeros(mask.shape, dtype=np.uint8)
-        cv2.drawContours(clean_mask, hulls, -1, 255, -1)
+        clean_mask = np.zeros((h, w), dtype=np.uint8)
+        cv2.drawContours(clean_mask, significant, -1, 255, -1)
 
         bgra = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
         bgra[:, :, 3] = clean_mask
