@@ -375,11 +375,11 @@ class CameraManager:
 
         # --- Secondary: baseline diff fallback ---
         # Catches dice whose colour closely matches the tray (chroma key would miss them).
+        # Only used when baseline resolution exactly matches current frame — resizing
+        # the baseline introduces interpolation artifacts that flood the entire diff mask.
         diff_mask = np.zeros((h, w), dtype=np.uint8)
-        if self.calibration_frame is not None:
+        if self.calibration_frame is not None and self.calibration_frame.shape == frame.shape:
             baseline = self.calibration_frame
-            if frame.shape != baseline.shape:
-                baseline = cv2.resize(baseline, (w, h))
             diff = cv2.absdiff(frame, baseline)
             diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
             diff_blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
