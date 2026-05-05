@@ -111,12 +111,26 @@ class VTTWebView(QWebEngineView):
         
         log_vtt("[WEBCHANNEL] QWebChannel created and DLABridge registered as 'dlaInterface'")
     
+    def inject_compositor_hints(self):
+        """Promote Foundry UI layers to stable GPU compositor layers to prevent HTML flickering."""
+        script = """
+        (function() {
+            var style = document.createElement('style');
+            style.id = 'dla-compositor-hints';
+            if (document.getElementById('dla-compositor-hints')) return;
+            style.textContent = '#ui-top, #ui-left, #ui-right, #ui-bottom, #hotbar, #navigation, #controls, #sidebar, #players, #notifications, #pause { transform: translateZ(0); }';
+            document.head.appendChild(style);
+        })();
+        """
+        self.page().runJavaScript(script)
+
     def on_page_loaded(self, ok):
         """Called when page finishes loading - inject qwebchannel.js"""
         if not ok:
             log_vtt("[WEBCHANNEL] Page load failed")
             return
-        
+
+        self.inject_compositor_hints()
         log_vtt("[WEBCHANNEL] Page loaded, injecting QWebChannel.js...")
         
         # First inject the qwebchannel.js library

@@ -175,8 +175,6 @@ def main():
     time.sleep(1.5)
     
     # Create and display the PyQt6 window
-    sys.argv += ['--in-process-gpu']
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     
     # Show StartupDialog first
