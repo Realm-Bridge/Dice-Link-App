@@ -2,7 +2,7 @@ import json
 from urllib.parse import urlparse
 
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings, QWebEngineScript
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtCore import QTimer, QUrl, Qt
 
@@ -273,14 +273,14 @@ class VTTWebView(QWebEngineView):
         popup_page = VTTWebPage(self.page().profile(), self.allowed_origin, popup_view)
         popup_view.setPage(popup_page)
 
-        # Inject a flag at document-creation time so DLC can detect it is running
-        # inside a popup window and skip DLA initialisation entirely.
-        popout_script = QWebEngineScript()
-        popout_script.setName("dla-popout-flag")
-        popout_script.setSourceCode("window.__dlaPopout = true;")
-        popout_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
-        popout_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
-        popup_page.scripts().insert(popout_script)
+        # Set __dlaPopout flag in the popup's JS context once the page finishes
+        # loading. loadFinished fires well before Foundry's ready hook, so the
+        # flag is guaranteed to be present when DLC checks for it.
+        def on_popup_loaded(ok, page=popup_page):
+            if ok:
+                page.runJavaScript("window.__dlaPopout = true;")
+
+        popup_view.loadFinished.connect(on_popup_loaded)
 
         # Inject JavaScript into popup to expose document operations
         # This allows PopOut module's document.open/write/close to work
