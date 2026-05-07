@@ -201,7 +201,15 @@ function handleMessage(message) {
         case 'phone_camera_disconnected':
             onPhoneCameraDisconnected();
             break;
-            
+
+        case 'chatInit':
+            handleChatInit(message);
+            break;
+
+        case 'chatMessage':
+            handleChatMessage(message);
+            break;
+
         default:
             debugLog(`Unknown message type: ${message.type}`, message);
     }

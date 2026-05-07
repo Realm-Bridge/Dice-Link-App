@@ -149,6 +149,17 @@ class DLABridge(QObject):
             self.log_vtt(f"[BRIDGE] ERROR processing player modes: {e}")
 
     @pyqtSlot(str)
+    def receiveChatMessage(self, data_json):
+        """Called by DLC to forward a Foundry chat message or initial history payload."""
+        self._reset_ping_timer()
+        try:
+            data = json.loads(data_json)
+            from bridge_state import send_chat_message_to_ui
+            send_chat_message_to_ui(data)
+        except json.JSONDecodeError:
+            self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveChatMessage")
+
+    @pyqtSlot(str)
     def receiveButtonSelect(self, data_json):
         """Called by FastAPI handler when user clicks a button in the controls window.
         Not called by DLC — does not reset the ping timer."""

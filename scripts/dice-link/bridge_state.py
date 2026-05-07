@@ -153,6 +153,19 @@ def send_player_modes_to_ui(player_modes_data):
         return False
 
 
+def send_chat_message_to_ui(data):
+    """Forward a chat message or init payload from DLC to the UI panel."""
+    try:
+        from core.websocket_handler import broadcast_to_ui
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(broadcast_to_ui(data))
+        return True
+    except Exception as e:
+        log_bridge_state(f"Error broadcasting chat message to UI: {e}")
+        return False
+
+
 def send_camera_frame_to_dlc(frame_b64: str):
     """Send a single camera frame to DLC via the bridge."""
     bridge = get_bridge()
