@@ -16,7 +16,7 @@ from state import app_state
 from core.websocket_handler import broadcast_to_ui
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
-from debug import log_server, log_flicker
+from debug import log_server
 from bridge_state import send_dice_result_to_foundry, send_dice_tray_roll_to_foundry
 
 # Get the base directory (now app.py is at the root of dice-link/)
@@ -509,10 +509,6 @@ async def handle_ui_message(message: dict):
     """Handle messages from browser UI"""
     msg_type = message.get("type")
     
-    if msg_type == "reportFlicker":
-        log_flicker()
-        return
-
     if msg_type == "debug":
         # Debug messages from JavaScript - print to command prompt
         log_server(f"[JS] {message.get('message', '')}")

@@ -273,26 +273,6 @@ class VTTWebView(QWebEngineView):
         popup_page = VTTWebPage(self.page().profile(), self.allowed_origin, popup_view)
         popup_view.setPage(popup_page)
 
-        # Set __dlaPopout flag in the popup's JS context once the page finishes
-        # loading. loadFinished fires well before Foundry's ready hook, so the
-        # flag is guaranteed to be present when DLC checks for it.
-        def on_popup_loaded(ok, page=popup_page):
-            if ok:
-                page.runJavaScript("window.__dlaPopout = true;")
-
-        popup_view.loadFinished.connect(on_popup_loaded)
-
-        # Inject JavaScript into popup to expose document operations
-        # This allows PopOut module's document.open/write/close to work
-        expose_document_script = """
-        (function() {
-            // Ensure the popup exposes itself properly as a window
-            window.__popupReady = true;
-            console.log('[POPUP] Popup initialized, document available');
-        })();
-        """
-        popup_page.runJavaScript(expose_document_script)
-        
         # Create window container
         popup_window = VTTPopupWindow(popup_view)
         popup_window.show()
@@ -300,7 +280,7 @@ class VTTWebView(QWebEngineView):
         # Keep references
         self.popup_windows.append(popup_window)
         
-        log_vtt("Popup created and document exposed to JavaScript")
+        log_vtt("Popup created")
         
         # Return the page (not view) - this gives JavaScript a proper document interface
         # Actually, we need to return something JavaScript can interact with

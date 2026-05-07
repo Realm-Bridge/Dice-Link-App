@@ -164,10 +164,3 @@ def log_snap(message: str):
         line = f"[Snap] {message}"
         print(line)
         _write_log(line)
-
-
-def log_flicker():
-    """Log a user-reported flicker marker. Always written regardless of debug settings."""
-    line = "[FLICKER REPORTED] <<<<<<<<<<<<<<<<<<<<<<<<<<"
-    print(line)
-    _write_log(line)
