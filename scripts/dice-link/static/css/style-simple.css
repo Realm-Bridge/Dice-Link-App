@@ -1168,45 +1168,31 @@ body {
 
 .chat-input-row {
     display: flex;
-    gap: 6px;
+    justify-content: center;
     padding: 6px 8px;
     border-top: 1px solid #3a3a5c;
     flex-shrink: 0;
 }
 
 .chat-input {
-    flex: 1;
+    width: 90%;
+    height: 72px;
     background: #1a1a2e;
     border: 1px solid #4a4a6a;
     color: #ccc;
     border-radius: 4px;
-    padding: 5px 8px;
+    padding: 6px 8px;
     font-size: 13px;
     outline: none;
+    resize: none;
+    font-family: inherit;
 }
 
 .chat-input:focus {
     border-color: #7a7aaa;
 }
 
-.chat-send-btn {
-    background: #2a2a4a;
-    border: 1px solid #4a4a6a;
-    color: #ccc;
-    border-radius: 4px;
-    padding: 5px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.chat-send-btn:hover:not(:disabled) {
-    background: #3a3a6a;
-    border-color: #7a7aaa;
-}
-
-.chat-input:disabled,
-.chat-send-btn:disabled {
+.chat-input:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
