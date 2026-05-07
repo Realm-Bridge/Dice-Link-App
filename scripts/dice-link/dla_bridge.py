@@ -131,7 +131,7 @@ class DLABridge(QObject):
             send_player_modes_to_ui(data)
 
             player_name = None
-            for player_id, player_data in data.items():
+            for player_data in data.get('players', []):
                 if isinstance(player_data, dict) and player_data.get('isSelf') is True:
                     player_name = player_data.get('name')
                     break

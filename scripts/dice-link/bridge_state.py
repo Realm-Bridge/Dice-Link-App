@@ -128,31 +128,25 @@ def send_player_modes_to_ui(player_modes_data):
     """
     Send player modes data from DLC to the UI controls window.
     Called when DLC broadcasts player modes update via QWebChannel.
-
-    Converts DLC data format (object with numeric keys) to UI expected format (array).
     """
     try:
         from core.websocket_handler import broadcast_to_ui
 
-        # Convert player modes data from DLC format to UI format
-        # DLC format: {"0": {"id": "...", "name": "...", "mode": "..."}, ...}
-        # UI format: [{"id": "...", "name": "...", "mode": "..."}, ...]
-        players_array = []
-        if isinstance(player_modes_data, dict):
-            for key, player_data in player_modes_data.items():
-                if isinstance(player_data, dict):
-                    players_array.append(player_data)
+        players_array = player_modes_data.get('players', [])
+        global_override = player_modes_data.get('globalOverride')
+        pending_requests = player_modes_data.get('pendingRequests', [])
 
         message = {
             'type': 'playerModesUpdate',
-            'players': players_array
+            'players': players_array,
+            'globalOverride': global_override,
+            'pendingRequests': pending_requests
         }
 
-        # Use asyncio to run the async broadcast function from a sync context
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(broadcast_to_ui(message))
-        log_bridge_state(f"Broadcast player modes to UI: {len(players_array)} players")
+        log_bridge_state(f"Broadcast player modes to UI: {len(players_array)} players, override={global_override}")
         return True
     except Exception as e:
         log_bridge_state(f"Error broadcasting player modes to UI: {e}")
