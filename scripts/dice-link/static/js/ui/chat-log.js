@@ -1,7 +1,7 @@
 /**
  * Chat Log UI Module
- * Renders the Foundry VTT chat log inside a Shadow DOM so Foundry's own
- * stylesheets apply without affecting the rest of the DLA panel.
+ * Renders incoming Foundry chat messages inside a Shadow DOM.
+ * Styling comes from DLA's own chat-cards.css — no Foundry CSS injected.
  */
 
 let shadowRoot = null;
@@ -9,52 +9,28 @@ let messageList = null;
 let pendingMessages = [];
 
 /**
- * Initialise the Shadow DOM, inject Foundry's stylesheets, and display messages.
- * @param {string[]} styleUrls  - External stylesheet URLs from Foundry.
- * @param {string[]} styleTexts - Inline stylesheet text content from Foundry.
- * @param {string[]} messages   - outerHTML of existing chat messages to display.
+ * Set up the Shadow DOM with DLA's chat card CSS and an empty message list.
+ * Called when a chatInit message arrives from DLC.
  */
-function initChatLog(styleUrls, styleTexts, messages) {
-    debugChatLog('initChatLog called', {
-        styleUrls: (styleUrls || []).length,
-        styleTexts: (styleTexts || []).length,
-        messages: (messages || []).length
-    });
+function initChatLog() {
+    debugChatLog('initChatLog called');
 
     const container = document.getElementById('vtt-chat-log');
     if (!container) {
-        debugChatLog('initChatLog: ERROR — #vtt-chat-log element not found in DOM');
+        debugChatLog('initChatLog: ERROR — #vtt-chat-log not found');
         return;
     }
-    debugChatLog('initChatLog: #vtt-chat-log container found');
 
     shadowRoot = container.shadowRoot || container.attachShadow({ mode: 'open' });
     shadowRoot.innerHTML = '';
-    debugChatLog('initChatLog: shadow DOM attached and cleared');
 
-    // Inject Foundry's external stylesheet(s)
-    for (const url of (styleUrls || [])) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = url;
-        shadowRoot.appendChild(link);
-    }
-    debugChatLog('initChatLog: external <link> tags injected', (styleUrls || []).length);
+    // DLA's own chat card stylesheet
+    const styleLink = document.createElement('link');
+    styleLink.rel = 'stylesheet';
+    styleLink.href = '/static/css/chat-cards.css';
+    shadowRoot.appendChild(styleLink);
 
-    // Inject Foundry's inline stylesheets (system and module styles)
-    let totalCssBytes = 0;
-    for (const text of (styleTexts || [])) {
-        const style = document.createElement('style');
-        style.textContent = text;
-        shadowRoot.appendChild(style);
-        totalCssBytes += text.length;
-    }
-    debugChatLog('initChatLog: <style> tags injected', {
-        count: (styleTexts || []).length,
-        totalBytes: totalCssBytes
-    });
-
-    // Layout styles scoped within the shadow
+    // Layout styles scoped to this Shadow DOM
     const layout = document.createElement('style');
     layout.textContent = `
         :host {
@@ -75,43 +51,32 @@ function initChatLog(styleUrls, styleTexts, messages) {
             overflow-y: auto;
             list-style: none;
             margin: 0;
-            padding: 4px 2px;
+            padding: 4px 4px;
             min-height: 0;
         }
         ol.chat-log::-webkit-scrollbar { width: 6px; }
         ol.chat-log::-webkit-scrollbar-track { background: transparent; }
-        ol.chat-log::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+        ol.chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
     `;
     shadowRoot.appendChild(layout);
 
-    // Wrapper with .chat-sidebar so ancestor-dependent CSS rules in Foundry apply
     const wrapper = document.createElement('div');
-    wrapper.className = 'chat-sidebar flexcol';
+    wrapper.className = 'chat-sidebar';
 
     messageList = document.createElement('ol');
-    messageList.className = 'chat-log plain themed theme-light';
+    messageList.className = 'chat-log';
     wrapper.appendChild(messageList);
     shadowRoot.appendChild(wrapper);
-    debugChatLog('initChatLog: shadow DOM structure built (wrapper + ol.chat-log)');
-
-    // Display existing messages bundled in the init payload
-    let rendered = 0;
-    (messages || []).forEach(html => {
-        _appendToList(html);
-        rendered++;
-    });
-    debugChatLog('initChatLog: existing messages rendered', rendered);
 
     // Flush any messages that arrived before init completed
     const flushed = pendingMessages.length;
     pendingMessages.forEach(html => _appendToList(html));
     pendingMessages = [];
-    debugChatLog('initChatLog: pending messages flushed', flushed);
+    debugChatLog('initChatLog: complete', { pendingFlushed: flushed });
 }
 
 /**
  * Append a single rendered message element to the list.
- * @param {string} html - outerHTML of a Foundry li.chat-message element.
  */
 function _appendToList(html) {
     if (!messageList || !html) return;
@@ -125,28 +90,21 @@ function _appendToList(html) {
 }
 
 /**
- * Handle a chatInit message — set up the shadow and display the full history.
+ * Handle chatInit — set up the Shadow DOM ready to receive messages.
  */
 function handleChatInit(message) {
-    debugChatLog('handleChatInit received', {
-        styleUrls: (message.styleUrls || []).length,
-        styleTexts: (message.styleTexts || []).length,
-        messages: (message.messages || []).length,
-        foundryUrl: message.foundryUrl || 'not set'
-    });
-    initChatLog(message.styleUrls || [], message.styleTexts || [], message.messages || []);
+    debugChatLog('handleChatInit received');
+    initChatLog();
 }
 
 /**
  * Handle a single incoming chat message — append it to the log.
  */
 function handleChatMessage(message) {
-    const ready = !!messageList;
     debugChatLog('handleChatMessage received', {
         messageId: message.messageId || 'unknown',
         htmlBytes: (message.html || '').length,
-        listReady: ready,
-        action: ready ? 'appending' : 'queuing'
+        listReady: !!messageList
     });
     if (!messageList) {
         pendingMessages.push(message.html || '');
