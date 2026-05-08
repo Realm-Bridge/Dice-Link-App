@@ -21,6 +21,7 @@ DEBUG_BRIDGE_STATE = True
 DEBUG_STARTUP_DIALOG = False
 DEBUG_DPI = False
 DEBUG_SNAP = False
+DEBUG_CHAT_LOG = True
 
 # --- Log file ---
 _LOG_DIR = Path(__file__).resolve().parent / "logs"
@@ -162,5 +163,13 @@ def log_snap(message: str):
     """Log Windows snap/docking native event messages."""
     if DEBUG_ENABLED and DEBUG_SNAP:
         line = f"[Snap] {message}"
+        print(line)
+        _write_log(line)
+
+
+def log_chat_log(message: str):
+    """Log chat log pipeline events — DLC payload receipt, CSS counts, message counts."""
+    if DEBUG_ENABLED and DEBUG_CHAT_LOG:
+        line = f"[Chat Log] {message}"
         print(line)
         _write_log(line)

@@ -2,7 +2,7 @@
 
 import json
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
-from debug import log_vtt, log_connection_monitor
+from debug import log_vtt, log_connection_monitor, log_chat_log
 
 
 class DLABridge(QObject):
@@ -154,6 +154,34 @@ class DLABridge(QObject):
         self._reset_ping_timer()
         try:
             data = json.loads(data_json)
+            msg_type = data.get("type", "unknown")
+            log_chat_log(f"receiveChatMessage: type={msg_type}, payload bytes={len(data_json)}")
+
+            if msg_type == "chatInit":
+                style_urls = data.get("styleUrls") or []
+                style_texts = data.get("styleTexts") or []
+                messages = data.get("messages") or []
+                log_chat_log(f"chatInit received: styleUrls={len(style_urls)}, styleTexts={len(style_texts)}, messages={len(messages)}")
+                for i, text in enumerate(style_texts):
+                    import re
+                    imports_total = len(re.findall(r'@import', text))
+                    imports_relative = len(re.findall(r"@import\s+['\"](?!https?://)", text))
+                    log_chat_log(
+                        f"  styleTexts[{i}]: {len(text)} bytes, "
+                        f"@imports total={imports_total}, "
+                        f"still-relative={imports_relative}"
+                        + (" WARNING: relative @imports will 404 on DLA" if imports_relative > 0 else "")
+                    )
+                log_chat_log(f"  styleUrls: {style_urls}")
+
+            elif msg_type == "chatMessage":
+                msg_id = data.get("messageId", "unknown")
+                html = data.get("html") or ""
+                log_chat_log(f"chatMessage received: messageId={msg_id}, html bytes={len(html)}")
+
+            else:
+                log_chat_log(f"unknown chat message type: {msg_type}")
+
             from bridge_state import send_chat_message_to_ui
             send_chat_message_to_ui(data)
         except json.JSONDecodeError:

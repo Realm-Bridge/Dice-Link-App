@@ -77,3 +77,27 @@ function setDebugEnabled(enabled) {
 function isDebugEnabled() {
   return DEBUG_ENABLED;
 }
+
+/**
+ * Log a chat log pipeline event — stylesheet injection, shadow DOM setup, message rendering.
+ * Prefixes output with [DLA CHAT LOG] so it is easy to filter in CMD.
+ * @param {string} message - What happened
+ * @param {*} data - Optional data to include
+ */
+function debugChatLog(message, data = null) {
+  if (!DEBUG_ENABLED) return;
+  const timestamp = new Date().toLocaleTimeString();
+  const dataStr = data !== null ? ' ' + JSON.stringify(data) : '';
+  const fullMessage = `[DLA CHAT LOG ${timestamp}] ${message}${dataStr}`;
+  console.log(fullMessage);
+  if (typeof getWebSocket === 'function') {
+    const ws = getWebSocket();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({ type: 'debug', message: fullMessage }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+}

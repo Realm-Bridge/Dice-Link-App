@@ -15,11 +15,22 @@ let pendingMessages = [];
  * @param {string[]} messages   - outerHTML of existing chat messages to display.
  */
 function initChatLog(styleUrls, styleTexts, messages) {
+    debugChatLog('initChatLog called', {
+        styleUrls: (styleUrls || []).length,
+        styleTexts: (styleTexts || []).length,
+        messages: (messages || []).length
+    });
+
     const container = document.getElementById('vtt-chat-log');
-    if (!container) return;
+    if (!container) {
+        debugChatLog('initChatLog: ERROR — #vtt-chat-log element not found in DOM');
+        return;
+    }
+    debugChatLog('initChatLog: #vtt-chat-log container found');
 
     shadowRoot = container.shadowRoot || container.attachShadow({ mode: 'open' });
     shadowRoot.innerHTML = '';
+    debugChatLog('initChatLog: shadow DOM attached and cleared');
 
     // Inject Foundry's external stylesheet(s)
     for (const url of (styleUrls || [])) {
@@ -28,13 +39,20 @@ function initChatLog(styleUrls, styleTexts, messages) {
         link.href = url;
         shadowRoot.appendChild(link);
     }
+    debugChatLog('initChatLog: external <link> tags injected', (styleUrls || []).length);
 
     // Inject Foundry's inline stylesheets (system and module styles)
+    let totalCssBytes = 0;
     for (const text of (styleTexts || [])) {
         const style = document.createElement('style');
         style.textContent = text;
         shadowRoot.appendChild(style);
+        totalCssBytes += text.length;
     }
+    debugChatLog('initChatLog: <style> tags injected', {
+        count: (styleTexts || []).length,
+        totalBytes: totalCssBytes
+    });
 
     // Layout styles scoped within the shadow
     const layout = document.createElement('style');
@@ -74,13 +92,21 @@ function initChatLog(styleUrls, styleTexts, messages) {
     messageList.className = 'chat-log plain themed theme-light';
     wrapper.appendChild(messageList);
     shadowRoot.appendChild(wrapper);
+    debugChatLog('initChatLog: shadow DOM structure built (wrapper + ol.chat-log)');
 
     // Display existing messages bundled in the init payload
-    (messages || []).forEach(html => _appendToList(html));
+    let rendered = 0;
+    (messages || []).forEach(html => {
+        _appendToList(html);
+        rendered++;
+    });
+    debugChatLog('initChatLog: existing messages rendered', rendered);
 
     // Flush any messages that arrived before init completed
+    const flushed = pendingMessages.length;
     pendingMessages.forEach(html => _appendToList(html));
     pendingMessages = [];
+    debugChatLog('initChatLog: pending messages flushed', flushed);
 }
 
 /**
@@ -102,6 +128,12 @@ function _appendToList(html) {
  * Handle a chatInit message — set up the shadow and display the full history.
  */
 function handleChatInit(message) {
+    debugChatLog('handleChatInit received', {
+        styleUrls: (message.styleUrls || []).length,
+        styleTexts: (message.styleTexts || []).length,
+        messages: (message.messages || []).length,
+        foundryUrl: message.foundryUrl || 'not set'
+    });
     initChatLog(message.styleUrls || [], message.styleTexts || [], message.messages || []);
 }
 
@@ -109,6 +141,13 @@ function handleChatInit(message) {
  * Handle a single incoming chat message — append it to the log.
  */
 function handleChatMessage(message) {
+    const ready = !!messageList;
+    debugChatLog('handleChatMessage received', {
+        messageId: message.messageId || 'unknown',
+        htmlBytes: (message.html || '').length,
+        listReady: ready,
+        action: ready ? 'appending' : 'queuing'
+    });
     if (!messageList) {
         pendingMessages.push(message.html || '');
         return;
