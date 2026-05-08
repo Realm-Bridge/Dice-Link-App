@@ -152,15 +152,14 @@ li.chat-message.emote .message-content { font-style: italic; }
     gap: 0.375rem;
 }
 
-/* Force correct visual order regardless of DOM order.
-   dnd5e v4 sometimes places .card-buttons before .card-header in the DOM
-   and uses CSS order to reposition them. We do the same here. */
+/* Force card-header to the top and buttons below description.
+   Only card-header and card-buttons are given explicit order values —
+   pills are left in their natural DOM position (already correct at bottom). */
 .chat-card .card-header,
-.chat-card > header { order: 1; }
-.chat-card .pills   { order: 2; }
+.chat-card > header      { order: 1; }
 .chat-card .description,
-.chat-card .card-content { order: 3; }
-.chat-card .card-buttons { order: 4; }
+.chat-card .card-content { order: 2; }
+.chat-card .card-buttons { order: 3; }
 
 /* ================================================================
    CARD HEADER — image + name (item / spell / activity cards)
