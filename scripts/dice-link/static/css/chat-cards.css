@@ -245,6 +245,12 @@ div.card-buttons button {
     line-height: 1;
 }
 
+div.card-buttons button span {
+    font-size: 22px;
+    font-weight: bold;
+    color: inherit;
+}
+
 /* ================================================================
    PILLS / TAGS
    Actual structure:
