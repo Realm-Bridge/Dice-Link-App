@@ -70,23 +70,9 @@ function initChatLog() {
 
     // Flush any messages that arrived before init completed
     const flushed = pendingMessages.length;
-    pendingMessages.forEach(html => _appendToList(html));
+    pendingMessages.forEach(msg => handleChatMessage(msg));
     pendingMessages = [];
     debugChatLog('initChatLog: complete', { pendingFlushed: flushed });
-}
-
-/**
- * Append a single rendered message element to the list.
- */
-function _appendToList(html) {
-    if (!messageList || !html) return;
-    const template = document.createElement('template');
-    template.innerHTML = html;
-    const node = template.content.firstElementChild;
-    if (node) {
-        messageList.appendChild(node);
-        messageList.scrollTop = messageList.scrollHeight;
-    }
 }
 
 /**
@@ -98,17 +84,38 @@ function handleChatInit(message) {
 }
 
 /**
- * Handle a single incoming chat message — append it to the log.
+ * Handle a single incoming chat message.
+ * If a card with the same messageId already exists in the list, replace it
+ * in-place (MIDI-QOL update). Otherwise append it and scroll to bottom.
  */
 function handleChatMessage(message) {
+    const id = message.messageId;
+    const html = message.html || '';
+
     debugChatLog('handleChatMessage received', {
-        messageId: message.messageId || 'unknown',
-        htmlBytes: (message.html || '').length,
+        messageId: id || 'unknown',
+        htmlBytes: html.length,
         listReady: !!messageList
     });
+
     if (!messageList) {
-        pendingMessages.push(message.html || '');
+        pendingMessages.push(message);
         return;
     }
-    _appendToList(message.html || '');
+
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const node = template.content.firstElementChild;
+    if (!node) return;
+
+    const existing = id
+        ? messageList.querySelector('[data-message-id="' + id + '"]')
+        : null;
+
+    if (existing) {
+        existing.replaceWith(node);
+    } else {
+        messageList.appendChild(node);
+        messageList.scrollTop = messageList.scrollHeight;
+    }
 }

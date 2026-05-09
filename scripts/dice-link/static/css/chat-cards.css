@@ -15,13 +15,18 @@
 
 * {
     font-family: 'Roboto', Arial, sans-serif;
-    font-size: 13px;
+    font-size: 16px;
     color: #191813;
     margin: 0;
     padding: 0;
 }
 
 ol, ul { list-style: none; }
+
+/* Foundry layout utility classes — defined by Foundry CSS normally,
+   not present in Shadow DOM so we provide them here. */
+.flexrow { display: flex; flex-direction: row; flex-wrap: wrap; }
+.flexcol { display: flex; flex-direction: column; }
 
 /* ================================================================
    CHAT MESSAGE — base container
@@ -38,146 +43,130 @@ li.chat-message {
     gap: 0.375rem;
 }
 
-li.chat-message.emote  { background: #f3edde; }
 li.chat-message.whisper { background: #e8e8ef; border-color: #a0a0c0; }
 li.chat-message.blind   { background: #f5eaf5; border-color: #c0a0c0; }
 
 /* ================================================================
    MESSAGE HEADER
+   Actual structure:
+     header.message-header.flexrow
+       h4.message-sender
+       span.message-metadata
+         time.message-timestamp
+         a.message-delete
+       span.flavor-text        (dice rolls only; full-width second row)
    ================================================================ */
 
-header.message-header,
-.message-header {
+header.message-header {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 0.375rem;
+    flex-wrap: wrap;
 }
 
-.message-sender {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 0.5rem;
+h4.message-sender {
+    font-family: 'Roboto Slab', Georgia, serif;
+    font-size: 17px;
+    font-weight: bold;
     flex: 1;
+    min-width: 0;
+    line-height: 1.3;
 }
 
-.message-header img.avatar,
-.message-sender img,
-img.avatar {
+span.message-metadata {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 0.25rem;
+}
+
+time.message-timestamp {
+    font-size: 12px;
+    color: #7a6e5f;
+    white-space: nowrap;
+}
+
+a.message-delete { display: none; }
+
+/* Sender avatar — class varies (avatar, portrait, or none); catch all img in header */
+header.message-header img {
     width: 36px;
     height: 36px;
     border-radius: 4px;
     border: 1px solid #9f9275;
     object-fit: cover;
     flex-shrink: 0;
+    display: block !important;
 }
 
-/* Sender name — covers h4.message-sender, name inside .message-sender wrapper,
-   and dnd5e .name-stacked .title variants */
-h4.message-sender,
-.message-header h4,
-.message-sender > h4,
-.message-sender > div > h4 {
-    font-family: 'Roboto Slab', Georgia, serif;
+/* flavor-text sits as a sibling after message-metadata — push to its own row */
+span.flavor-text {
+    flex-basis: 100%;
+    font-style: italic;
     font-size: 14px;
-    font-weight: bold;
-    flex: 1;
+    color: #5a4e3a;
     line-height: 1.3;
-    display: block;
-}
-
-/* dnd5e name-stacked layout (newer messages) */
-.name-stacked {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 32px;
-    justify-content: center;
-    gap: 2px;
-}
-
-.name-stacked .title,
-h4.title {
-    font-family: 'Roboto Slab', Georgia, serif;
-    font-size: 14px;
-    font-weight: bold;
-    line-height: 1.2;
-}
-
-.name-stacked .subtitle,
-p.subtitle {
-    font-size: 11px;
-    color: #5a5242;
-    line-height: 1.2;
-}
-
-.message-metadata {
-    display: flex;
-    align-items: flex-start;
-    flex-shrink: 0;
-}
-
-time.message-timestamp {
-    font-size: 10px;
-    color: #7a6e5f;
-    white-space: nowrap;
 }
 
 /* ================================================================
    MESSAGE CONTENT
    ================================================================ */
 
-.message-content {
+div.message-content {
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
     line-height: 1.4;
 }
 
-.message-content p { margin-bottom: 0.25rem; }
-.message-content p:last-child { margin-bottom: 0; }
-.message-content img { max-width: 100%; height: auto; border-radius: 3px; }
-
-li.chat-message.emote .message-content { font-style: italic; }
+div.message-content > p { margin-bottom: 0.25rem; }
+div.message-content > p:last-child { margin-bottom: 0; }
+div.message-content img { max-width: 100%; height: auto; border-radius: 3px; }
 
 /* ================================================================
-   CHAT CARD — common container (.dnd5e2 prefix in newer versions)
+   CHAT CARD
    ================================================================ */
 
-.chat-card,
-.dnd5e2.chat-card {
+div.chat-card {
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
 }
 
-/* Force card-header to the top and buttons below description.
-   Only card-header and card-buttons are given explicit order values —
-   pills are left in their natural DOM position (already correct at bottom). */
-.chat-card .card-header,
-.chat-card > header      { order: 1; }
-.chat-card .description,
-.chat-card .card-content { order: 2; }
-.chat-card .card-buttons { order: 3; }
-
 /* ================================================================
-   CARD HEADER — image + name (item / spell / activity cards)
+   CARD HEADER SECTION
+   Actual structure:
+     section.card-header.description.collapsible
+       header.summary
+         img.gold-icon
+         div.name-stacked.border
+           span.title
+           span.subtitle
+         i.fa-solid.fa-chevron-down.fa-fw
+       section.details.collapsible-content.card-content
+         div.wrapper
+           ...
    ================================================================ */
 
-.chat-card .card-header,
-.chat-card header,
-header.card-header {
+section.card-header {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.25rem;
     padding-bottom: 0.375rem;
     border-bottom: 1px solid #9f9275;
 }
 
-.card-header img,
-.chat-card header img {
+/* Header row: image + name stack + chevron */
+section.card-header > header.summary {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+section.card-header > header.summary > img.gold-icon {
+    display: block !important;
     width: 36px;
     height: 36px;
     border: 1px solid #9f9275;
@@ -186,81 +175,62 @@ header.card-header {
     flex-shrink: 0;
 }
 
-.card-header h3,
-.card-header h4,
-.chat-card header h3,
-.chat-card header h4 {
-    font-family: 'Roboto Slab', Georgia, serif;
-    font-size: 14px;
-    font-weight: bold;
-    flex: 1;
-}
-
-/* ================================================================
-   PILLS / TAGS
-   ================================================================ */
-
-.pills {
+/* Item / spell name and type */
+div.name-stacked {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    margin-top: 0.125rem;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+    gap: 2px;
 }
 
-.pill {
-    font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+div.name-stacked > span.title {
+    font-family: 'Roboto Slab', Georgia, serif;
+    font-size: 17px;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+div.name-stacked > span.subtitle {
+    font-size: 13px;
+    color: #5a5242;
+    line-height: 1.2;
+}
+
+/* Collapse chevron */
+section.card-header > header.summary > i {
+    margin-left: auto;
     font-size: 10px;
-    line-height: 1;
-    padding: 2px 6px;
-    background: #e0d8ce;
-    border: 1px solid #9f9275;
-    border-radius: 3px;
-    color: #5a4e3a;
-    white-space: nowrap;
+    color: #9f9275;
+    flex-shrink: 0;
 }
 
-/* ================================================================
-   DESCRIPTION — card body text area
-   ================================================================ */
-
-.description {
-    padding: 0.5rem;
+/* Description body — hidden by default to match Foundry's collapsed state */
+section.details.collapsible-content {
+    display: none;
+    padding: 0.375rem 0.5rem;
     border: 1px solid #9f9275;
     border-radius: 3px;
     background: #f8f4f1;
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1.5;
 }
 
-.description.critical { border: 3px double #9f9275; }
-
-.description p { margin-bottom: 0.375rem; }
-.description p:last-child { margin-bottom: 0; }
-
-.description h3,
-.description h4 {
-    font-family: 'Roboto Slab', Georgia, serif;
-    font-size: 13px;
-    margin-bottom: 0.25rem;
-}
-
-/* ================================================================
-   CARD CONTENT (wrapper used in some card types)
-   ================================================================ */
-
-.card-content { padding: 0.25rem 0; }
+section.details.collapsible-content p { margin-bottom: 0.375rem; }
+section.details.collapsible-content p:last-child { margin-bottom: 0; }
 
 /* ================================================================
    CARD BUTTONS
    ================================================================ */
 
-.card-buttons {
+div.card-buttons {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.card-buttons button {
+div.card-buttons > button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -270,7 +240,7 @@ header.card-header {
     background: #e8e0d5;
     border: 1px solid #9f9275;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
     color: #44342a;
     cursor: default;
@@ -278,30 +248,100 @@ header.card-header {
 }
 
 /* ================================================================
-   DICE ROLL DISPLAY
+   PILLS / TAGS
+   Actual structure:
+     ul.card-footer.pills.unlist
+       li.pill.transparent
+         span.label
    ================================================================ */
 
-.dice-roll,
-.dice-result {
+ul.card-footer.pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding-top: 0.25rem;
+    border-top: 1px dotted #9f9275;
+}
+
+ul.card-footer.pills > li.pill {
+    font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+    font-size: 12px;
+    line-height: 1;
+    padding: 2px 6px;
+    background: #e0d8ce;
+    border: 1px solid #9f9275;
+    border-radius: 3px;
+    color: #5a4e3a;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+ul.card-footer.pills > li.pill > span.label {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* ================================================================
+   DICE ROLL DISPLAY
+   Actual structure:
+     div.dice-roll
+       div.dice-result
+         div.dice-formula
+         div.dice-tooltip-collapser
+           div.dice-tooltip
+             section.tooltip-part
+               div.dice
+                 ol.dice-rolls
+                   li.roll.die.d20  (or .basicdie.dN etc.)
+         h4.dice-total
+   ================================================================ */
+
+div.dice-roll {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.dice-formula {
+div.dice-result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+div.dice-formula {
     padding: 0.25rem 0.5rem;
     border-radius: 3px;
     background: rgba(0,0,0,0.05);
     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     color: #44342a;
     text-align: center;
 }
 
-h4.dice-total,
-.dice-total {
+div.dice-tooltip-collapser {
+    display: flex;
+    flex-direction: column;
+}
+
+div.dice-tooltip {
+    display: none;
+    padding: 0.25rem;
+    background: rgba(0,0,0,0.03);
+    border-radius: 3px;
+}
+
+section.tooltip-part {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+h4.dice-total {
+    font-family: 'Roboto Slab', Georgia, serif;
     font-weight: bold;
-    font-size: 28px;
+    font-size: 34px;
     padding: 0.25rem;
     border-radius: 3px;
     background: rgba(0,0,0,0.05);
@@ -310,23 +350,23 @@ h4.dice-total,
     color: #191813;
 }
 
-.dice-total.success:not(.fumble) {
+h4.dice-total.success:not(.fumble) {
     background: rgba(0,108,0,0.1);
     color: #006c00;
 }
 
-.dice-total.critical {
+h4.dice-total.critical {
     background: rgba(0,108,0,0.15);
     color: #006c00;
     border: 1px solid #006c00;
 }
 
-.dice-total.failure:not(.critical) {
+h4.dice-total.failure:not(.critical) {
     background: rgba(110,0,0,0.1);
     color: #6e0000;
 }
 
-.dice-total.fumble {
+h4.dice-total.fumble {
     background: rgba(110,0,0,0.15);
     color: #6e0000;
     border: 1px solid #6e0000;
@@ -341,67 +381,85 @@ ol.dice-rolls {
     justify-content: center;
 }
 
-ol.dice-rolls .roll.die {
+ol.dice-rolls > li.roll.die,
+ol.dice-rolls > li.roll.basicdie {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 24px;
-    height: 24px;
+    min-width: 28px;
+    height: 28px;
     padding: 0 4px;
     background: #e8e0d5;
     border: 1px solid #9f9275;
     border-radius: 3px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
 }
 
-ol.dice-rolls .roll.die.max {
+ol.dice-rolls > li.roll.die.max,
+ol.dice-rolls > li.roll.basicdie.max {
     background: rgba(0,108,0,0.15);
     border-color: #006c00;
     color: #006c00;
 }
 
-ol.dice-rolls .roll.die.min {
+ol.dice-rolls > li.roll.die.min,
+ol.dice-rolls > li.roll.basicdie.min {
     background: rgba(110,0,0,0.1);
     border-color: #6e0000;
     color: #6e0000;
 }
 
 /* ================================================================
-   DAMAGE / HEALING VALUES
+   MIDI-QOL — consolidated chat card
    ================================================================ */
 
-.calculated {
-    font-size: 14px;
-    font-weight: bold;
+/* Hide interactive re-roll buttons */
+div.midi-qol-attack-buttons,
+div.midi-qol-damage-buttons { display: none; }
+
+/* Hide result sections that have not yet been filled by the MIDI workflow */
+div.midi-qol-attack-roll:not(.midi-qol-section-filled),
+div.midi-qol-damage-roll:not(.midi-qol-section-filled),
+div.midi-qol-hits-display:not(.midi-qol-section-filled),
+div.midi-qol-saves-display:not(.midi-qol-section-filled),
+div.midi-qol-other-damage-roll:not(.midi-qol-section-filled),
+div.midi-qol-bonus-damage-roll:not(.midi-qol-section-filled),
+div.midi-qol-utility-roll:not(.midi-qol-section-filled) { display: none; }
+
+div.midi-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
 }
 
-.calculated.healing { color: #3c7f58; }
-.calculated.damage  { color: #9c5b47; }
-
-/* ================================================================
-   TRAYS (effects, targets, card sections)
-   ================================================================ */
-
-.card-tray,
-.effects-tray,
-.targets-tray {
-    margin-top: 0.125rem;
-    padding-top: 0.25rem;
-    border-top: 1px dotted #9f9275;
+/* Stack attack and damage vertically inside their flexrow container */
+div.midi-results > div.flexrow {
+    flex-direction: column;
+    gap: 0.375rem;
 }
 
-/* ================================================================
-   FLAVOR TEXT
-   ================================================================ */
+div.midi-qol-attack-roll,
+div.midi-qol-damage-roll {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
 
-.flavor-text,
-.card-flavor,
-.flavor {
-    font-style: italic;
+div.midi-roll-label {
     font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: #5a4e3a;
+    text-align: center;
 }
+
+/* Extra tooltip element inside MIDI damage sections — hide alongside dice-tooltip */
+div.midi-dice-tooltip { display: none; }
+
+/* Hits display collapsible tray — hide (interactive, not needed in display-only view) */
+div.card-tray.targets-tray.collapsible { display: none; }
 
 /* ================================================================
    LINKS & INLINE ROLLS
