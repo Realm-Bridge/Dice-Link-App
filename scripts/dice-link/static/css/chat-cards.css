@@ -315,7 +315,7 @@ div.dice-formula {
     border-radius: 3px;
     background: rgba(0,0,0,0.05);
     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
-    font-size: 14px;
+    font-size: 16px;
     color: #44342a;
     text-align: center;
 }
@@ -382,7 +382,8 @@ ol.dice-rolls {
 }
 
 ol.dice-rolls > li.roll.die,
-ol.dice-rolls > li.roll.basicdie {
+ol.dice-rolls > li.roll.basicdie,
+ol.dice-rolls > li.roll.d20die {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -433,12 +434,6 @@ div.midi-results {
     gap: 0.375rem;
 }
 
-/* Stack attack and damage vertically inside their flexrow container */
-div.midi-results > div.flexrow {
-    flex-direction: column;
-    gap: 0.375rem;
-}
-
 div.midi-qol-attack-roll,
 div.midi-qol-damage-roll {
     display: flex;
@@ -447,7 +442,7 @@ div.midi-qol-damage-roll {
 }
 
 div.midi-roll-label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
