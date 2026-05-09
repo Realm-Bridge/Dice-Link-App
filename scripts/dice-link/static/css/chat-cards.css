@@ -497,9 +497,11 @@ div.card-tray.targets-tray.collapsible > label {
     justify-content: center;
 }
 
-/* Targets list — collapsed by default; expandable later */
 div.card-tray.targets-tray.collapsible > div.collapsible-content {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 95%;
 }
 
 /* ================================================================
@@ -542,13 +544,34 @@ li.target.midi-qol {
 li.target.midi-qol i.midi-qol-hit-symbol {
     font-size: 16px;
     flex-shrink: 0;
+    color: #5a4e3a;
+}
+
+li.target.success {
+    background: rgba(0, 108, 0, 0.08);
+    border-color: #4a8c4a;
+}
+
+li.target.success i.midi-qol-hit-symbol {
     color: #006c00;
 }
 
+li.target.failure {
+    background: rgba(110, 0, 0, 0.08);
+    border-color: #8c4a4a;
+}
+
+li.target.failure i.midi-qol-hit-symbol {
+    color: #6e0000;
+}
+
+.viewer-gm span.midi-qol-playerTokenName { display: none; }
+.viewer-player span.midi-qol-gmTokenName { display: none; }
+
 li.target.midi-qol div.name-stacked > span.title {
     font-family: 'Roboto', Arial, sans-serif;
-    font-size: 15px;
-    font-weight: normal;
+    font-size: 45px;
+    font-weight: bold;
 }
 
 div.midi-qol-ac {
@@ -593,9 +616,11 @@ div.midi-qol-dmg-header {
 
 /* GM whisper — collapsed body */
 div.collapsible-content.card-content {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     gap: 0.25rem;
+    background: rgba(255, 0, 0, 0.15);
+    border: 2px solid red;
 }
 
 div.collapsible-content.card-content > div.wrapper {

@@ -69,6 +69,7 @@ function initChatLog() {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'chat-sidebar';
+    wrapper.classList.add(getIsGM() ? 'viewer-gm' : 'viewer-player');
 
     messageList = document.createElement('ol');
     messageList.className = 'chat-log';
