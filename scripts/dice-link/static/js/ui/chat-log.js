@@ -28,7 +28,7 @@ function initChatLog() {
     // stylesheets is unreliable for @font-face in some Chromium builds.
     const faLink = document.createElement('link');
     faLink.rel = 'stylesheet';
-    faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css';
+    faLink.href = '/static/fonts/fontawesome/css/all.min.css';
     shadowRoot.appendChild(faLink);
 
     // DLA's own chat card stylesheet

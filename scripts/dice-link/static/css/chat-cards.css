@@ -203,8 +203,9 @@ section.card-header > header.summary > i {
     flex-shrink: 0;
 }
 
-/* Description body */
+/* Description body — collapsed by default; expandable later */
 section.details.collapsible-content {
+    display: none;
     padding: 0.375rem 0.5rem;
     border: 1px solid #9f9275;
     border-radius: 3px;
@@ -321,7 +322,9 @@ div.dice-tooltip-collapser {
     flex-direction: column;
 }
 
+/* Dice breakdown — collapsed by default; expandable later */
 div.dice-tooltip {
+    display: none;
     padding: 0.375rem;
     background: rgba(0,0,0,0.03);
     border-radius: 3px;
@@ -432,6 +435,54 @@ div.midi-roll-label {
     letter-spacing: 0.05em;
     color: #5a4e3a;
     text-align: center;
+}
+
+/* MIDI damage tooltip — collapsed by default; expandable later */
+div.midi-dice-tooltip {
+    display: none;
+}
+
+/* Targets / hits display — centred label row */
+div.midi-qol-hits-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+div.midi-qol-single-hit-card {
+    width: 100%;
+}
+
+div.card-tray.targets-tray.collapsible {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+div.card-tray.targets-tray.collapsible > label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #5a4e3a;
+    cursor: default;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #9f9275;
+    border-radius: 3px;
+    background: #e8e0d5;
+    width: 100%;
+    justify-content: center;
+}
+
+/* Targets list — collapsed by default; expandable later */
+div.card-tray.targets-tray.collapsible > div.collapsible-content {
+    display: none;
 }
 
 /* ================================================================
