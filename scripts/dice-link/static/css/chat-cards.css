@@ -233,11 +233,12 @@ div.card-buttons button {
     justify-content: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
+    min-height: 44px;
     width: 100%;
     background: #e8e0d5;
     border: 1px solid #9f9275;
     border-radius: 4px;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: bold;
     color: #44342a;
     cursor: default;
