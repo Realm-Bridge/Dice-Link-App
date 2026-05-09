@@ -227,7 +227,7 @@ div.card-buttons {
     gap: 0.375rem;
 }
 
-div.card-buttons > button {
+div.card-buttons button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -348,6 +348,14 @@ h4.dice-total {
     color: #191813;
 }
 
+h4.dice-total::after {
+    content: "›";
+    margin-left: 0.4em;
+    font-size: 0.6em;
+    opacity: 0.5;
+    vertical-align: middle;
+}
+
 h4.dice-total.success:not(.fumble) {
     background: rgba(0,108,0,0.1);
     color: #006c00;
@@ -426,6 +434,8 @@ div.midi-qol-damage-roll {
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
+    flex: 1;
+    min-width: 0;
 }
 
 div.midi-roll-label {
