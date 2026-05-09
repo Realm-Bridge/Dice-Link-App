@@ -24,6 +24,13 @@ function initChatLog() {
     shadowRoot = container.shadowRoot || container.attachShadow({ mode: 'open' });
     shadowRoot.innerHTML = '';
 
+    // Font Awesome — loaded as a direct link element; @import inside Shadow DOM
+    // stylesheets is unreliable for @font-face in some Chromium builds.
+    const faLink = document.createElement('link');
+    faLink.rel = 'stylesheet';
+    faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css';
+    shadowRoot.appendChild(faLink);
+
     // DLA's own chat card stylesheet
     const styleLink = document.createElement('link');
     styleLink.rel = 'stylesheet';

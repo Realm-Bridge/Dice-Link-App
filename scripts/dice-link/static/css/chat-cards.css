@@ -5,7 +5,6 @@
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Roboto+Slab:wght@400;700&family=Roboto+Condensed:wght@400;700&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
 
 /* ================================================================
    RESET
@@ -38,9 +37,9 @@ li.chat-message {
     background: #f1ebe8;
     border: 1px solid #c5b89a;
     border-radius: 6px;
-    padding: 0.5rem;
+    padding: 0.625rem;
     margin-bottom: 0.375rem;
-    gap: 0.375rem;
+    gap: 0.5rem;
 }
 
 li.chat-message.whisper { background: #e8e8ef; border-color: #a0a0c0; }
@@ -67,7 +66,7 @@ header.message-header {
 
 h4.message-sender {
     font-family: 'Roboto Slab', Georgia, serif;
-    font-size: 17px;
+    font-size: 18px;
     font-weight: bold;
     flex: 1;
     min-width: 0;
@@ -87,8 +86,6 @@ time.message-timestamp {
     white-space: nowrap;
 }
 
-a.message-delete { display: none; }
-
 /* Sender avatar — class varies (avatar, portrait, or none); catch all img in header */
 header.message-header img {
     width: 36px;
@@ -104,7 +101,7 @@ header.message-header img {
 span.flavor-text {
     flex-basis: 100%;
     font-style: italic;
-    font-size: 14px;
+    font-size: 15px;
     color: #5a4e3a;
     line-height: 1.3;
 }
@@ -116,7 +113,7 @@ span.flavor-text {
 div.message-content {
     display: flex;
     flex-direction: column;
-    gap: 0.375rem;
+    gap: 0.5rem;
     line-height: 1.4;
 }
 
@@ -131,7 +128,7 @@ div.message-content img { max-width: 100%; height: auto; border-radius: 3px; }
 div.chat-card {
     display: flex;
     flex-direction: column;
-    gap: 0.375rem;
+    gap: 0.5rem;
 }
 
 /* ================================================================
@@ -152,8 +149,8 @@ div.chat-card {
 section.card-header {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    padding-bottom: 0.375rem;
+    gap: 0.375rem;
+    padding-bottom: 0.5rem;
     border-bottom: 1px solid #9f9275;
 }
 
@@ -167,8 +164,8 @@ section.card-header > header.summary {
 
 section.card-header > header.summary > img.gold-icon {
     display: block !important;
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     border: 1px solid #9f9275;
     border-radius: 4px;
     object-fit: cover;
@@ -182,18 +179,18 @@ div.name-stacked {
     flex: 1;
     min-width: 0;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
 }
 
 div.name-stacked > span.title {
     font-family: 'Roboto Slab', Georgia, serif;
-    font-size: 17px;
+    font-size: 20px;
     font-weight: bold;
     line-height: 1.2;
 }
 
 div.name-stacked > span.subtitle {
-    font-size: 13px;
+    font-size: 15px;
     color: #5a5242;
     line-height: 1.2;
 }
@@ -201,19 +198,18 @@ div.name-stacked > span.subtitle {
 /* Collapse chevron */
 section.card-header > header.summary > i {
     margin-left: auto;
-    font-size: 10px;
+    font-size: 18px;
     color: #9f9275;
     flex-shrink: 0;
 }
 
-/* Description body — hidden by default to match Foundry's collapsed state */
+/* Description body */
 section.details.collapsible-content {
-    display: none;
     padding: 0.375rem 0.5rem;
     border: 1px solid #9f9275;
     border-radius: 3px;
     background: #f8f4f1;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -227,7 +223,7 @@ section.details.collapsible-content p:last-child { margin-bottom: 0; }
 div.card-buttons {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.375rem;
 }
 
 div.card-buttons > button {
@@ -235,12 +231,12 @@ div.card-buttons > button {
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
-    padding: 0.375rem 0.5rem;
+    padding: 0.5rem 0.75rem;
     width: 100%;
     background: #e8e0d5;
     border: 1px solid #9f9275;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
     color: #44342a;
     cursor: default;
@@ -258,16 +254,16 @@ div.card-buttons > button {
 ul.card-footer.pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    padding-top: 0.25rem;
+    gap: 0.375rem;
+    padding-top: 0.375rem;
     border-top: 1px dotted #9f9275;
 }
 
 ul.card-footer.pills > li.pill {
     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1;
-    padding: 2px 6px;
+    padding: 4px 10px;
     background: #e0d8ce;
     border: 1px solid #9f9275;
     border-radius: 3px;
@@ -301,17 +297,17 @@ ul.card-footer.pills > li.pill > span.label {
 div.dice-roll {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.375rem;
 }
 
 div.dice-result {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.375rem;
 }
 
 div.dice-formula {
-    padding: 0.25rem 0.5rem;
+    padding: 0.375rem 0.75rem;
     border-radius: 3px;
     background: rgba(0,0,0,0.05);
     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
@@ -326,8 +322,7 @@ div.dice-tooltip-collapser {
 }
 
 div.dice-tooltip {
-    display: none;
-    padding: 0.25rem;
+    padding: 0.375rem;
     background: rgba(0,0,0,0.03);
     border-radius: 3px;
 }
@@ -341,8 +336,8 @@ section.tooltip-part {
 h4.dice-total {
     font-family: 'Roboto Slab', Georgia, serif;
     font-weight: bold;
-    font-size: 34px;
-    padding: 0.25rem;
+    font-size: 40px;
+    padding: 0.5rem;
     border-radius: 3px;
     background: rgba(0,0,0,0.05);
     text-align: center;
@@ -376,8 +371,8 @@ h4.dice-total.fumble {
 ol.dice-rolls {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    padding: 0.25rem;
+    gap: 0.375rem;
+    padding: 0.375rem;
     justify-content: center;
 }
 
@@ -387,25 +382,27 @@ ol.dice-rolls > li.roll.d20die {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
-    height: 28px;
-    padding: 0 4px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 6px;
     background: #e8e0d5;
     border: 1px solid #9f9275;
     border-radius: 3px;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
 }
 
 ol.dice-rolls > li.roll.die.max,
-ol.dice-rolls > li.roll.basicdie.max {
+ol.dice-rolls > li.roll.basicdie.max,
+ol.dice-rolls > li.roll.d20die.max {
     background: rgba(0,108,0,0.15);
     border-color: #006c00;
     color: #006c00;
 }
 
 ol.dice-rolls > li.roll.die.min,
-ol.dice-rolls > li.roll.basicdie.min {
+ol.dice-rolls > li.roll.basicdie.min,
+ol.dice-rolls > li.roll.d20die.min {
     background: rgba(110,0,0,0.1);
     border-color: #6e0000;
     color: #6e0000;
@@ -415,46 +412,27 @@ ol.dice-rolls > li.roll.basicdie.min {
    MIDI-QOL — consolidated chat card
    ================================================================ */
 
-/* Hide interactive re-roll buttons */
-div.midi-qol-attack-buttons,
-div.midi-qol-damage-buttons { display: none; }
-
-/* Hide result sections that have not yet been filled by the MIDI workflow */
-div.midi-qol-attack-roll:not(.midi-qol-section-filled),
-div.midi-qol-damage-roll:not(.midi-qol-section-filled),
-div.midi-qol-hits-display:not(.midi-qol-section-filled),
-div.midi-qol-saves-display:not(.midi-qol-section-filled),
-div.midi-qol-other-damage-roll:not(.midi-qol-section-filled),
-div.midi-qol-bonus-damage-roll:not(.midi-qol-section-filled),
-div.midi-qol-utility-roll:not(.midi-qol-section-filled) { display: none; }
-
 div.midi-results {
     display: flex;
     flex-direction: column;
-    gap: 0.375rem;
+    gap: 0.5rem;
 }
 
 div.midi-qol-attack-roll,
 div.midi-qol-damage-roll {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.375rem;
 }
 
 div.midi-roll-label {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #5a4e3a;
     text-align: center;
 }
-
-/* Extra tooltip element inside MIDI damage sections — hide alongside dice-tooltip */
-div.midi-dice-tooltip { display: none; }
-
-/* Hits display collapsible tray — hide (interactive, not needed in display-only view) */
-div.card-tray.targets-tray.collapsible { display: none; }
 
 /* ================================================================
    LINKS & INLINE ROLLS
