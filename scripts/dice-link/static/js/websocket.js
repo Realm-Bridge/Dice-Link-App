@@ -202,6 +202,10 @@ function handleMessage(message) {
             onPhoneCameraDisconnected();
             break;
 
+        case 'chatSetup':
+            handleChatSetup(message);
+            break;
+
         case 'chatInit':
             handleChatInit(message);
             break;

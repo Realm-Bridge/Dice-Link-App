@@ -24,6 +24,7 @@ class DLABridge(QObject):
     connectionPingReady = pyqtSignal()
     cameraFrameReady = pyqtSignal(str)
     cameraStreamEndReady = pyqtSignal()
+    chatInteractionReady = pyqtSignal(str)
 
     PING_INTERVAL_MS = 30000  # Send ping after 30s of silence from DLC
     PONG_TIMEOUT_MS = 2000    # Declare dead if no pong within 2s
@@ -157,22 +158,14 @@ class DLABridge(QObject):
             msg_type = data.get("type", "unknown")
             log_chat_log(f"receiveChatMessage: type={msg_type}, payload bytes={len(data_json)}")
 
-            if msg_type == "chatInit":
+            if msg_type == "chatSetup":
                 style_urls = data.get("styleUrls") or []
-                style_texts = data.get("styleTexts") or []
-                messages = data.get("messages") or []
-                log_chat_log(f"chatInit received: styleUrls={len(style_urls)}, styleTexts={len(style_texts)}, messages={len(messages)}")
-                for i, text in enumerate(style_texts):
-                    import re
-                    imports_total = len(re.findall(r'@import', text))
-                    imports_relative = len(re.findall(r"@import\s+['\"](?!https?://)", text))
-                    log_chat_log(
-                        f"  styleTexts[{i}]: {len(text)} bytes, "
-                        f"@imports total={imports_total}, "
-                        f"still-relative={imports_relative}"
-                        + (" WARNING: relative @imports will 404 on DLA" if imports_relative > 0 else "")
-                    )
-                log_chat_log(f"  styleUrls: {style_urls}")
+                css_vars = data.get("cssVars") or {}
+                body_classes = data.get("bodyClasses") or []
+                log_chat_log(f"chatSetup received: {len(style_urls)} sheets, {len(css_vars)} vars, {len(body_classes)} body classes")
+
+            elif msg_type == "chatInit":
+                log_chat_log("chatInit received")
 
             elif msg_type == "chatMessage":
                 msg_id = data.get("messageId", "unknown")
@@ -321,3 +314,9 @@ class DLABridge(QObject):
             self.cameraStreamEndReady.emit()
         except Exception as e:
             self.log_vtt(f"[BRIDGE] ERROR sending camera stream end: {str(e)}")
+
+    def sendChatInteraction(self, data_json: str):
+        try:
+            self.chatInteractionReady.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending chat interaction: {str(e)}")

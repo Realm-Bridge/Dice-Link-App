@@ -166,6 +166,20 @@ def send_chat_message_to_ui(data):
         return False
 
 
+def send_chat_interaction_to_dlc(data):
+    """Forward a chat card interaction from DLA's UI to DLC via the bridge."""
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.sendChatInteraction(json.dumps(data))
+            log_bridge_state(f"Sent chatInteraction to DLC: messageId={data.get('messageId')}, dlaId={data.get('dlaId')}")
+            return True
+        except Exception as e:
+            log_bridge_state(f"Error sending chatInteraction to DLC: {e}")
+            return False
+    return False
+
+
 def send_camera_frame_to_dlc(frame_b64: str):
     """Send a single camera frame to DLC via the bridge."""
     bridge = get_bridge()
