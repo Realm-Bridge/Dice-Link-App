@@ -28,7 +28,7 @@ let _pendingSetup = null;
 
 function handleChatSetup(message) {
     debugChatLog('handleChatSetup received', {
-        sheets: (message.styleUrls || []).length,
+        blocks: (message.styleTexts || []).length,
         vars: Object.keys(message.cssVars || {}).length,
         bodyClasses: (message.bodyClasses || []).length,
         rootFontSize: message.rootFontSize || 'not sent'
@@ -40,7 +40,7 @@ function handleChatSetup(message) {
     });
 
     _pendingSetup = {
-        styleUrls:    message.styleUrls    || [],
+        styleTexts:   message.styleTexts   || [],
         cssVars:      message.cssVars      || {},
         bodyClasses:  message.bodyClasses  || [],
         rootFontSize: message.rootFontSize || null
@@ -61,24 +61,36 @@ function initChatLog() {
     }
 
     const setup        = _pendingSetup || {};
-    const styleUrls    = setup.styleUrls    || [];
+    const styleTexts   = setup.styleTexts   || [];
     const cssVars      = setup.cssVars      || {};
     const bodyClasses  = setup.bodyClasses  || [];
     const rootFontSize = setup.rootFontSize || null;
 
-    // Load all Foundry stylesheets into the main document inside a named CSS layer.
-    // @layer(foundry) ensures every unlayered DLA rule wins any specificity clash,
-    // so Foundry's global resets cannot affect DLA's own controls.
-    // Only injected once — stylesheet URLs do not change on reconnect.
-    if (!_foundryStylesInjected && styleUrls.length > 0) {
-        const importStyle = document.createElement('style');
-        importStyle.id = 'foundry-css-layer';
-        importStyle.textContent = styleUrls
-            .map(url => `@import url("${url}") layer(foundry);`)
-            .join('\n');
-        document.head.appendChild(importStyle);
+    // Inject Foundry's embedded CSS blocks into the main document inside a named CSS layer.
+    // @layer(foundry) ensures every unlayered DLA rule wins any specificity clash.
+    // @import statements cannot appear inside @layer, so they are extracted and
+    // converted to layered @import syntax before the layer block.
+    // Only injected once — style blocks do not change on reconnect.
+    if (!_foundryStylesInjected && styleTexts.length > 0) {
+        const layeredImports = [];
+        const layerBlocks = [];
+
+        for (const text of styleTexts) {
+            const cleaned = text.replace(/^@import\s[^;]+;/gm, match => {
+                layeredImports.push(match.replace(/;\s*$/, ' layer(foundry);'));
+                return '';
+            }).trim();
+            if (cleaned) {
+                layerBlocks.push(`@layer foundry {\n${cleaned}\n}`);
+            }
+        }
+
+        const cssEl = document.createElement('style');
+        cssEl.id = 'foundry-css-layer';
+        cssEl.textContent = [...layeredImports, ...layerBlocks].join('\n\n');
+        document.head.appendChild(cssEl);
         _foundryStylesInjected = true;
-        debugChatLog(`initChatLog: injected ${styleUrls.length} Foundry stylesheets as layer(foundry)`);
+        debugChatLog(`initChatLog: injected ${styleTexts.length} Foundry style blocks as layer(foundry)`);
     }
 
     // Inject Foundry's runtime CSS vars scoped to #vtt-chat-log.

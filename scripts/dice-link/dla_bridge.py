@@ -159,10 +159,10 @@ class DLABridge(QObject):
             log_chat_log(f"receiveChatMessage: type={msg_type}, payload bytes={len(data_json)}")
 
             if msg_type == "chatSetup":
-                style_urls = data.get("styleUrls") or []
+                style_texts = data.get("styleTexts") or []
                 css_vars = data.get("cssVars") or {}
                 body_classes = data.get("bodyClasses") or []
-                log_chat_log(f"chatSetup received: {len(style_urls)} sheets, {len(css_vars)} vars, {len(body_classes)} body classes")
+                log_chat_log(f"chatSetup received: {len(style_texts)} style blocks, {len(css_vars)} vars, {len(body_classes)} body classes")
 
             elif msg_type == "chatInit":
                 log_chat_log("chatInit received")
