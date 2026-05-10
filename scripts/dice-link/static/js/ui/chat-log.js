@@ -1,18 +1,26 @@
 /**
  * Chat Log UI Module
- * Renders incoming Foundry chat messages inside a Shadow DOM,
- * styled with Foundry's own CSS received via chatSetup.
+ * Renders incoming Foundry chat messages inside the control panel,
+ * styled with Foundry's own CSS loaded into the main document via @layer.
+ *
+ * CSS loading strategy:
+ *   - Foundry stylesheet URLs are imported as @layer(foundry) so DLA's own
+ *     (unlayered) CSS always wins any specificity clash.
+ *   - DLA's document.body already carries Foundry's body classes (added in
+ *     handleChatSetup), so body.xxx selectors in Foundry's CSS fire correctly.
+ *   - Computed CSS vars received from DLC are scoped to #vtt-chat-log and are
+ *     unlayered, so they override any layered stylesheet defaults.
+ *   - Layout and image-constraint overrides are scoped to #vtt-chat-log so
+ *     they cannot affect the rest of DLA's UI.
  */
 
-let shadowRoot = null;
 let messageList = null;
 let pendingMessages = [];
-
-// CSS setup data received from DLC before chatInit
+let _foundryStylesInjected = false;
 let _pendingSetup = null;
 
 // ============================================================================
-// CHAT SETUP (receives Foundry CSS data from DLC)
+// CHAT SETUP — receives Foundry CSS data from DLC before chatInit
 // ============================================================================
 
 function handleChatSetup(message) {
@@ -22,20 +30,20 @@ function handleChatSetup(message) {
         bodyClasses: (message.bodyClasses || []).length
     });
 
-    // Add Foundry body classes to DLA's page body so body-level CSS selectors fire
+    // Add Foundry body classes to DLA's document.body so body.xxx CSS selectors fire
     (message.bodyClasses || []).forEach(cls => {
         if (cls) document.body.classList.add(cls);
     });
 
-    // Store for use when chatInit arrives
     _pendingSetup = {
         styleUrls: message.styleUrls || [],
-        cssVars: message.cssVars || {}
+        cssVars: message.cssVars || {},
+        bodyClasses: message.bodyClasses || []
     };
 }
 
 // ============================================================================
-// CHAT INIT (builds the Shadow DOM)
+// CHAT INIT — builds the DOM and loads Foundry CSS
 // ============================================================================
 
 function initChatLog() {
@@ -47,77 +55,101 @@ function initChatLog() {
         return;
     }
 
-    shadowRoot = container.shadowRoot || container.attachShadow({ mode: 'open' });
-    shadowRoot.innerHTML = '';
-
     const setup = _pendingSetup || {};
     const styleUrls = setup.styleUrls || [];
     const cssVars = setup.cssVars || {};
+    const bodyClasses = setup.bodyClasses || [];
 
-    // Inject Foundry's CSS custom properties so colour/size variables resolve inside the shadow tree
-    if (Object.keys(cssVars).length > 0) {
-        const varStyle = document.createElement('style');
-        const decls = Object.entries(cssVars).map(([k, v]) => `  ${k}: ${v};`).join('\n');
-        varStyle.textContent = `:host {\n${decls}\n}`;
-        shadowRoot.appendChild(varStyle);
+    // Load all Foundry stylesheets into the main document inside a named CSS layer.
+    // @layer(foundry) means every unlayered DLA rule automatically wins on conflicts —
+    // Foundry's global rules (button, img, body, etc.) cannot override DLA's own styling.
+    // Only done once per session; Foundry stylesheet URLs don't change on reconnect.
+    if (!_foundryStylesInjected && styleUrls.length > 0) {
+        const importStyle = document.createElement('style');
+        importStyle.id = 'foundry-css-layer';
+        importStyle.textContent = styleUrls
+            .map(url => `@import url("${url}") layer(foundry);`)
+            .join('\n');
+        document.head.appendChild(importStyle);
+        _foundryStylesInjected = true;
+        debugChatLog(`initChatLog: injected ${styleUrls.length} Foundry stylesheets as layer(foundry)`);
     }
 
-    // Font Awesome (always needed, served locally)
-    const faLink = document.createElement('link');
-    faLink.rel = 'stylesheet';
-    faLink.href = '/static/fonts/fontawesome/css/all.min.css';
-    shadowRoot.appendChild(faLink);
+    // Inject Foundry's computed CSS vars scoped to #vtt-chat-log.
+    // These are the runtime-resolved values (e.g. dark theme values set by JS),
+    // not just the stylesheet defaults. Being unlayered, they win over layered values.
+    const existingVars = document.getElementById('foundry-css-vars');
+    if (existingVars) existingVars.remove();
+    if (Object.keys(cssVars).length > 0) {
+        const varStyle = document.createElement('style');
+        varStyle.id = 'foundry-css-vars';
+        const decls = Object.entries(cssVars).map(([k, v]) => `  ${k}: ${v};`).join('\n');
+        varStyle.textContent = `#vtt-chat-log {\n${decls}\n}`;
+        document.head.appendChild(varStyle);
+    }
 
-    // Load all Foundry CSS files via absolute URLs
-    styleUrls.forEach(url => {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = url;
-        shadowRoot.appendChild(link);
-    });
+    // Layout and image constraints scoped to #vtt-chat-log.
+    // Injected once — does not change on reconnect.
+    if (!document.getElementById('foundry-chat-layout')) {
+        const layout = document.createElement('style');
+        layout.id = 'foundry-chat-layout';
+        layout.textContent = `
+            #vtt-chat-log {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                overflow: hidden;
+            }
+            #vtt-chat-log #sidebar {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                min-height: 0;
+            }
+            #vtt-chat-log section#chat {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                min-height: 0;
+            }
+            #vtt-chat-log ol#chat-log {
+                flex: 1;
+                overflow-y: auto;
+                list-style: none;
+                margin: 0;
+                padding: 4px;
+                min-height: 0;
+            }
+            #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
+            #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
+            #vtt-chat-log ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
+            #vtt-chat-log img {
+                max-width: 100%;
+                height: auto;
+            }
+            #vtt-chat-log .message-header img,
+            #vtt-chat-log .profile-image,
+            #vtt-chat-log img.profile-image,
+            #vtt-chat-log .author-avatar img {
+                width: 36px;
+                height: 36px;
+                object-fit: cover;
+                border-radius: 50%;
+            }
+        `;
+        document.head.appendChild(layout);
+    }
 
-    // Minimal layout styles — only what is needed to position the panel itself
-    const layout = document.createElement('style');
-    layout.textContent = `
-        :host {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            overflow: hidden;
-        }
-        #sidebar {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            min-height: 0;
-        }
-        section#chat {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            min-height: 0;
-        }
-        ol#chat-log {
-            flex: 1;
-            overflow-y: auto;
-            list-style: none;
-            margin: 0;
-            padding: 4px;
-            min-height: 0;
-        }
-        ol#chat-log::-webkit-scrollbar { width: 6px; }
-        ol#chat-log::-webkit-scrollbar-track { background: transparent; }
-        ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
-    `;
-    shadowRoot.appendChild(layout);
+    // Rebuild the chat panel DOM inside #vtt-chat-log
+    container.innerHTML = '';
 
-    // Build the ancestor structure that Foundry's CSS selectors expect:
-    // #sidebar > section#chat > ol#chat-log
     const sidebar = document.createElement('div');
     sidebar.id = 'sidebar';
-    sidebar.classList.add(getIsGM() ? 'viewer-gm' : 'viewer-player');
+    // Mirror Foundry's body classes onto #sidebar so CSS rules that use those classes
+    // as ancestors (e.g. .dnd5e-theme-dark .chat-message) fire correctly inside the panel
+    bodyClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
 
     const chatSection = document.createElement('section');
     chatSection.id = 'chat';
@@ -125,7 +157,7 @@ function initChatLog() {
     messageList = document.createElement('ol');
     messageList.id = 'chat-log';
 
-    // Intercept clicks on numbered interactive elements and forward to DLC
+    // Forward clicks on numbered interactive elements to DLC
     messageList.addEventListener('click', e => {
         const dlaTarget = e.target.closest('[data-dla-id]');
         if (!dlaTarget) return;
@@ -141,7 +173,7 @@ function initChatLog() {
         });
     });
 
-    // Intercept change events (selects, checkboxes) and forward to DLC
+    // Forward change events (selects, checkboxes) to DLC
     messageList.addEventListener('change', e => {
         const dlaTarget = e.target.closest('[data-dla-id]');
         if (!dlaTarget) return;
@@ -163,7 +195,7 @@ function initChatLog() {
 
     chatSection.appendChild(messageList);
     sidebar.appendChild(chatSection);
-    shadowRoot.appendChild(sidebar);
+    container.appendChild(sidebar);
 
     const flushed = pendingMessages.length;
     pendingMessages.forEach(msg => handleChatMessage(msg));
@@ -172,7 +204,7 @@ function initChatLog() {
 }
 
 // ============================================================================
-// MESSAGE HANDLERS (called from websocket.js handleMessage)
+// MESSAGE HANDLERS — called from websocket.js handleMessage
 // ============================================================================
 
 function handleChatInit(message) {
@@ -180,10 +212,6 @@ function handleChatInit(message) {
     initChatLog();
 }
 
-/**
- * Handle a single incoming chat message.
- * Replaces existing card in-place by messageId, or appends new card.
- */
 function handleChatMessage(message) {
     const id = message.messageId;
     const html = message.html || '';
