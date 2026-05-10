@@ -244,7 +244,7 @@ function handleChatMessage(message) {
         htmlBytes: html.length,
         listReady: !!messageList
     });
-    debugChatLog('handleChatMessage HTML preview:', html.substring(0, 400));
+    debugChatLog('handleChatMessage HTML preview:', html.substring(0, 4000));
 
     if (!messageList) {
         pendingMessages.push(message);
