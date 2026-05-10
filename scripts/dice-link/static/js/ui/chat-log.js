@@ -83,12 +83,10 @@ function initChatLog() {
                 return '';
             }).trim();
             if (cleaned) {
-                // :root selectors inside @scope (#vtt-chat-log) never match because
-                // :root is the document root, not a descendant of the chat container.
-                // Remap them so CSS custom properties (colours, backgrounds, etc.)
-                // are actually inherited inside the panel.
+                // Remap :root to #vtt-chat-log so dnd5e CSS variables are scoped to
+                // the chat panel rather than leaking onto DLA's document root.
                 const remapped = cleaned.replace(/:root\b/g, '#vtt-chat-log');
-                layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${remapped}\n}\n}`);
+                layerBlocks.push(`@layer foundry {\n${remapped}\n}`);
             }
         }
 
@@ -179,6 +177,7 @@ function initChatLog() {
     // Mirror Foundry's body classes onto #sidebar so CSS rules that use those
     // classes as ancestors (without requiring body as tag) fire inside the panel
     bodyClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
+    sidebar.classList.add('themed');
 
     const chatSection = document.createElement('section');
     chatSection.id = 'chat';
