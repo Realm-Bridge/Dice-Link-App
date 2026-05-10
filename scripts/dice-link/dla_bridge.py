@@ -163,15 +163,6 @@ class DLABridge(QObject):
                 css_vars = data.get("cssVars") or {}
                 body_classes = data.get("bodyClasses") or []
                 log_chat_log(f"chatSetup received: {len(style_texts)} style blocks, {len(css_vars)} vars, {len(body_classes)} body classes")
-                for entry in (data.get("sheetDiagnostic") or []):
-                    log_chat_log(f"  stylesheet[{entry.get('i')}]: tag={entry.get('tag')}, href={entry.get('href') or 'none'}, textContent={entry.get('textLen')}b, cssRules={entry.get('rulesCount')}")
-                for entry in (data.get("adoptedDiagnostic") or []):
-                    log_chat_log(f"  adoptedSheet[{entry.get('i')}]: cssRules={entry.get('rulesCount')}, cssText={entry.get('totalTextLen')}b")
-                for entry in (data.get("rulesDiagnostic") or []):
-                    if 'error' in entry:
-                        log_chat_log(f"  foundry2.css rules ERROR: {entry.get('error')}")
-                    else:
-                        log_chat_log(f"  foundry2.css rule[{entry.get('i')}]: {entry.get('text')}")
 
             elif msg_type == "chatInit":
                 log_chat_log("chatInit received")
