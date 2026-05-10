@@ -83,7 +83,7 @@ function initChatLog() {
                 return '';
             }).trim();
             if (cleaned) {
-                layerBlocks.push(`@layer foundry {\n${cleaned}\n}`);
+                layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${cleaned}\n}\n}`);
             }
         }
 
@@ -92,7 +92,7 @@ function initChatLog() {
         cssEl.textContent = [...layeredImports, ...layerBlocks].join('\n\n');
         document.head.appendChild(cssEl);
         _foundryStylesInjected = true;
-        debugChatLog(`initChatLog: injected ${styleTexts.length} Foundry style blocks as layer(foundry)`);
+        debugChatLog(`initChatLog: injected ${styleTexts.length} Foundry style blocks scoped to #vtt-chat-log`);
     }
 
     // Inject Foundry's runtime CSS vars scoped to #vtt-chat-log.
