@@ -83,10 +83,14 @@ function initChatLog() {
                 return '';
             }).trim();
             if (cleaned) {
-                // Remap :root to #vtt-chat-log so dnd5e CSS variables are scoped to
-                // the chat panel rather than leaking onto DLA's document root.
-                const remapped = cleaned.replace(/:root\b/g, '#vtt-chat-log');
-                layerBlocks.push(`@layer foundry {\n${remapped}\n}`);
+                // Remap :root and body.xxx selectors into #vtt-chat-log so they
+                // resolve inside the @scope boundary rather than reaching outside it.
+                // body.theme-dark → #vtt-chat-log.theme-dark etc., matched by the
+                // classes we apply to #vtt-chat-log in initChatLog below.
+                const remapped = cleaned
+                    .replace(/:root\b/g, '#vtt-chat-log')
+                    .replace(/\bbody\.([\w-]+)/g, '#vtt-chat-log.$1');
+                layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${remapped}\n}\n}`);
             }
         }
 
@@ -171,6 +175,12 @@ function initChatLog() {
 
     // Rebuild the chat panel DOM inside #vtt-chat-log
     container.innerHTML = '';
+
+    // Apply body classes and themed to #vtt-chat-log itself so that
+    // body.theme-dark selectors (remapped to #vtt-chat-log.theme-dark) fire
+    // correctly inside the @scope without reaching outside the panel.
+    bodyClasses.forEach(cls => { if (cls) container.classList.add(cls); });
+    container.classList.add('themed');
 
     const sidebar = document.createElement('div');
     sidebar.id = 'sidebar';
