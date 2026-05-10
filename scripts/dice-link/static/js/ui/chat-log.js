@@ -83,13 +83,14 @@ function initChatLog() {
                 return '';
             }).trim();
             if (cleaned) {
-                // Remap :root and body.xxx selectors into #vtt-chat-log so they
-                // resolve inside the @scope boundary rather than reaching outside it.
-                // body.theme-dark → #vtt-chat-log.theme-dark etc., matched by the
-                // classes we apply to #vtt-chat-log in initChatLog below.
+                // Remap :root and body.xxx selectors to #sidebar so they resolve
+                // inside the @scope boundary. #sidebar is a real element inside
+                // #vtt-chat-log that carries all the body classes, so the browser
+                // can find it. Remapping to #vtt-chat-log itself fails because the
+                // scope root cannot be its own ancestor inside @scope.
                 const remapped = cleaned
-                    .replace(/:root\b/g, '#vtt-chat-log')
-                    .replace(/\bbody\.([\w-]+)/g, '#vtt-chat-log.$1');
+                    .replace(/:root\b/g, '#sidebar')
+                    .replace(/\bbody\.([\w-]+)/g, '#sidebar.$1');
                 layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${remapped}\n}\n}`);
             }
         }
@@ -175,12 +176,6 @@ function initChatLog() {
 
     // Rebuild the chat panel DOM inside #vtt-chat-log
     container.innerHTML = '';
-
-    // Apply body classes and themed to #vtt-chat-log itself so that
-    // body.theme-dark selectors (remapped to #vtt-chat-log.theme-dark) fire
-    // correctly inside the @scope without reaching outside the panel.
-    bodyClasses.forEach(cls => { if (cls) container.classList.add(cls); });
-    container.classList.add('themed');
 
     const sidebar = document.createElement('div');
     sidebar.id = 'sidebar';
