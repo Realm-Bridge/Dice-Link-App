@@ -1,17 +1,20 @@
 /**
  * Chat Log UI Module
  * Renders incoming Foundry chat messages inside the control panel,
- * styled with Foundry's own CSS loaded into the main document via @layer.
+ * styled exclusively with Foundry's own CSS loaded into the main document.
  *
- * CSS loading strategy:
- *   - Foundry stylesheet URLs are imported as @layer(foundry) so DLA's own
- *     (unlayered) CSS always wins any specificity clash.
- *   - DLA's document.body already carries Foundry's body classes (added in
- *     handleChatSetup), so body.xxx selectors in Foundry's CSS fire correctly.
- *   - Computed CSS vars received from DLC are scoped to #vtt-chat-log and are
- *     unlayered, so they override any layered stylesheet defaults.
- *   - Layout and image-constraint overrides are scoped to #vtt-chat-log so
- *     they cannot affect the rest of DLA's UI.
+ * CSS strategy:
+ *   - Foundry stylesheets loaded as @layer(foundry) so DLA's own unlayered
+ *     CSS always wins any conflict — Foundry cannot break DLA's UI.
+ *   - DLA's document.body carries Foundry's body classes, so body.xxx
+ *     selectors in Foundry's CSS fire correctly.
+ *   - Foundry's computed root font-size is applied to #vtt-chat-log so that
+ *     em-based values inside chat cards compute against the correct base.
+ *   - All card content styling (images, avatars, colours, fonts, layout
+ *     inside cards) is left entirely to Foundry's own CSS. We add nothing
+ *     system-specific here.
+ *   - Our CSS only covers the outer panel structure needed to make the
+ *     chat list exist and scroll inside DLA's layout.
  */
 
 let messageList = null;
@@ -27,18 +30,20 @@ function handleChatSetup(message) {
     debugChatLog('handleChatSetup received', {
         sheets: (message.styleUrls || []).length,
         vars: Object.keys(message.cssVars || {}).length,
-        bodyClasses: (message.bodyClasses || []).length
+        bodyClasses: (message.bodyClasses || []).length,
+        rootFontSize: message.rootFontSize || 'not sent'
     });
 
-    // Add Foundry body classes to DLA's document.body so body.xxx CSS selectors fire
+    // Add Foundry body classes to DLA's document.body so body.xxx selectors fire
     (message.bodyClasses || []).forEach(cls => {
         if (cls) document.body.classList.add(cls);
     });
 
     _pendingSetup = {
-        styleUrls: message.styleUrls || [],
-        cssVars: message.cssVars || {},
-        bodyClasses: message.bodyClasses || []
+        styleUrls:    message.styleUrls    || [],
+        cssVars:      message.cssVars      || {},
+        bodyClasses:  message.bodyClasses  || [],
+        rootFontSize: message.rootFontSize || null
     };
 }
 
@@ -55,15 +60,16 @@ function initChatLog() {
         return;
     }
 
-    const setup = _pendingSetup || {};
-    const styleUrls = setup.styleUrls || [];
-    const cssVars = setup.cssVars || {};
-    const bodyClasses = setup.bodyClasses || [];
+    const setup        = _pendingSetup || {};
+    const styleUrls    = setup.styleUrls    || [];
+    const cssVars      = setup.cssVars      || {};
+    const bodyClasses  = setup.bodyClasses  || [];
+    const rootFontSize = setup.rootFontSize || null;
 
     // Load all Foundry stylesheets into the main document inside a named CSS layer.
-    // @layer(foundry) means every unlayered DLA rule automatically wins on conflicts —
-    // Foundry's global rules (button, img, body, etc.) cannot override DLA's own styling.
-    // Only done once per session; Foundry stylesheet URLs don't change on reconnect.
+    // @layer(foundry) ensures every unlayered DLA rule wins any specificity clash,
+    // so Foundry's global resets cannot affect DLA's own controls.
+    // Only injected once — stylesheet URLs do not change on reconnect.
     if (!_foundryStylesInjected && styleUrls.length > 0) {
         const importStyle = document.createElement('style');
         importStyle.id = 'foundry-css-layer';
@@ -75,9 +81,10 @@ function initChatLog() {
         debugChatLog(`initChatLog: injected ${styleUrls.length} Foundry stylesheets as layer(foundry)`);
     }
 
-    // Inject Foundry's computed CSS vars scoped to #vtt-chat-log.
-    // These are the runtime-resolved values (e.g. dark theme values set by JS),
-    // not just the stylesheet defaults. Being unlayered, they win over layered values.
+    // Inject Foundry's runtime CSS vars scoped to #vtt-chat-log.
+    // These are the computed values (e.g. dark-theme overrides set by JS),
+    // not just stylesheet defaults. Being unlayered they win over layered values.
+    // Re-injected on every chatInit in case the theme changed.
     const existingVars = document.getElementById('foundry-css-vars');
     if (existingVars) existingVars.remove();
     if (Object.keys(cssVars).length > 0) {
@@ -88,8 +95,10 @@ function initChatLog() {
         document.head.appendChild(varStyle);
     }
 
-    // Layout and image constraints scoped to #vtt-chat-log.
-    // Injected once — does not change on reconnect.
+    // Structural layout CSS — injected once.
+    // This only covers what is needed for the panel to exist and scroll inside
+    // DLA's layout. Nothing inside chat cards is styled here; that is entirely
+    // Foundry's responsibility via the loaded stylesheets.
     if (!document.getElementById('foundry-chat-layout')) {
         const layout = document.createElement('style');
         layout.id = 'foundry-chat-layout';
@@ -125,21 +134,21 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
-            #vtt-chat-log img {
-                max-width: 100%;
-                height: auto;
-            }
-            #vtt-chat-log .message-header img,
-            #vtt-chat-log .profile-image,
-            #vtt-chat-log img.profile-image,
-            #vtt-chat-log .author-avatar img {
-                width: 36px;
-                height: 36px;
-                object-fit: cover;
-                border-radius: 50%;
-            }
         `;
         document.head.appendChild(layout);
+    }
+
+    // Apply Foundry's root font-size to the chat container.
+    // This ensures em-based values inside chat cards compute against the same
+    // base that Foundry uses, regardless of which game system is active.
+    const existingFontSize = document.getElementById('foundry-chat-fontsize');
+    if (existingFontSize) existingFontSize.remove();
+    if (rootFontSize) {
+        const fontSizeStyle = document.createElement('style');
+        fontSizeStyle.id = 'foundry-chat-fontsize';
+        fontSizeStyle.textContent = `#vtt-chat-log { font-size: ${rootFontSize}; }`;
+        document.head.appendChild(fontSizeStyle);
+        debugChatLog(`initChatLog: applied rootFontSize=${rootFontSize} to #vtt-chat-log`);
     }
 
     // Rebuild the chat panel DOM inside #vtt-chat-log
@@ -147,8 +156,8 @@ function initChatLog() {
 
     const sidebar = document.createElement('div');
     sidebar.id = 'sidebar';
-    // Mirror Foundry's body classes onto #sidebar so CSS rules that use those classes
-    // as ancestors (e.g. .dnd5e-theme-dark .chat-message) fire correctly inside the panel
+    // Mirror Foundry's body classes onto #sidebar so CSS rules that use those
+    // classes as ancestors (without requiring body as tag) fire inside the panel
     bodyClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
 
     const chatSection = document.createElement('section');
@@ -213,7 +222,7 @@ function handleChatInit(message) {
 }
 
 function handleChatMessage(message) {
-    const id = message.messageId;
+    const id   = message.messageId;
     const html = message.html || '';
 
     debugChatLog('handleChatMessage received', {
