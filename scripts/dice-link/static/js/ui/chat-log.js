@@ -83,7 +83,12 @@ function initChatLog() {
                 return '';
             }).trim();
             if (cleaned) {
-                layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${cleaned}\n}\n}`);
+                // :root selectors inside @scope (#vtt-chat-log) never match because
+                // :root is the document root, not a descendant of the chat container.
+                // Remap them so CSS custom properties (colours, backgrounds, etc.)
+                // are actually inherited inside the panel.
+                const remapped = cleaned.replace(/:root\b/g, '#vtt-chat-log');
+                layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${remapped}\n}\n}`);
             }
         }
 
@@ -144,6 +149,7 @@ function initChatLog() {
                 margin: 0;
                 padding: 4px;
                 min-height: 0;
+                zoom: 1.25;
             }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
