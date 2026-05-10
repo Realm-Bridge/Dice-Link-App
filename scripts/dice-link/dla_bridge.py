@@ -163,6 +163,8 @@ class DLABridge(QObject):
                 css_vars = data.get("cssVars") or {}
                 body_classes = data.get("bodyClasses") or []
                 log_chat_log(f"chatSetup received: {len(style_texts)} style blocks, {len(css_vars)} vars, {len(body_classes)} body classes")
+                for entry in (data.get("programmaticDiagnostic") or []):
+                    log_chat_log(f"  programmatic sheet[{entry.get('si')}] rule[{entry.get('ri')}]: {entry.get('text')}")
 
             elif msg_type == "chatInit":
                 log_chat_log("chatInit received")
