@@ -163,6 +163,7 @@ class DLABridge(QObject):
                 css_vars = data.get("cssVars") or {}
                 body_classes = data.get("bodyClasses") or []
                 log_chat_log(f"chatSetup received: {len(style_texts)} style blocks, {len(css_vars)} vars, {len(body_classes)} body classes")
+                log_chat_log(f"  body classes: {' '.join(body_classes) if body_classes else '(none)'}")
                 for entry in (data.get("programmaticDiagnostic") or []):
                     log_chat_log(f"  programmatic sheet[{entry.get('si')}] rule[{entry.get('ri')}]: {entry.get('text')}")
 
@@ -173,6 +174,12 @@ class DLABridge(QObject):
                 msg_id = data.get("messageId", "unknown")
                 html = data.get("html") or ""
                 log_chat_log(f"chatMessage received: messageId={msg_id}, html bytes={len(html)}")
+
+            elif msg_type == "chatDiagnostic":
+                event = data.get("event", "unknown")
+                log_chat_log(f"chatDiagnostic: {event}")
+                for entry in (data.get("sheets") or []):
+                    log_chat_log(f"  sheet[{entry.get('i')}]: tag={entry.get('tag')}, href={entry.get('href') or 'none'}, textContent={entry.get('textLen')}b, cssRules={entry.get('rulesCount')}")
 
             else:
                 log_chat_log(f"unknown chat message type: {msg_type}")

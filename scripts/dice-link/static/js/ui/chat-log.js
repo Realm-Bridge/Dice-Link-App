@@ -27,12 +27,14 @@ let _pendingSetup = null;
 // ============================================================================
 
 function handleChatSetup(message) {
+    const bodyClasses = message.bodyClasses || [];
     debugChatLog('handleChatSetup received', {
         blocks: (message.styleTexts || []).length,
         vars: Object.keys(message.cssVars || {}).length,
-        bodyClasses: (message.bodyClasses || []).length,
+        bodyClasses: bodyClasses.length,
         rootFontSize: message.rootFontSize || 'not sent'
     });
+    debugChatLog('handleChatSetup body classes:', bodyClasses.join(' ') || '(none)');
 
     // Add Foundry body classes to DLA's document.body so body.xxx selectors fire
     (message.bodyClasses || []).forEach(cls => {
@@ -242,6 +244,7 @@ function handleChatMessage(message) {
         htmlBytes: html.length,
         listReady: !!messageList
     });
+    debugChatLog('handleChatMessage HTML preview:', html.substring(0, 400));
 
     if (!messageList) {
         pendingMessages.push(message);
@@ -252,6 +255,10 @@ function handleChatMessage(message) {
     template.innerHTML = html;
     const node = template.content.firstElementChild;
     if (!node) return;
+
+    // Strip any <style> or <link> elements inside the card — if left in, they
+    // become global CSS when the node is moved to the live document, breaking DLA's UI.
+    node.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
 
     const existing = id
         ? messageList.querySelector('[data-message-id="' + id + '"]')
