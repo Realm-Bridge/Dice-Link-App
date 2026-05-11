@@ -84,13 +84,13 @@ function initChatLog() {
             }).trim();
             if (cleaned) {
                 // Remap :root and body.xxx selectors to #sidebar so they resolve
-                // inside the @scope boundary. #sidebar is a real element inside
+                // inside the @scope boundary. #dla-sidebar is a real element inside
                 // #vtt-chat-log that carries all the body classes, so the browser
                 // can find it. Remapping to #vtt-chat-log itself fails because the
                 // scope root cannot be its own ancestor inside @scope.
                 const remapped = cleaned
-                    .replace(/:root\b/g, '#sidebar')
-                    .replace(/\bbody\.([\w-]+)/g, '#sidebar.$1');
+                    .replace(/:root\b/g, '#dla-sidebar')
+                    .replace(/\bbody\.([\w-]+)/g, '#dla-sidebar.$1');
                 layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${remapped}\n}\n}`);
             }
         }
@@ -131,14 +131,14 @@ function initChatLog() {
                 height: 100%;
                 overflow: hidden;
             }
-            #vtt-chat-log #sidebar {
+            #vtt-chat-log #dla-sidebar {
                 flex: 1;
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
                 min-height: 0;
             }
-            #vtt-chat-log section#chat {
+            #vtt-chat-log .dla-chat {
                 flex: 1;
                 display: flex;
                 flex-direction: column;
@@ -178,14 +178,12 @@ function initChatLog() {
     container.innerHTML = '';
 
     const sidebar = document.createElement('div');
-    sidebar.id = 'sidebar';
-    // Mirror Foundry's body classes onto #sidebar so CSS rules that use those
-    // classes as ancestors (without requiring body as tag) fire inside the panel
+    sidebar.id = 'dla-sidebar';
     bodyClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
     sidebar.classList.add('themed');
 
-    const chatSection = document.createElement('section');
-    chatSection.id = 'chat';
+    const chatSection = document.createElement('div');
+    chatSection.classList.add('dla-chat');
 
     messageList = document.createElement('ol');
     messageList.id = 'chat-log';
