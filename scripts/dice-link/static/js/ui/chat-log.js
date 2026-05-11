@@ -116,7 +116,7 @@ function initChatLog() {
         const varStyle = document.createElement('style');
         varStyle.id = 'foundry-css-vars';
         const decls = Object.entries(cssVars).map(([k, v]) => `  ${k}: ${v};`).join('\n');
-        varStyle.textContent = `#vtt-chat-log {\n${decls}\n}`;
+        varStyle.textContent = `#vtt-chat-log #dla-sidebar {\n${decls}\n}`;
         document.head.appendChild(varStyle);
     }
 
