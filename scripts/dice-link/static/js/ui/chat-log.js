@@ -83,24 +83,27 @@ function initChatLog() {
                 return '';
             }).trim();
             if (cleaned) {
-                // Remap :root and body.xxx selectors to #sidebar so they resolve
-                // inside the @scope boundary. #dla-sidebar is a real element inside
-                // #vtt-chat-log that carries all the body classes, so the browser
-                // can find it. Remapping to #vtt-chat-log itself fails because the
-                // scope root cannot be its own ancestor inside @scope.
                 const remapped = cleaned
                     .replace(/:root\b/g, '#dla-sidebar')
                     .replace(/\bbody\.([\w-]+)/g, '#dla-sidebar.$1');
-                layerBlocks.push(`@scope (#vtt-chat-log) {\n@layer foundry {\n${remapped}\n}\n}`);
+                layerBlocks.push(remapped);
             }
         }
 
+        // All blocks go into ONE @scope + @layer so CSS layer ordering
+        // (variables < general < specific) applies across all files.
+        // Separate wrappers per block isolate each block's layer context,
+        // preventing dark-theme overrides from beating light-theme defaults.
         const cssEl = document.createElement('style');
         cssEl.id = 'foundry-css-layer';
-        cssEl.textContent = [...layeredImports, ...layerBlocks].join('\n\n');
+        const allContent = layerBlocks.join('\n\n');
+        cssEl.textContent = [
+            ...layeredImports,
+            `@scope (#vtt-chat-log) {\n@layer foundry {\n${allContent}\n}\n}`
+        ].join('\n\n');
         document.head.appendChild(cssEl);
         _foundryStylesInjected = true;
-        debugChatLog(`initChatLog: injected ${styleTexts.length} Foundry style blocks scoped to #vtt-chat-log`);
+        debugChatLog(`initChatLog: injected ${styleTexts.length} Foundry style blocks into single scoped layer`);
     }
 
     // Inject Foundry's runtime CSS vars scoped to #vtt-chat-log.
@@ -148,11 +151,12 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log {
                 flex: 1;
                 overflow-y: auto;
+                overflow-x: hidden;
                 list-style: none;
                 margin: 0;
                 padding: 4px;
                 min-height: 0;
-                zoom: 1.25;
+                font-size: 0.875rem;
             }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
