@@ -131,7 +131,6 @@ function initChatLog() {
             #vtt-chat-log {
                 display: flex;
                 flex-direction: column;
-                height: 100%;
                 overflow: hidden;
             }
             #vtt-chat-log #dla-sidebar {
@@ -156,7 +155,10 @@ function initChatLog() {
                 margin: 0;
                 padding: 4px;
                 min-height: 0;
-                font-size: 0.875rem;
+            }
+            #vtt-chat-log ol#chat-log > li {
+                width: 100%;
+                box-sizing: border-box;
             }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
