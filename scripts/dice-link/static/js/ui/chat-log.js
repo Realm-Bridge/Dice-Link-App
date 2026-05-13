@@ -177,6 +177,23 @@ function initChatLog() {
         document.head.appendChild(layout);
     }
 
+    // Override Font Awesome font-family for icon classes inside the chat log.
+    // Foundry bundles FA6 Free locally; its CSS gets injected into @layer foundry and
+    // sets font-family: "Font Awesome 6 Free" — a font not registered in DLA. These
+    // unlayered rules override that, pointing icon classes at FA7 Pro from the Kit.
+    if (!document.getElementById('foundry-fa-override')) {
+        const faOverride = document.createElement('style');
+        faOverride.id = 'foundry-fa-override';
+        faOverride.textContent = `
+            #vtt-chat-log .fa-solid, #vtt-chat-log .fas { font-family: "Font Awesome 7 Pro" !important; font-weight: 900; display: inline-block; }
+            #vtt-chat-log .fa-regular, #vtt-chat-log .far { font-family: "Font Awesome 7 Pro" !important; font-weight: 400; display: inline-block; }
+            #vtt-chat-log .fa-light, #vtt-chat-log .fal { font-family: "Font Awesome 7 Pro" !important; font-weight: 300; display: inline-block; }
+            #vtt-chat-log .fa-thin { font-family: "Font Awesome 7 Pro" !important; font-weight: 100; display: inline-block; }
+            #vtt-chat-log .fa-brands, #vtt-chat-log .fab { font-family: "Font Awesome 7 Brands" !important; font-weight: 400; display: inline-block; }
+        `;
+        document.head.appendChild(faOverride);
+    }
+
     // Apply Foundry's root font-size to the chat container.
     // This ensures em-based values inside chat cards compute against the same
     // base that Foundry uses, regardless of which game system is active.
