@@ -214,6 +214,10 @@ function handleMessage(message) {
             handleChatMessage(message);
             break;
 
+        case 'chatRefStyles':
+            handleChatRefStyles(message);
+            break;
+
         default:
             debugLog(`Unknown message type: ${message.type}`, message);
     }

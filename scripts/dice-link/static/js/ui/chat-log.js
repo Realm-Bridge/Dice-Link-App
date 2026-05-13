@@ -408,7 +408,12 @@ function handleChatMessage(message) {
         messageList.scrollTop = messageList.scrollHeight;
     }
 
-    if (message.refStyles) {
-        setTimeout(() => compareStyles(node, message.refStyles), 300);
-    }
+}
+
+function handleChatRefStyles(message) {
+    const id = message.messageId;
+    if (!id || !message.refStyles) return;
+    const node = messageList ? messageList.querySelector('[data-message-id="' + id + '"]') : null;
+    if (!node) { debugChatLog(`handleChatRefStyles: card ${id} not found in DOM`); return; }
+    compareStyles(node, message.refStyles);
 }
