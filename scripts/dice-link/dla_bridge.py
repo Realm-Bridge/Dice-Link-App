@@ -181,6 +181,10 @@ class DLABridge(QObject):
                 for entry in (data.get("sheets") or []):
                     log_chat_log(f"  sheet[{entry.get('i')}]: tag={entry.get('tag')}, href={entry.get('href') or 'none'}, textContent={entry.get('textLen')}b, cssRules={entry.get('rulesCount')}")
 
+            elif msg_type == "chatRefStyles":
+                msg_id = data.get("messageId", "unknown")
+                log_chat_log(f"chatRefStyles received: messageId={msg_id}")
+
             else:
                 log_chat_log(f"unknown chat message type: {msg_type}")
 
