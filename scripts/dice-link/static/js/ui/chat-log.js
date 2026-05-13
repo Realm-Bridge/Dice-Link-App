@@ -45,7 +45,8 @@ function handleChatSetup(message) {
         styleTexts:   message.styleTexts   || [],
         cssVars:      message.cssVars      || {},
         bodyClasses:  message.bodyClasses  || [],
-        rootFontSize: message.rootFontSize || null
+        rootFontSize: message.rootFontSize || null,
+        sidebarWidth: message.sidebarWidth || 300,
     };
 }
 
@@ -67,6 +68,7 @@ function initChatLog() {
     const cssVars      = setup.cssVars      || {};
     const bodyClasses  = setup.bodyClasses  || [];
     const rootFontSize = setup.rootFontSize || null;
+    const sidebarWidth = setup.sidebarWidth || 300;
 
     // Inject Foundry's embedded CSS blocks into the main document inside a named CSS layer.
     // @layer(foundry) ensures every unlayered DLA rule wins any specificity clash.
@@ -134,6 +136,7 @@ function initChatLog() {
                 overflow: hidden;
             }
             #vtt-chat-log #dla-sidebar {
+                position: static;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
@@ -141,6 +144,7 @@ function initChatLog() {
                 min-height: 0;
             }
             #vtt-chat-log .dla-chat {
+                position: static;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
@@ -148,6 +152,7 @@ function initChatLog() {
                 min-height: 0;
             }
             #vtt-chat-log ol#chat-log {
+                position: static;
                 flex: 1;
                 overflow-y: auto;
                 overflow-x: hidden;
@@ -159,6 +164,7 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log > li {
                 width: 100%;
                 box-sizing: border-box;
+                zoom: var(--dla-chat-zoom, 1);
             }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
@@ -234,10 +240,47 @@ function initChatLog() {
     sidebar.appendChild(chatSection);
     container.appendChild(sidebar);
 
+    // Calculate zoom: lay cards out at Foundry's sidebar width, scale up to fill our panel
+    const chatWidth = messageList.clientWidth;
+    if (chatWidth > 0 && sidebarWidth > 0) {
+        const zoom = chatWidth / sidebarWidth;
+        container.style.setProperty('--dla-chat-zoom', zoom.toFixed(4));
+        debugChatLog(`initChatLog: zoom=${zoom.toFixed(3)} (dla=${chatWidth}px / foundry=${sidebarWidth}px)`);
+    }
+
     const flushed = pendingMessages.length;
     pendingMessages.forEach(msg => handleChatMessage(msg));
     pendingMessages = [];
     debugChatLog('initChatLog: complete', { pendingFlushed: flushed });
+
+    // Diagnostic: comprehensive layout snapshot of the scroll chain
+    setTimeout(() => {
+        const els = [
+            { label: '#vtt-chat-log',  el: document.getElementById('vtt-chat-log') },
+            { label: '#dla-sidebar',   el: document.getElementById('dla-sidebar') },
+            { label: '.dla-chat',      el: document.querySelector('.dla-chat') },
+            { label: 'ol#chat-log',    el: document.getElementById('chat-log') },
+        ];
+        els.forEach(({ label, el }) => {
+            if (!el) { debugChatLog(`LAYOUT DIAG ${label}: NOT FOUND`); return; }
+            const cs = getComputedStyle(el);
+            const rect = el.getBoundingClientRect();
+            const parent = el.parentElement;
+            const parentCs = parent ? getComputedStyle(parent) : null;
+            debugChatLog(
+                `LAYOUT DIAG ${label}:` +
+                ` offsetH=${el.offsetHeight} scrollH=${el.scrollHeight} clientH=${el.clientHeight} rectH=${Math.round(rect.height)}` +
+                ` | display=${cs.display} position=${cs.position}` +
+                ` | flex=${cs.flex} flexDir=${cs.flexDirection} alignSelf=${cs.alignSelf} alignItems=${cs.alignItems}` +
+                ` | height=${cs.height} minH=${cs.minHeight} maxH=${cs.maxHeight}` +
+                ` | overflow=${cs.overflow} overflowY=${cs.overflowY}` +
+                ` | parent=${parent ? parent.tagName + (parent.id ? '#' + parent.id : '') + (parent.className ? '.' + parent.className.trim().split(/\s+/)[0] : '') : 'none'}` +
+                ` parentDisplay=${parentCs ? parentCs.display : '-'} parentFlexDir=${parentCs ? parentCs.flexDirection : '-'} parentH=${parent ? parent.offsetHeight : '-'}`
+            );
+        });
+        // Also confirm our layout style element is present
+        debugChatLog(`LAYOUT DIAG styles: foundry-chat-layout=${!!document.getElementById('foundry-chat-layout')} foundry-css-layer=${!!document.getElementById('foundry-css-layer')} foundry-css-vars=${!!document.getElementById('foundry-css-vars')}`);
+    }, 500);
 }
 
 // ============================================================================
