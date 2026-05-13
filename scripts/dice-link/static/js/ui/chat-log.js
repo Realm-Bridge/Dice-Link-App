@@ -42,13 +42,13 @@ function handleChatSetup(message) {
     });
 
     _pendingSetup = {
-        styleTexts:           message.styleTexts           || [],
-        cssVars:              message.cssVars              || {},
-        bodyClasses:          message.bodyClasses          || [],
-        chatContainerClasses: message.chatContainerClasses || [],
-        rootFontSize:         message.rootFontSize         || null,
-        sidebarWidth:         message.sidebarWidth         || 300,
-        dnd5eDiagVars:        message.dnd5eDiagVars        || {},
+        styleTexts:    message.styleTexts    || [],
+        cssVars:       message.cssVars       || {},
+        bodyClasses:   message.bodyClasses   || [],
+        interfaceTheme: message.interfaceTheme || '',
+        rootFontSize:  message.rootFontSize  || null,
+        sidebarWidth:  message.sidebarWidth  || 300,
+        dnd5eDiagVars: message.dnd5eDiagVars || {},
     };
 }
 
@@ -67,10 +67,10 @@ function initChatLog() {
 
     const setup              = _pendingSetup || {};
     const styleTexts         = setup.styleTexts         || [];
-    const cssVars            = setup.cssVars            || {};
-    const bodyClasses        = setup.bodyClasses        || [];
-    const chatContainerClasses = setup.chatContainerClasses || [];
-    const rootFontSize       = setup.rootFontSize       || null;
+    const cssVars          = setup.cssVars          || {};
+    const bodyClasses      = setup.bodyClasses      || [];
+    const interfaceTheme   = setup.interfaceTheme   || '';
+    const rootFontSize     = setup.rootFontSize     || null;
     const sidebarWidth       = setup.sidebarWidth       || 300;
     const dnd5eDiagVars      = setup.dnd5eDiagVars      || {};
 
@@ -213,8 +213,8 @@ function initChatLog() {
     const sidebar = document.createElement('div');
     sidebar.id = 'dla-sidebar';
     bodyClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
-    chatContainerClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
     sidebar.classList.add('themed');
+    if (interfaceTheme) sidebar.classList.add(`theme-${interfaceTheme}`);
 
     const chatSection = document.createElement('div');
     chatSection.classList.add('dla-chat');
