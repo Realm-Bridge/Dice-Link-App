@@ -21,7 +21,6 @@ let messageList = null;
 let pendingMessages = [];
 let _foundryStylesInjected = false;
 let _pendingSetup = null;
-let _cardDiagDone = false;
 
 // ============================================================================
 // CHAT SETUP — receives Foundry CSS data from DLC before chatInit
@@ -190,7 +189,6 @@ function initChatLog() {
     }
 
     // Rebuild the chat panel DOM inside #vtt-chat-log
-    _cardDiagDone = false;
     container.innerHTML = '';
 
     const sidebar = document.createElement('div');
@@ -322,6 +320,58 @@ function handleChatInit(message) {
     initChatLog();
 }
 
+// ============================================================================
+// STYLE DIFF — compares DLA-rendered card against Foundry reference styles
+// ============================================================================
+
+function compareStyles(card, refStyles) {
+    const cardId = card.dataset?.messageId || '?';
+    let diffs = 0;
+    let matches = 0;
+
+    for (const [sel, refList] of Object.entries(refStyles)) {
+        const dlaEls = card.querySelectorAll(sel);
+        refList.forEach((ref, i) => {
+            const el = dlaEls[i];
+            if (!el) {
+                debugChatLog(`STYLE DIFF [${sel}][${i}]: element missing in DLA`);
+                diffs++;
+                return;
+            }
+            const cs = getComputedStyle(el);
+            [
+                ['color',       ref.color,       cs.color],
+                ['bg',          ref.bg,          cs.backgroundColor],
+                ['borderStyle', ref.borderStyle, cs.borderStyle],
+                ['borderColor', ref.borderColor, cs.borderColor],
+                ['position',    ref.position,    cs.position],
+            ].forEach(([prop, foundry, dla]) => {
+                if (foundry !== dla) {
+                    debugChatLog(`STYLE DIFF [${sel}][${i}] ${prop}: foundry=${foundry} dla=${dla}`);
+                    diffs++;
+                } else {
+                    matches++;
+                }
+            });
+            if (ref.before) {
+                const bp = getComputedStyle(el, '::before');
+                if (ref.before.content !== bp.content)
+                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::before content: foundry=${ref.before.content} dla=${bp.content}`);
+                if (ref.before.fontFamily !== bp.fontFamily)
+                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::before font: foundry="${ref.before.fontFamily.substring(0, 80)}" dla="${bp.fontFamily.substring(0, 80)}"`);
+            }
+            if (ref.after) {
+                const ap = getComputedStyle(el, '::after');
+                if (ref.after.content !== ap.content)
+                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::after content: foundry=${ref.after.content} dla=${ap.content}`);
+                if (ref.after.fontFamily !== ap.fontFamily)
+                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::after font: foundry="${ref.after.fontFamily.substring(0, 80)}" dla="${ap.fontFamily.substring(0, 80)}"`);
+            }
+        });
+    }
+    debugChatLog(`STYLE DIFF summary id=${cardId}: ${diffs} diffs, ${matches} matches`);
+}
+
 function handleChatMessage(message) {
     const id   = message.messageId;
     const html = message.html || '';
@@ -358,45 +408,7 @@ function handleChatMessage(message) {
         messageList.scrollTop = messageList.scrollHeight;
     }
 
-    // One-shot: after first card is in the DOM, capture computed styles on key element types
-    if (!_cardDiagDone) {
-        _cardDiagDone = true;
-        setTimeout(() => {
-            const card = messageList?.firstElementChild;
-            if (!card) { debugChatLog('CARD DIAG: no card in list'); return; }
-            [
-                ['button',         card.querySelectorAll('button')],
-                ['.tag',           card.querySelectorAll('.tag')],
-                ['[class*="pip"]', card.querySelectorAll('[class*="pip"]')],
-                ['[class*="tag"]', card.querySelectorAll('[class*="tag"]')],
-            ].forEach(([label, els]) => {
-                els.forEach((el, i) => {
-                    const cs     = getComputedStyle(el);
-                    const before = getComputedStyle(el, '::before');
-                    const after  = getComputedStyle(el, '::after');
-                    debugChatLog(
-                        `CARD DIAG ${label}[${i}] class="${String(el.className).substring(0, 60)}":` +
-                        ` color=${cs.color} bg=${cs.backgroundColor}` +
-                        ` borderStyle=${cs.borderStyle} borderColor=${cs.borderColor}` +
-                        ` position=${cs.position}`
-                    );
-                    if (before.content && before.content !== 'none' && before.content !== '""' && before.content !== 'normal')
-                        debugChatLog(`  ::before content=${before.content} fontFamily=${before.fontFamily}`);
-                    if (after.content && after.content !== 'none' && after.content !== '""' && after.content !== 'normal')
-                        debugChatLog(`  ::after content=${after.content} fontFamily=${after.fontFamily}`);
-                });
-            });
-            // Detect absolute/fixed-positioned elements that may be rendering in the wrong place
-            card.querySelectorAll('*').forEach(el => {
-                const pos = getComputedStyle(el).position;
-                if (pos === 'absolute' || pos === 'fixed') {
-                    const cs = getComputedStyle(el);
-                    debugChatLog(
-                        `CARD DIAG abs/fixed class="${String(el.className).substring(0, 60)}" tag=${el.tagName}:` +
-                        ` position=${pos} top=${cs.top} left=${cs.left} right=${cs.right} bottom=${cs.bottom}`
-                    );
-                }
-            });
-        }, 300);
+    if (message.refStyles) {
+        setTimeout(() => compareStyles(node, message.refStyles), 300);
     }
 }
