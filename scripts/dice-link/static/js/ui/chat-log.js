@@ -197,6 +197,7 @@ function initChatLog() {
     sidebar.id = 'dla-sidebar';
     bodyClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
     sidebar.classList.add('themed');
+    sidebar.classList.add('application');
 
     const chatSection = document.createElement('div');
     chatSection.classList.add('dla-chat');
