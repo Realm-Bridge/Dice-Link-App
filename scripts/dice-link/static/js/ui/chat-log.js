@@ -21,6 +21,7 @@ let messageList = null;
 let pendingMessages = [];
 let _foundryStylesInjected = false;
 let _pendingSetup = null;
+let _cardDiagDone = false;
 
 // ============================================================================
 // CHAT SETUP — receives Foundry CSS data from DLC before chatInit
@@ -42,11 +43,12 @@ function handleChatSetup(message) {
     });
 
     _pendingSetup = {
-        styleTexts:   message.styleTexts   || [],
-        cssVars:      message.cssVars      || {},
-        bodyClasses:  message.bodyClasses  || [],
-        rootFontSize: message.rootFontSize || null,
-        sidebarWidth: message.sidebarWidth || 300,
+        styleTexts:    message.styleTexts    || [],
+        cssVars:       message.cssVars       || {},
+        bodyClasses:   message.bodyClasses   || [],
+        rootFontSize:  message.rootFontSize  || null,
+        sidebarWidth:  message.sidebarWidth  || 300,
+        dnd5eDiagVars: message.dnd5eDiagVars || {},
     };
 }
 
@@ -63,12 +65,13 @@ function initChatLog() {
         return;
     }
 
-    const setup        = _pendingSetup || {};
-    const styleTexts   = setup.styleTexts   || [];
-    const cssVars      = setup.cssVars      || {};
-    const bodyClasses  = setup.bodyClasses  || [];
-    const rootFontSize = setup.rootFontSize || null;
-    const sidebarWidth = setup.sidebarWidth || 300;
+    const setup         = _pendingSetup || {};
+    const styleTexts    = setup.styleTexts    || [];
+    const cssVars       = setup.cssVars       || {};
+    const bodyClasses   = setup.bodyClasses   || [];
+    const rootFontSize  = setup.rootFontSize  || null;
+    const sidebarWidth  = setup.sidebarWidth  || 300;
+    const dnd5eDiagVars = setup.dnd5eDiagVars || {};
 
     // Inject Foundry's embedded CSS blocks into the main document inside a named CSS layer.
     // @layer(foundry) ensures every unlayered DLA rule wins any specificity clash.
@@ -187,6 +190,7 @@ function initChatLog() {
     }
 
     // Rebuild the chat panel DOM inside #vtt-chat-log
+    _cardDiagDone = false;
     container.innerHTML = '';
 
     const sidebar = document.createElement('div');
@@ -280,6 +284,32 @@ function initChatLog() {
         });
         // Also confirm our layout style element is present
         debugChatLog(`LAYOUT DIAG styles: foundry-chat-layout=${!!document.getElementById('foundry-chat-layout')} foundry-css-layer=${!!document.getElementById('foundry-css-layer')} foundry-css-vars=${!!document.getElementById('foundry-css-vars')}`);
+
+        // CSS variable source diagnostic — compare what root/body sent vs dnd5e-specific elements
+        if (Object.keys(dnd5eDiagVars).length === 0) {
+            debugChatLog('CSS VAR DIAG: no dnd5e-specific element vars received from DLC');
+        } else {
+            for (const [sel, vars] of Object.entries(dnd5eDiagVars)) {
+                let diffCount = 0;
+                for (const [name, val] of Object.entries(vars)) {
+                    const rootVal = cssVars[name];
+                    if (rootVal !== val) {
+                        diffCount++;
+                        debugChatLog(`CSS VAR DIFF [${sel}] ${name}: dnd5e="${val}" root/body="${rootVal ?? '(unset)'}"`);
+                    }
+                }
+                debugChatLog(`CSS VAR DIAG [${sel}]: ${Object.keys(vars).length} vars total, ${diffCount} differ from root/body`);
+            }
+        }
+
+        // Font loading diagnostic — checks whether dnd5e-icons and other fonts loaded in DLA
+        document.fonts.ready.then(() => {
+            const fontList = [];
+            document.fonts.forEach(f => fontList.push(`${f.family}/${f.weight}/${f.style}:${f.status}`));
+            debugChatLog('FONT DIAG dnd5e-icons (quoted):', document.fonts.check('1em "dnd5e-icons"'));
+            debugChatLog('FONT DIAG dnd5e-icons (unquoted):', document.fonts.check('1em dnd5e-icons'));
+            debugChatLog('FONT DIAG all fonts:', fontList.join(' | '));
+        });
     }, 500);
 }
 
@@ -326,5 +356,47 @@ function handleChatMessage(message) {
     } else {
         messageList.appendChild(node);
         messageList.scrollTop = messageList.scrollHeight;
+    }
+
+    // One-shot: after first card is in the DOM, capture computed styles on key element types
+    if (!_cardDiagDone) {
+        _cardDiagDone = true;
+        setTimeout(() => {
+            const card = messageList?.firstElementChild;
+            if (!card) { debugChatLog('CARD DIAG: no card in list'); return; }
+            [
+                ['button',         card.querySelectorAll('button')],
+                ['.tag',           card.querySelectorAll('.tag')],
+                ['[class*="pip"]', card.querySelectorAll('[class*="pip"]')],
+                ['[class*="tag"]', card.querySelectorAll('[class*="tag"]')],
+            ].forEach(([label, els]) => {
+                els.forEach((el, i) => {
+                    const cs     = getComputedStyle(el);
+                    const before = getComputedStyle(el, '::before');
+                    const after  = getComputedStyle(el, '::after');
+                    debugChatLog(
+                        `CARD DIAG ${label}[${i}] class="${String(el.className).substring(0, 60)}":` +
+                        ` color=${cs.color} bg=${cs.backgroundColor}` +
+                        ` borderStyle=${cs.borderStyle} borderColor=${cs.borderColor}` +
+                        ` position=${cs.position}`
+                    );
+                    if (before.content && before.content !== 'none' && before.content !== '""' && before.content !== 'normal')
+                        debugChatLog(`  ::before content=${before.content} fontFamily=${before.fontFamily}`);
+                    if (after.content && after.content !== 'none' && after.content !== '""' && after.content !== 'normal')
+                        debugChatLog(`  ::after content=${after.content} fontFamily=${after.fontFamily}`);
+                });
+            });
+            // Detect absolute/fixed-positioned elements that may be rendering in the wrong place
+            card.querySelectorAll('*').forEach(el => {
+                const pos = getComputedStyle(el).position;
+                if (pos === 'absolute' || pos === 'fixed') {
+                    const cs = getComputedStyle(el);
+                    debugChatLog(
+                        `CARD DIAG abs/fixed class="${String(el.className).substring(0, 60)}" tag=${el.tagName}:` +
+                        ` position=${pos} top=${cs.top} left=${cs.left} right=${cs.right} bottom=${cs.bottom}`
+                    );
+                }
+            });
+        }, 300);
     }
 }
