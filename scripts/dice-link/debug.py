@@ -24,23 +24,19 @@ DEBUG_SNAP = False
 DEBUG_CHAT_LOG = True
 
 # --- Log file ---
-# Live log: logs/dla.log — capped at 50,000 lines.
-# Archive:  logs/dla_archive.log — single permanent file; oldest overflow lines are appended here.
+# Live log: logs/dla.log — archived to dla_archive.log on every startup; contains only the current session.
+# Archive:  logs/dla_archive.log — single permanent file; all previous sessions appended here.
 _LOG_DIR = Path(__file__).resolve().parent / "logs"
 _LOG_DIR.mkdir(exist_ok=True)
 _LOG_PATH = _LOG_DIR / "dla.log"
 _ARCHIVE_PATH = _LOG_DIR / "dla_archive.log"
 
-_MAX_LINES = 50_000
-
 if _LOG_PATH.exists():
-    _lines = _LOG_PATH.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
-    if len(_lines) > _MAX_LINES:
-        _overflow = _lines[:-_MAX_LINES]
-        _keep = _lines[-_MAX_LINES:]
+    _existing = _LOG_PATH.read_text(encoding="utf-8", errors="replace")
+    if _existing.strip():
         with open(_ARCHIVE_PATH, "a", encoding="utf-8") as _arc:
-            _arc.writelines(_overflow)
-        _LOG_PATH.write_text("".join(_keep), encoding="utf-8")
+            _arc.write(_existing)
+    _LOG_PATH.write_text("", encoding="utf-8")
 
 _log_file = open(_LOG_PATH, "a", encoding="utf-8", buffering=1)
 _log_file.write(f"\n{'='*60}\n")

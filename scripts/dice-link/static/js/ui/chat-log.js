@@ -32,7 +32,8 @@ function handleChatSetup(message) {
         blocks: (message.styleTexts || []).length,
         vars: Object.keys(message.cssVars || {}).length,
         bodyClasses: bodyClasses.length,
-        rootFontSize: message.rootFontSize || 'not sent'
+        rootFontSize: message.rootFontSize || 'not sent',
+        interfaceTheme: message.interfaceTheme || '(not sent)'
     });
     debugChatLog('handleChatSetup body classes:', bodyClasses.join(' ') || '(none)');
 
@@ -175,23 +176,6 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
         `;
         document.head.appendChild(layout);
-    }
-
-    // Override Font Awesome font-family for icon classes inside the chat log.
-    // Foundry bundles FA6 Free locally; its CSS gets injected into @layer foundry and
-    // sets font-family: "Font Awesome 6 Free" — a font not registered in DLA. These
-    // unlayered rules override that, pointing icon classes at FA7 Pro from the Kit.
-    if (!document.getElementById('foundry-fa-override')) {
-        const faOverride = document.createElement('style');
-        faOverride.id = 'foundry-fa-override';
-        faOverride.textContent = `
-            #vtt-chat-log .fa-solid, #vtt-chat-log .fas { font-family: "Font Awesome 7 Pro" !important; font-weight: 900; display: inline-block; }
-            #vtt-chat-log .fa-regular, #vtt-chat-log .far { font-family: "Font Awesome 7 Pro" !important; font-weight: 400; display: inline-block; }
-            #vtt-chat-log .fa-light, #vtt-chat-log .fal { font-family: "Font Awesome 7 Pro" !important; font-weight: 300; display: inline-block; }
-            #vtt-chat-log .fa-thin { font-family: "Font Awesome 7 Pro" !important; font-weight: 100; display: inline-block; }
-            #vtt-chat-log .fa-brands, #vtt-chat-log .fab { font-family: "Font Awesome 7 Brands" !important; font-weight: 400; display: inline-block; }
-        `;
-        document.head.appendChild(faOverride);
     }
 
     // Apply Foundry's root font-size to the chat container.
@@ -427,6 +411,47 @@ function handleChatMessage(message) {
         messageList.appendChild(node);
         messageList.scrollTop = messageList.scrollHeight;
     }
+
+    // Diagnostics — runs 1 s after insertion to give FA kit time to inject SVGs
+    setTimeout(() => {
+        const msgId = node.dataset?.messageId || '?';
+
+        // CSS variable resolution — what do pill/button elements actually see?
+        const dnd5eEl = node.querySelector('.dnd5e2') || node;
+        const cs = getComputedStyle(dnd5eEl);
+        const probeVars = [
+            '--color-text-primary',
+            '--dnd5e-color-pill-text',
+            '--dnd5e-color-pill-border',
+            '--color-border-light-primary',
+            '--dnd5e-color-gold',
+        ];
+        const varVals = probeVars.map(v => `${v}="${cs.getPropertyValue(v).trim() || '(unset)'}"`).join(' ');
+        debugChatLog(`CSS VAR RUNTIME [${msgId}] on ${dnd5eEl === node ? 'card-root' : '.dnd5e2'}: ${varVals}`);
+
+        const pillEl = node.querySelector('.pill, .tag.pill, .activity-pill');
+        if (pillEl) {
+            const pcs = getComputedStyle(pillEl);
+            debugChatLog(`PILL RUNTIME [${msgId}]: color=${pcs.color} bg=${pcs.backgroundColor} borderColor=${pcs.borderColor} borderStyle=${pcs.borderStyle}`);
+        } else {
+            debugChatLog(`PILL RUNTIME [${msgId}]: no pill element found`);
+        }
+
+        const btnEl = node.querySelector('.card-buttons button, .chat-damage-application button');
+        if (btnEl) {
+            const bcs = getComputedStyle(btnEl);
+            debugChatLog(`BTN RUNTIME [${msgId}]: color=${bcs.color} bg=${bcs.backgroundColor} borderColor=${bcs.borderColor}`);
+        }
+
+        // FA SVG injection — did the kit replace <i> tags with <svg>?
+        const iEls = [...node.querySelectorAll('i[class*="fa-"]')];
+        const svgEls = [...node.querySelectorAll('svg.svg-inline--fa')];
+        debugChatLog(`FA SVG DIAG [${msgId}]: <i class="fa-*"> remaining=${iEls.length} FA <svg> injected=${svgEls.length}`);
+        if (iEls.length > 0) {
+            const classes = iEls.map(i => i.className).join(' | ');
+            debugChatLog(`FA SVG DIAG [${msgId}]: remaining <i> classes: ${classes.substring(0, 500)}`);
+        }
+    }, 1000);
 
 }
 
