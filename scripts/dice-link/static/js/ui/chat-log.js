@@ -91,8 +91,8 @@ function initChatLog() {
             }).trim();
             if (cleaned) {
                 const remapped = cleaned
-                    .replace(/:root\b/g, '#dla-sidebar')
-                    .replace(/\bbody\.([\w-]+)/g, '#dla-sidebar.$1');
+                    .replace(/:root\b/g, ':where(#dla-sidebar)')
+                    .replace(/\bbody\.([\w-]+)/g, ':where(#dla-sidebar).$1');
                 layerBlocks.push(remapped);
             }
         }
@@ -428,6 +428,21 @@ function handleChatMessage(message) {
         messageList.scrollTop = messageList.scrollHeight;
     }
 
+    // dnd5e renders weapon/activity icons as <i class="dnd5e-icon" data-src="..."> or
+    // <dnd5e-icon src="..."> custom elements. Both require dnd5e's JS to load SVG content.
+    // Since dnd5e's JS does not run in DLA, they render as empty elements. Replace with
+    // plain <img> so the browser loads the SVG file directly. URLs are already absolute
+    // because makeAbsolute in DLC converts both src and data-src before sending.
+    node.querySelectorAll('i.dnd5e-icon[data-src], dnd5e-icon[src], dnd5e-icon[data-src]').forEach(el => {
+        const src = el.getAttribute('data-src') || el.getAttribute('src');
+        if (!src) return;
+        const img = document.createElement('img');
+        img.src = src;
+        img.classList.add('dnd5e-icon');
+        if (el.hasAttribute('inert')) img.setAttribute('inert', '');
+        el.replaceWith(img);
+    });
+
     // Diagnostics — runs 1 s after insertion to give FA kit time to inject SVGs
     setTimeout(() => {
         const msgId = node.dataset?.messageId || '?';
@@ -437,9 +452,8 @@ function handleChatMessage(message) {
         const cs = getComputedStyle(dnd5eEl);
         const probeVars = [
             '--color-text-primary',
-            '--dnd5e-color-pill-text',
-            '--dnd5e-color-pill-border',
-            '--color-border-light-primary',
+            '--pill-transparent-color',
+            '--pill-border-dotted',
             '--dnd5e-color-gold',
         ];
         const varVals = probeVars.map(v => `${v}="${cs.getPropertyValue(v).trim() || '(unset)'}"`).join(' ');
