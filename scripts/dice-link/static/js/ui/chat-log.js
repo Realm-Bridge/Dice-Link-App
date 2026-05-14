@@ -127,6 +127,26 @@ function initChatLog() {
         document.head.appendChild(varStyle);
     }
 
+    // Inject dnd5e element-scoped CSS vars unlayered, directly on .dnd5e2.
+    // dnd5e chat cards always use a light parchment colour scheme even when the
+    // Foundry UI is dark. Without this, .dnd5e2 elements inherit the dark-theme
+    // vars injected on #dla-sidebar above, giving wrong text and border colours.
+    // Being unlayered and set directly on the element, these beat the inherited values.
+    const existingDnd5eVars = document.getElementById('foundry-dnd5e-vars');
+    if (existingDnd5eVars) existingDnd5eVars.remove();
+    if (Object.keys(dnd5eDiagVars).length > 0) {
+        const dnd5eVarStyle = document.createElement('style');
+        dnd5eVarStyle.id = 'foundry-dnd5e-vars';
+        const blocks = [];
+        for (const [sel, vars] of Object.entries(dnd5eDiagVars)) {
+            const decls = Object.entries(vars).map(([k, v]) => `  ${k}: ${v};`).join('\n');
+            blocks.push(`#vtt-chat-log ${sel} {\n${decls}\n}`);
+        }
+        dnd5eVarStyle.textContent = blocks.join('\n\n');
+        document.head.appendChild(dnd5eVarStyle);
+        debugChatLog(`initChatLog: injected dnd5e-scoped vars for: ${Object.keys(dnd5eDiagVars).join(', ')}`);
+    }
+
     // Structural layout CSS — injected once.
     // This only covers what is needed for the panel to exist and scroll inside
     // DLA's layout. Nothing inside chat cards is styled here; that is entirely
