@@ -97,13 +97,29 @@ function initChatLog() {
             }
         }
 
+        // Extract @font-face rules before scoping — @font-face inside @scope is not
+        // recognised by Chrome and fonts are never registered. Inject them separately
+        // in a plain unscoped <style> so the browser registers them globally.
+        const fontFaceRules = [];
+        const scopedBlocks = layerBlocks.map(block =>
+            block.replace(/@font-face\s*\{[^}]+\}/gi, match => {
+                fontFaceRules.push(match);
+                return '';
+            })
+        );
+        if (fontFaceRules.length > 0) {
+            const fontEl = document.createElement('style');
+            fontEl.id = 'foundry-font-faces';
+            fontEl.textContent = fontFaceRules.join('\n');
+            document.head.appendChild(fontEl);
+            debugChatLog(`initChatLog: injected ${fontFaceRules.length} @font-face rules outside @scope`);
+        }
+
         // All blocks go into ONE @scope + @layer so CSS layer ordering
         // (variables < general < specific) applies across all files.
-        // Separate wrappers per block isolate each block's layer context,
-        // preventing dark-theme overrides from beating light-theme defaults.
         const cssEl = document.createElement('style');
         cssEl.id = 'foundry-css-layer';
-        const allContent = layerBlocks.join('\n\n');
+        const allContent = scopedBlocks.join('\n\n');
         cssEl.textContent = [
             ...layeredImports,
             `@scope (#vtt-chat-log) {\n@layer foundry {\n${allContent}\n}\n}`
@@ -125,26 +141,6 @@ function initChatLog() {
         const decls = Object.entries(cssVars).map(([k, v]) => `  ${k}: ${v};`).join('\n');
         varStyle.textContent = `#vtt-chat-log #dla-sidebar {\n${decls}\n}`;
         document.head.appendChild(varStyle);
-    }
-
-    // Inject dnd5e element-scoped CSS vars unlayered, directly on .dnd5e2.
-    // dnd5e chat cards always use a light parchment colour scheme even when the
-    // Foundry UI is dark. Without this, .dnd5e2 elements inherit the dark-theme
-    // vars injected on #dla-sidebar above, giving wrong text and border colours.
-    // Being unlayered and set directly on the element, these beat the inherited values.
-    const existingDnd5eVars = document.getElementById('foundry-dnd5e-vars');
-    if (existingDnd5eVars) existingDnd5eVars.remove();
-    if (Object.keys(dnd5eDiagVars).length > 0) {
-        const dnd5eVarStyle = document.createElement('style');
-        dnd5eVarStyle.id = 'foundry-dnd5e-vars';
-        const blocks = [];
-        for (const [sel, vars] of Object.entries(dnd5eDiagVars)) {
-            const decls = Object.entries(vars).map(([k, v]) => `  ${k}: ${v};`).join('\n');
-            blocks.push(`#vtt-chat-log ${sel} {\n${decls}\n}`);
-        }
-        dnd5eVarStyle.textContent = blocks.join('\n\n');
-        document.head.appendChild(dnd5eVarStyle);
-        debugChatLog(`initChatLog: injected dnd5e-scoped vars for: ${Object.keys(dnd5eDiagVars).join(', ')}`);
     }
 
     // Structural layout CSS — injected once.
