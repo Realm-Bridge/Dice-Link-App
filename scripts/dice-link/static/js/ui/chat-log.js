@@ -494,26 +494,61 @@ function handleChatMessage(message) {
             debugChatLog(`FA SVG DIAG [${msgId}]: remaining <i> classes: ${classes.substring(0, 500)}`);
         }
 
-        // Chevron position diagnostic — measures actual widths of .dice-total and its
-        // ancestors to confirm whether position:relative and flex column widths are correct.
+        // Chevron layout diagnostic — measures the full ancestor chain and sibling to
+        // understand why the chevron appears far from the number.
         const diceTotals = [...node.querySelectorAll('.dice-result .dice-total')];
         if (diceTotals.length > 0) {
+            // Measure the li's computed padding to confirm the zoom-scaled padding is applying.
+            const li = node.closest('li') || node;
+            const liCs = getComputedStyle(li);
+            debugChatLog(
+                `CHEVRON DIAG [${msgId}] li: ` +
+                `offsetW=${li.offsetWidth} clientW=${li.clientWidth} ` +
+                `paddingL=${liCs.paddingLeft} paddingR=${liCs.paddingRight} ` +
+                `zoom=${liCs.zoom}`
+            );
+
             diceTotals.forEach((el, i) => {
-                const elCs = getComputedStyle(el);
-                const acs  = getComputedStyle(el, '::after');
-                const parent = el.closest('.dice-result');
+                const elCs   = getComputedStyle(el);
+                const bcs    = getComputedStyle(el, '::before');
+                const acs    = getComputedStyle(el, '::after');
+                const result = el.closest('.dice-result');
+                const resCs  = result ? getComputedStyle(result) : null;
                 const gp     = el.closest('.midi-qol-attack-roll, .midi-qol-damage-roll, .dice-roll');
+                const gpCs   = gp ? getComputedStyle(gp) : null;
+                const ggp    = gp ? gp.parentElement : null;
+                const ggpCs  = ggp ? getComputedStyle(ggp) : null;
+                // Sibling .dice-formula (measures how much flex space the formula takes)
+                const formula = result ? result.querySelector('.dice-formula') : null;
+
                 debugChatLog(
-                    `DICE-TOTAL DIAG [${msgId}][${i}]: ` +
-                    `offsetW=${el.offsetWidth} pos=${elCs.position} flex="${elCs.flex}" ` +
-                    `afterPos="${acs.position}" afterRight="${acs.right}" ` +
-                    `afterContent="${acs.content}" afterFont="${acs.fontFamily.substring(0, 50)}" ` +
-                    `parentW=${parent ? parent.offsetWidth : 'n/a'} ` +
-                    `gpCls="${gp ? gp.className.trim().substring(0, 60) : 'n/a'}" gpW=${gp ? gp.offsetWidth : 'n/a'}`
+                    `CHEVRON DIAG [${msgId}][${i}] dice-total: ` +
+                    `offsetW=${el.offsetWidth} flex="${elCs.flex}" padding="${elCs.paddingLeft}/${elCs.paddingRight}" ` +
+                    `beforeW="${bcs.width}" beforeBorderL="${bcs.borderLeftWidth}" beforeContent="${bcs.content}" ` +
+                    `afterRight="${acs.right}" afterContent="${acs.content}" afterFont="${acs.fontFamily.substring(0, 40)}"`
+                );
+                debugChatLog(
+                    `CHEVRON DIAG [${msgId}][${i}] dice-result: ` +
+                    `offsetW=${result ? result.offsetWidth : 'n/a'} ` +
+                    `flexDir="${resCs ? resCs.flexDirection : 'n/a'}" display="${resCs ? resCs.display : 'n/a'}"`
+                );
+                debugChatLog(
+                    `CHEVRON DIAG [${msgId}][${i}] dice-roll: ` +
+                    `offsetW=${gp ? gp.offsetWidth : 'n/a'} cls="${gp ? gp.className.trim().substring(0, 60) : 'n/a'}" ` +
+                    `flex="${gpCs ? gpCs.flex : 'n/a'}" display="${gpCs ? gpCs.display : 'n/a'}" flexDir="${gpCs ? gpCs.flexDirection : 'n/a'}"`
+                );
+                debugChatLog(
+                    `CHEVRON DIAG [${msgId}][${i}] dice-roll-parent: ` +
+                    `offsetW=${ggp ? ggp.offsetWidth : 'n/a'} cls="${ggp ? ggp.className.trim().substring(0, 60) : 'n/a'}" ` +
+                    `display="${ggpCs ? ggpCs.display : 'n/a'}" flexDir="${ggpCs ? ggpCs.flexDirection : 'n/a'}"`
+                );
+                debugChatLog(
+                    `CHEVRON DIAG [${msgId}][${i}] dice-formula: ` +
+                    `offsetW=${formula ? formula.offsetWidth : 'n/a'} flex="${formula ? getComputedStyle(formula).flex : 'n/a'}"`
                 );
             });
         } else {
-            debugChatLog(`DICE-TOTAL DIAG [${msgId}]: no .dice-result .dice-total found in card`);
+            debugChatLog(`CHEVRON DIAG [${msgId}]: no .dice-result .dice-total found in card`);
         }
     }, 1000);
 
