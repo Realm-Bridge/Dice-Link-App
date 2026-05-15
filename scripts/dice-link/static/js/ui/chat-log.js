@@ -200,6 +200,7 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log > li {
                 width: calc(100% - 8px * var(--dla-chat-zoom, 1));
                 margin: 0 calc(4px * var(--dla-chat-zoom, 1));
+                padding: calc(8px * var(--dla-chat-zoom, 1));
                 box-sizing: border-box;
                 zoom: var(--dla-chat-zoom, 1);
             }
