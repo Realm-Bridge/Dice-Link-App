@@ -198,7 +198,8 @@ function initChatLog() {
                 min-height: 0;
             }
             #vtt-chat-log ol#chat-log > li {
-                width: 100%;
+                width: calc(100% - 8px * var(--dla-chat-zoom, 1));
+                margin: 0 calc(4px * var(--dla-chat-zoom, 1));
                 box-sizing: border-box;
                 zoom: var(--dla-chat-zoom, 1);
             }
