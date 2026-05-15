@@ -21,6 +21,7 @@ let messageList = null;
 let pendingMessages = [];
 let _foundryStylesInjected = false;
 let _pendingSetup = null;
+let _zoomObserver = null;
 
 // ============================================================================
 // CHAT SETUP — receives Foundry CSS data from DLC before chatInit
@@ -57,6 +58,14 @@ function handleChatSetup(message) {
 // CHAT INIT — builds the DOM and loads Foundry CSS
 // ============================================================================
 
+function applyZoom(container, contentWidth, sidebarWidth) {
+    if (contentWidth > 0 && sidebarWidth > 0) {
+        const zoom = contentWidth / sidebarWidth;
+        container.style.setProperty('--dla-chat-zoom', zoom.toFixed(4));
+        debugChatLog(`chat zoom: ${zoom.toFixed(3)} (dla=${Math.round(contentWidth)}px / foundry=${sidebarWidth}px)`);
+    }
+}
+
 function initChatLog() {
     debugChatLog('initChatLog called');
 
@@ -64,6 +73,12 @@ function initChatLog() {
     if (!container) {
         debugChatLog('initChatLog: ERROR — #vtt-chat-log not found');
         return;
+    }
+
+    // Disconnect previous zoom observer before rebuilding DOM
+    if (_zoomObserver) {
+        _zoomObserver.disconnect();
+        _zoomObserver = null;
     }
 
     const setup              = _pendingSetup || {};
@@ -261,13 +276,24 @@ function initChatLog() {
     sidebar.appendChild(chatSection);
     container.appendChild(sidebar);
 
-    // Calculate zoom: lay cards out at Foundry's sidebar width, scale up to fill our panel
-    const chatWidth = messageList.clientWidth;
-    if (chatWidth > 0 && sidebarWidth > 0) {
-        const zoom = chatWidth / sidebarWidth;
-        container.style.setProperty('--dla-chat-zoom', zoom.toFixed(4));
-        debugChatLog(`initChatLog: zoom=${zoom.toFixed(3)} (dla=${chatWidth}px / foundry=${sidebarWidth}px)`);
-    }
+    // Initial zoom: subtract the ol's own padding so chatWidth matches exactly
+    // what li { width: 100% } resolves to — avoiding a small but visible error
+    // where right-anchored elements (e.g. dice chevron) appear too far right.
+    const olStyle = getComputedStyle(messageList);
+    const initialWidth = messageList.clientWidth
+        - parseFloat(olStyle.paddingLeft  || '0')
+        - parseFloat(olStyle.paddingRight || '0');
+    applyZoom(container, initialWidth, sidebarWidth);
+
+    // Keep zoom correct whenever the DLA window is resized.
+    // ResizeObserver contentRect.width is the content-box width (padding excluded),
+    // matching exactly what li { width: 100% } resolves to inside the ol.
+    _zoomObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            applyZoom(container, entry.contentRect.width, sidebarWidth);
+        }
+    });
+    _zoomObserver.observe(messageList);
 
     const flushed = pendingMessages.length;
     pendingMessages.forEach(msg => handleChatMessage(msg));
