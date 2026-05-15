@@ -491,6 +491,28 @@ function handleChatMessage(message) {
             const classes = iEls.map(i => i.className).join(' | ');
             debugChatLog(`FA SVG DIAG [${msgId}]: remaining <i> classes: ${classes.substring(0, 500)}`);
         }
+
+        // Chevron position diagnostic — measures actual widths of .dice-total and its
+        // ancestors to confirm whether position:relative and flex column widths are correct.
+        const diceTotals = [...node.querySelectorAll('.dice-result .dice-total')];
+        if (diceTotals.length > 0) {
+            diceTotals.forEach((el, i) => {
+                const elCs = getComputedStyle(el);
+                const acs  = getComputedStyle(el, '::after');
+                const parent = el.closest('.dice-result');
+                const gp     = el.closest('.midi-qol-attack-roll, .midi-qol-damage-roll, .dice-roll');
+                debugChatLog(
+                    `DICE-TOTAL DIAG [${msgId}][${i}]: ` +
+                    `offsetW=${el.offsetWidth} pos=${elCs.position} flex="${elCs.flex}" ` +
+                    `afterPos="${acs.position}" afterRight="${acs.right}" ` +
+                    `afterContent="${acs.content}" afterFont="${acs.fontFamily.substring(0, 50)}" ` +
+                    `parentW=${parent ? parent.offsetWidth : 'n/a'} ` +
+                    `gpCls="${gp ? gp.className.trim().substring(0, 60) : 'n/a'}" gpW=${gp ? gp.offsetWidth : 'n/a'}`
+                );
+            });
+        } else {
+            debugChatLog(`DICE-TOTAL DIAG [${msgId}]: no .dice-result .dice-total found in card`);
+        }
     }, 1000);
 
 }
