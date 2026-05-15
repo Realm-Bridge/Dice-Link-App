@@ -178,6 +178,7 @@ def main():
     # --disable-web-security allows DLA's panel (localhost:8765) to load fonts and
     # other assets from Foundry's server (localhost:30000) without CORS blocking.
     # Safe for a trusted local desktop app.
+    os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = '--disable-web-security'
     qt_args = [sys.argv[0], '--disable-web-security'] + sys.argv[1:]
     app = QApplication(qt_args)
     
