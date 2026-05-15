@@ -190,19 +190,6 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
-            #vtt-chat-log .dice-result .dice-total::after { display: none; }
-            #vtt-chat-log .dice-result .dice-total .dla-chevron {
-                position: absolute;
-                inset: 6px 0 6px auto;
-                display: grid;
-                place-content: center;
-                padding: 0 0.8125rem;
-                color: var(--color-text-secondary, #333);
-                font-size: var(--font-size-16, 1rem);
-                pointer-events: none;
-                transform: rotate(-90deg);
-            }
-            #vtt-chat-log .dnd5e2.chat-message { --pill-transparent-color: #4e4e4e; }
         `;
         document.head.appendChild(layout);
     }
@@ -225,9 +212,8 @@ function initChatLog() {
 
     const sidebar = document.createElement('div');
     sidebar.id = 'dla-sidebar';
-    bodyClasses.forEach(cls => { if (cls) sidebar.classList.add(cls); });
-    sidebar.classList.add('themed');
-    if (interfaceTheme) sidebar.classList.add(`theme-${interfaceTheme}`);
+    bodyClasses.forEach(cls => { if (cls && !cls.startsWith('theme-')) sidebar.classList.add(cls); });
+    sidebar.classList.add('themed', 'theme-light');
 
     const chatSection = document.createElement('div');
     chatSection.classList.add('dla-chat');
@@ -440,20 +426,6 @@ function handleChatMessage(message) {
         messageList.appendChild(node);
         messageList.scrollTop = messageList.scrollHeight;
     }
-
-    // Inject a DOM chevron into each dice total — the CSS ::after chevron uses FA codepoint
-    // \f054 which requires the FontAwesome webfont (not loaded in DLA). The FA SVG kit
-    // running in DLA converts <i class="fa-solid fa-chevron-right"> to SVG instead.
-    node.querySelectorAll('.dice-result .dice-total').forEach(el => {
-        if (el.querySelector('.dla-chevron')) return;
-        const span = document.createElement('span');
-        span.className = 'dla-chevron';
-        span.setAttribute('aria-hidden', 'true');
-        const icon = document.createElement('i');
-        icon.className = 'fa-solid fa-chevron-right';
-        span.appendChild(icon);
-        el.appendChild(span);
-    });
 
     // Diagnostics — runs 1 s after insertion to give FA kit time to inject SVGs
     setTimeout(() => {
