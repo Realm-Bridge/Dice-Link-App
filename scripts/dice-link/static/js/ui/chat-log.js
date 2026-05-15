@@ -190,6 +190,19 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
+            #vtt-chat-log .dice-result .dice-total::after { display: none; }
+            #vtt-chat-log .dice-result .dice-total .dla-chevron {
+                position: absolute;
+                inset: 6px 0 6px auto;
+                display: grid;
+                place-content: center;
+                padding: 0 0.8125rem;
+                color: var(--color-text-secondary, #333);
+                font-size: var(--font-size-16, 1rem);
+                pointer-events: none;
+                transform: rotate(-90deg);
+            }
+            #vtt-chat-log .dnd5e2.chat-message { --pill-transparent-color: #4e4e4e; }
         `;
         document.head.appendChild(layout);
     }
@@ -428,19 +441,18 @@ function handleChatMessage(message) {
         messageList.scrollTop = messageList.scrollHeight;
     }
 
-    // dnd5e renders weapon/activity icons as <i class="dnd5e-icon" data-src="..."> or
-    // <dnd5e-icon src="..."> custom elements. Both require dnd5e's JS to load SVG content.
-    // Since dnd5e's JS does not run in DLA, they render as empty elements. Replace with
-    // plain <img> so the browser loads the SVG file directly. URLs are already absolute
-    // because makeAbsolute in DLC converts both src and data-src before sending.
-    node.querySelectorAll('i.dnd5e-icon[data-src], dnd5e-icon[src], dnd5e-icon[data-src]').forEach(el => {
-        const src = el.getAttribute('data-src') || el.getAttribute('src');
-        if (!src) return;
-        const img = document.createElement('img');
-        img.src = src;
-        img.classList.add('dnd5e-icon');
-        if (el.hasAttribute('inert')) img.setAttribute('inert', '');
-        el.replaceWith(img);
+    // Inject a DOM chevron into each dice total — the CSS ::after chevron uses FA codepoint
+    // \f054 which requires the FontAwesome webfont (not loaded in DLA). The FA SVG kit
+    // running in DLA converts <i class="fa-solid fa-chevron-right"> to SVG instead.
+    node.querySelectorAll('.dice-result .dice-total').forEach(el => {
+        if (el.querySelector('.dla-chevron')) return;
+        const span = document.createElement('span');
+        span.className = 'dla-chevron';
+        span.setAttribute('aria-hidden', 'true');
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-chevron-right';
+        span.appendChild(icon);
+        el.appendChild(span);
     });
 
     // Diagnostics — runs 1 s after insertion to give FA kit time to inject SVGs
