@@ -1339,7 +1339,24 @@ body {
     cursor: pointer;
     padding: 3px;
     min-width: 0;
+    position: relative;
     transition: border-color 0.15s;
+}
+
+.chat-tray-die-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--dlc-accent);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 8px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.4;
+    pointer-events: none;
 }
 
 .chat-tray-die-btn:hover {

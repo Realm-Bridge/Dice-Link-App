@@ -458,12 +458,22 @@ function _updateChatAdvDisButtons() {
     if (disBtn) disBtn.classList.toggle('active', _chatTrayState.advMode === 'disadvantage');
 }
 
+function _updateChatDieBadge(btn) {
+    const die = parseInt(btn.dataset.die);
+    const count = _chatTrayState.dice[die] || 0;
+    const badge = btn.querySelector('.chat-tray-die-count');
+    if (!badge) return;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'block' : 'none';
+}
+
 function _resetChatTray() {
     _chatTrayState = { dice: {}, modifier: 0, advMode: 'normal' };
     const input = document.getElementById('chat-tray-input');
     if (input) input.value = '';
     _updateChatModifierDisplay();
     _updateChatAdvDisButtons();
+    document.querySelectorAll('.chat-tray-die-btn').forEach(btn => _updateChatDieBadge(btn));
 }
 
 function _sendChatMessage() {
@@ -514,11 +524,12 @@ function initChatTray() {
         });
     });
 
-    // Die buttons — left-click adds, right-click removes; rebuilds formula
+    // Die buttons — left-click adds, right-click removes; rebuilds formula + badge
     document.querySelectorAll('.chat-tray-die-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const die = parseInt(btn.dataset.die);
             _chatTrayState.dice[die] = (_chatTrayState.dice[die] || 0) + 1;
+            _updateChatDieBadge(btn);
             _rebuildChatInput();
         });
         btn.addEventListener('contextmenu', e => {
@@ -527,6 +538,7 @@ function initChatTray() {
             const current = _chatTrayState.dice[die] || 0;
             if (current > 0) {
                 _chatTrayState.dice[die] = current - 1;
+                _updateChatDieBadge(btn);
                 _rebuildChatInput();
             }
         });

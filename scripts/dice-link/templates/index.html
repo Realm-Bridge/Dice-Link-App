@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=69">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=70">
     <script src="https://kit.fontawesome.com/39d7cc98ef.js" crossorigin="anonymous"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
@@ -181,24 +181,31 @@
                     <div class="chat-tray-dice-row">
                         <button class="chat-tray-die-btn" data-die="4" title="d4">
                             <img src="/static/DLC Dice/D4/d4-blank.svg" alt="d4" class="chat-tray-die-icon" />
+                            <span class="chat-tray-die-count" style="display:none;">0</span>
                         </button>
                         <button class="chat-tray-die-btn" data-die="6" title="d6">
                             <img src="/static/DLC Dice/D6/d6-blank.svg" alt="d6" class="chat-tray-die-icon" />
+                            <span class="chat-tray-die-count" style="display:none;">0</span>
                         </button>
                         <button class="chat-tray-die-btn" data-die="8" title="d8">
                             <img src="/static/DLC Dice/D8/d8-blank.svg" alt="d8" class="chat-tray-die-icon" />
+                            <span class="chat-tray-die-count" style="display:none;">0</span>
                         </button>
                         <button class="chat-tray-die-btn" data-die="10" title="d10">
                             <img src="/static/DLC Dice/D10/d10-blank.svg" alt="d10" class="chat-tray-die-icon" />
+                            <span class="chat-tray-die-count" style="display:none;">0</span>
                         </button>
                         <button class="chat-tray-die-btn" data-die="12" title="d12">
                             <img src="/static/DLC Dice/D12/d12-blank.svg" alt="d12" class="chat-tray-die-icon" />
+                            <span class="chat-tray-die-count" style="display:none;">0</span>
                         </button>
                         <button class="chat-tray-die-btn" data-die="20" title="d20">
                             <img src="/static/DLC Dice/D20/d20-blank.svg" alt="d20" class="chat-tray-die-icon" />
+                            <span class="chat-tray-die-count" style="display:none;">0</span>
                         </button>
                         <button class="chat-tray-die-btn" data-die="100" title="d100">
                             <img src="/static/DLC Dice/D100/d100-blank.svg" alt="d100" class="chat-tray-die-icon" />
+                            <span class="chat-tray-die-count" style="display:none;">0</span>
                         </button>
                     </div>
                 </div>
@@ -365,7 +372,7 @@
     <script src="/static/js/ui/player-modes.js?v=1"></script>
     <script src="/static/js/ui/window-control.js?v=1"></script>
     <script src="/static/js/ui/camera.js?v=16"></script>
-    <script src="/static/js/ui/chat-log.js?v=10"></script>
+    <script src="/static/js/ui/chat-log.js?v=11"></script>
 
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>
