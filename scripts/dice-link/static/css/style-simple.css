@@ -1181,26 +1181,72 @@ body {
     gap: 6px;
 }
 
-.chat-tray-top-row {
+/* Row 1: modifier group, ADV, DIS, visibility buttons */
+.chat-tray-controls-row {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+}
+
+.chat-tray-modifier {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.chat-tray-ctrl-btn {
+    width: 38px;
+    height: 38px;
+    background: #1a1a2e;
+    border: 1px solid #4a4a6a;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+#chat-tray-adv,
+#chat-tray-dis {
+    width: 52px;
+    font-size: 13px;
+}
+
+.chat-tray-ctrl-btn:hover {
+    border-color: var(--dlc-accent);
+    background: #1e1e3a;
+}
+
+.chat-tray-mod-value {
+    min-width: 28px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ccc;
+    flex-shrink: 0;
 }
 
 .chat-tray-visibility {
     display: flex;
-    gap: 3px;
+    gap: 4px;
+    margin-left: auto;
     flex-shrink: 0;
 }
 
 .chat-tray-vis-btn {
-    width: 28px;
-    height: 28px;
+    width: 38px;
+    height: 38px;
     background: #1a1a2e;
     border: 1px solid #4a4a6a;
     border-radius: 4px;
     color: #555;
-    font-size: 11px;
+    font-size: 15px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1218,17 +1264,26 @@ body {
     color: #ccc;
 }
 
+/* Row 2: textarea + send button */
+.chat-tray-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+
 .chat-tray-input {
     flex: 1;
-    height: 28px;
+    height: 75px;
     background: #1a1a2e;
     border: 1px solid #4a4a6a;
     color: #ccc;
     border-radius: 4px;
-    padding: 0 8px;
-    font-size: 12px;
+    padding: 8px;
+    font-size: 14px;
     outline: none;
     font-family: inherit;
+    resize: none;
+    line-height: 1.4;
     min-width: 0;
 }
 
@@ -1237,23 +1292,30 @@ body {
 }
 
 .chat-tray-send-btn {
-    height: 28px;
-    padding: 0 12px;
+    height: 75px;
+    width: 70px;
+    padding: 0 8px;
     background: var(--dlc-success);
     border: none;
     border-radius: 4px;
     color: white;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
     flex-shrink: 0;
-    white-space: nowrap;
+    white-space: normal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
 }
 
 .chat-tray-send-btn:hover {
     opacity: 0.85;
 }
 
+/* Row 3: dice buttons */
 .chat-tray-dice-row {
     display: flex;
     gap: 4px;
@@ -1261,6 +1323,7 @@ body {
 
 .chat-tray-die-btn {
     flex: 1;
+    height: 60px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1269,8 +1332,8 @@ body {
     border: 1px solid #4a4a6a;
     border-radius: 4px;
     cursor: pointer;
-    padding: 4px 2px;
-    gap: 2px;
+    padding: 6px 2px 4px;
+    gap: 3px;
     min-width: 0;
     transition: border-color 0.15s;
 }
@@ -1281,14 +1344,14 @@ body {
 }
 
 .chat-tray-die-icon {
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     object-fit: contain;
     display: block;
 }
 
 .chat-tray-die-label {
-    font-size: 9px;
+    font-size: 11px;
     color: #888;
     line-height: 1;
 }
