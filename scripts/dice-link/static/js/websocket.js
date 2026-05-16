@@ -218,6 +218,10 @@ function handleMessage(message) {
             handleChatRefStyles(message);
             break;
 
+        case 'chatVisibilityState':
+            handleChatVisibilityState(message);
+            break;
+
         default:
             debugLog(`Unknown message type: ${message.type}`, message);
     }

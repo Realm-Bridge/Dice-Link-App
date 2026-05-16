@@ -485,6 +485,14 @@ function _sendChatMessage() {
     _resetChatTray();
 }
 
+function handleChatVisibilityState(message) {
+    const mode = message.mode;
+    if (!mode) return;
+    document.querySelectorAll('.chat-tray-vis-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+}
+
 function initChatTray() {
     // Modifier ± — accumulate, rebuild formula
     const modMinus = document.getElementById('chat-tray-mod-minus');
