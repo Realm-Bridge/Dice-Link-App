@@ -221,9 +221,9 @@ function initChatLog() {
     if (rootFontSize) {
         const fontSizeStyle = document.createElement('style');
         fontSizeStyle.id = 'foundry-chat-fontsize';
-        fontSizeStyle.textContent = `#vtt-chat-log { font-size: ${rootFontSize}; }`;
+        fontSizeStyle.textContent = `html { font-size: ${rootFontSize}; } #vtt-chat-log { font-size: ${rootFontSize}; }`;
         document.head.appendChild(fontSizeStyle);
-        debugChatLog(`initChatLog: applied rootFontSize=${rootFontSize} to #vtt-chat-log`);
+        debugChatLog(`initChatLog: applied rootFontSize=${rootFontSize} to html and #vtt-chat-log`);
     }
 
     // Rebuild the chat panel DOM inside #vtt-chat-log
