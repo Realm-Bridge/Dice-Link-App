@@ -1279,7 +1279,7 @@ body {
     color: #ccc;
     border-radius: 4px;
     padding: 8px;
-    font-size: 14px;
+    font-size: 21px;
     outline: none;
     font-family: inherit;
     resize: none;
@@ -1325,15 +1325,13 @@ body {
     flex: 1;
     height: 60px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     background: #1a1a2e;
     border: 1px solid #4a4a6a;
     border-radius: 4px;
     cursor: pointer;
-    padding: 6px 2px 4px;
-    gap: 3px;
+    padding: 3px;
     min-width: 0;
     transition: border-color 0.15s;
 }
@@ -1344,16 +1342,10 @@ body {
 }
 
 .chat-tray-die-icon {
-    width: 40px;
-    height: 40px;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     display: block;
-}
-
-.chat-tray-die-label {
-    font-size: 11px;
-    color: #888;
-    line-height: 1;
 }
 
 .bottom-right {
