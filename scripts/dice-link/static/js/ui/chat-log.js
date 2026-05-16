@@ -527,7 +527,14 @@ function handleChatMessage(message) {
                     `CHEVRON DIAG [${msgId}][${i}] dice-total: ` +
                     `offsetW=${el.offsetWidth} flex="${elCs.flex}" position="${elCs.position}" padding="${elCs.paddingLeft}/${elCs.paddingRight}" ` +
                     `beforeW="${bcs.width}" beforeBorderL="${bcs.borderLeftWidth}" beforeContent="${bcs.content}" ` +
-                    `afterRight="${acs.right}" afterContent="${acs.content}" afterFont="${acs.fontFamily.substring(0, 40)}"`
+                    `afterRight="${acs.right}" afterWidth="${acs.width}" afterLeft="${acs.left}" afterContent="${acs.content}" afterFont="${acs.fontFamily.substring(0, 40)}"`
+                );
+                const dtRect = el.getBoundingClientRect();
+                const offsetP = el.offsetParent;
+                debugChatLog(
+                    `CHEVRON DIAG [${msgId}][${i}] dice-total-geo: ` +
+                    `rect.left=${dtRect.left.toFixed(1)} rect.right=${dtRect.right.toFixed(1)} rect.w=${dtRect.width.toFixed(1)} ` +
+                    `offsetLeft=${el.offsetLeft} offsetParent="${offsetP ? (offsetP.id || offsetP.className.trim().substring(0, 30) || offsetP.tagName) : 'null'}"`
                 );
                 debugChatLog(
                     `CHEVRON DIAG [${msgId}][${i}] dice-result: ` +
