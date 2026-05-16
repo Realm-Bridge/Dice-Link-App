@@ -1155,7 +1155,7 @@ body {
 .bottom-section {
     position: absolute;
     top: 513px;
-    left: 36px;
+    left: 722px;
     right: 36px;
     bottom: 36px;
     display: flex;
@@ -1163,8 +1163,11 @@ body {
 }
 
 .vtt-chat-log-panel {
-    width: 650px;
-    flex-shrink: 0;
+    position: absolute;
+    top: 57px;
+    left: 36px;
+    bottom: 36px;
+    width: 550px;
 }
 
 .chat-input-row {
