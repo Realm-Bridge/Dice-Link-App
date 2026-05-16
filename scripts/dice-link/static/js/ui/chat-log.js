@@ -98,10 +98,6 @@ function initChatLog() {
     if (!_foundryStylesInjected && styleTexts.length > 0) {
         const layeredImports = [];
         const layerBlocks = [];
-        // Qt WebEngine does not resolve rem units correctly inside @scope { @layer {} }.
-        // Convert rem → px before injection so the browser sees only absolute values.
-        const rootFontSizePx = rootFontSize ? parseFloat(rootFontSize) : 16;
-
         for (const text of styleTexts) {
             const cleaned = text.replace(/^@import\s[^;]+;/gm, match => {
                 layeredImports.push(match.replace(/;\s*$/, ' layer(foundry);'));
@@ -110,8 +106,7 @@ function initChatLog() {
             if (cleaned) {
                 const remapped = cleaned
                     .replace(/:root\b/g, ':where(#dla-sidebar)')
-                    .replace(/\bbody\.([\w-]+)/g, ':where(#dla-sidebar).$1')
-                    .replace(/([\d.]+)rem\b/g, (_, n) => `${parseFloat(n) * rootFontSizePx}px`);
+                    .replace(/\bbody\.([\w-]+)/g, ':where(#dla-sidebar).$1');
                 layerBlocks.push(remapped);
             }
         }
@@ -211,8 +206,6 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
-            /* OVERFLOW TEST — temporary diagnostic: if ::after disappears, it was rendering outside dice-total's border box */
-            #vtt-chat-log .dice-result .dice-total { overflow: hidden; }
         `;
         document.head.appendChild(layout);
     }
@@ -225,9 +218,9 @@ function initChatLog() {
     if (rootFontSize) {
         const fontSizeStyle = document.createElement('style');
         fontSizeStyle.id = 'foundry-chat-fontsize';
-        fontSizeStyle.textContent = `html { font-size: ${rootFontSize}; } #vtt-chat-log { font-size: ${rootFontSize}; }`;
+        fontSizeStyle.textContent = `#vtt-chat-log { font-size: ${rootFontSize}; }`;
         document.head.appendChild(fontSizeStyle);
-        debugChatLog(`initChatLog: applied rootFontSize=${rootFontSize} to html and #vtt-chat-log`);
+        debugChatLog(`initChatLog: applied rootFontSize=${rootFontSize} to #vtt-chat-log`);
     }
 
     // Rebuild the chat panel DOM inside #vtt-chat-log
@@ -308,60 +301,6 @@ function initChatLog() {
     pendingMessages = [];
     debugChatLog('initChatLog: complete', { pendingFlushed: flushed });
 
-    // Diagnostic: comprehensive layout snapshot of the scroll chain
-    setTimeout(() => {
-        const els = [
-            { label: '#vtt-chat-log',  el: document.getElementById('vtt-chat-log') },
-            { label: '#dla-sidebar',   el: document.getElementById('dla-sidebar') },
-            { label: '.dla-chat',      el: document.querySelector('.dla-chat') },
-            { label: 'ol#chat-log',    el: document.getElementById('chat-log') },
-        ];
-        els.forEach(({ label, el }) => {
-            if (!el) { debugChatLog(`LAYOUT DIAG ${label}: NOT FOUND`); return; }
-            const cs = getComputedStyle(el);
-            const rect = el.getBoundingClientRect();
-            const parent = el.parentElement;
-            const parentCs = parent ? getComputedStyle(parent) : null;
-            debugChatLog(
-                `LAYOUT DIAG ${label}:` +
-                ` offsetH=${el.offsetHeight} scrollH=${el.scrollHeight} clientH=${el.clientHeight} rectH=${Math.round(rect.height)}` +
-                ` | display=${cs.display} position=${cs.position}` +
-                ` | flex=${cs.flex} flexDir=${cs.flexDirection} alignSelf=${cs.alignSelf} alignItems=${cs.alignItems}` +
-                ` | height=${cs.height} minH=${cs.minHeight} maxH=${cs.maxHeight}` +
-                ` | overflow=${cs.overflow} overflowY=${cs.overflowY}` +
-                ` | parent=${parent ? parent.tagName + (parent.id ? '#' + parent.id : '') + (parent.className ? '.' + parent.className.trim().split(/\s+/)[0] : '') : 'none'}` +
-                ` parentDisplay=${parentCs ? parentCs.display : '-'} parentFlexDir=${parentCs ? parentCs.flexDirection : '-'} parentH=${parent ? parent.offsetHeight : '-'}`
-            );
-        });
-        // Also confirm our layout style element is present
-        debugChatLog(`LAYOUT DIAG styles: foundry-chat-layout=${!!document.getElementById('foundry-chat-layout')} foundry-css-layer=${!!document.getElementById('foundry-css-layer')} foundry-css-vars=${!!document.getElementById('foundry-css-vars')}`);
-
-        // CSS variable source diagnostic — compare what root/body sent vs dnd5e-specific elements
-        if (Object.keys(dnd5eDiagVars).length === 0) {
-            debugChatLog('CSS VAR DIAG: no dnd5e-specific element vars received from DLC');
-        } else {
-            for (const [sel, vars] of Object.entries(dnd5eDiagVars)) {
-                let diffCount = 0;
-                for (const [name, val] of Object.entries(vars)) {
-                    const rootVal = cssVars[name];
-                    if (rootVal !== val) {
-                        diffCount++;
-                        debugChatLog(`CSS VAR DIFF [${sel}] ${name}: dnd5e="${val}" root/body="${rootVal ?? '(unset)'}"`);
-                    }
-                }
-                debugChatLog(`CSS VAR DIAG [${sel}]: ${Object.keys(vars).length} vars total, ${diffCount} differ from root/body`);
-            }
-        }
-
-        // Font loading diagnostic — checks whether dnd5e-icons and other fonts loaded in DLA
-        document.fonts.ready.then(() => {
-            const fontList = [];
-            document.fonts.forEach(f => fontList.push(`${f.family}/${f.weight}/${f.style}:${f.status}`));
-            debugChatLog('FONT DIAG dnd5e-icons (quoted):', document.fonts.check('1em "dnd5e-icons"'));
-            debugChatLog('FONT DIAG dnd5e-icons (unquoted):', document.fonts.check('1em dnd5e-icons'));
-            debugChatLog('FONT DIAG all fonts:', fontList.join(' | '));
-        });
-    }, 500);
 }
 
 // ============================================================================
@@ -460,110 +399,6 @@ function handleChatMessage(message) {
         messageList.appendChild(node);
         messageList.scrollTop = messageList.scrollHeight;
     }
-
-    // Diagnostics — runs 1 s after insertion to give FA kit time to inject SVGs
-    setTimeout(() => {
-        const msgId = node.dataset?.messageId || '?';
-
-        // CSS variable resolution — what do pill/button elements actually see?
-        const dnd5eEl = node.querySelector('.dnd5e2') || node;
-        const cs = getComputedStyle(dnd5eEl);
-        const probeVars = [
-            '--color-text-primary',
-            '--pill-transparent-color',
-            '--pill-border-dotted',
-            '--dnd5e-color-gold',
-        ];
-        const varVals = probeVars.map(v => `${v}="${cs.getPropertyValue(v).trim() || '(unset)'}"`).join(' ');
-        debugChatLog(`CSS VAR RUNTIME [${msgId}] on ${dnd5eEl === node ? 'card-root' : '.dnd5e2'}: ${varVals}`);
-
-        const pillEl = node.querySelector('.pill, .tag.pill, .activity-pill');
-        if (pillEl) {
-            const pcs = getComputedStyle(pillEl);
-            debugChatLog(`PILL RUNTIME [${msgId}]: color=${pcs.color} bg=${pcs.backgroundColor} borderColor=${pcs.borderColor} borderStyle=${pcs.borderStyle}`);
-        } else {
-            debugChatLog(`PILL RUNTIME [${msgId}]: no pill element found`);
-        }
-
-        const btnEl = node.querySelector('.card-buttons button, .chat-damage-application button');
-        if (btnEl) {
-            const bcs = getComputedStyle(btnEl);
-            debugChatLog(`BTN RUNTIME [${msgId}]: color=${bcs.color} bg=${bcs.backgroundColor} borderColor=${bcs.borderColor}`);
-        }
-
-        // FA SVG injection — did the kit replace <i> tags with <svg>?
-        const iEls = [...node.querySelectorAll('i[class*="fa-"]')];
-        const svgEls = [...node.querySelectorAll('svg.svg-inline--fa')];
-        debugChatLog(`FA SVG DIAG [${msgId}]: <i class="fa-*"> remaining=${iEls.length} FA <svg> injected=${svgEls.length}`);
-        if (iEls.length > 0) {
-            const classes = iEls.map(i => i.className).join(' | ');
-            debugChatLog(`FA SVG DIAG [${msgId}]: remaining <i> classes: ${classes.substring(0, 500)}`);
-        }
-
-        // Chevron layout diagnostic — measures the full ancestor chain and sibling to
-        // understand why the chevron appears far from the number.
-        const diceTotals = [...node.querySelectorAll('.dice-result .dice-total')];
-        if (diceTotals.length > 0) {
-            // Measure the li's computed padding to confirm the zoom-scaled padding is applying.
-            const li = node.closest('li') || node;
-            const liCs = getComputedStyle(li);
-            debugChatLog(
-                `CHEVRON DIAG [${msgId}] li: ` +
-                `offsetW=${li.offsetWidth} clientW=${li.clientWidth} ` +
-                `paddingL=${liCs.paddingLeft} paddingR=${liCs.paddingRight} ` +
-                `zoom=${liCs.zoom}`
-            );
-
-            diceTotals.forEach((el, i) => {
-                const elCs   = getComputedStyle(el);
-                const bcs    = getComputedStyle(el, '::before');
-                const acs    = getComputedStyle(el, '::after');
-                const result = el.closest('.dice-result');
-                const resCs  = result ? getComputedStyle(result) : null;
-                const gp     = el.closest('.midi-qol-attack-roll, .midi-qol-damage-roll, .dice-roll');
-                const gpCs   = gp ? getComputedStyle(gp) : null;
-                const ggp    = gp ? gp.parentElement : null;
-                const ggpCs  = ggp ? getComputedStyle(ggp) : null;
-                // Sibling .dice-formula (measures how much flex space the formula takes)
-                const formula = result ? result.querySelector('.dice-formula') : null;
-
-                debugChatLog(
-                    `CHEVRON DIAG [${msgId}][${i}] dice-total: ` +
-                    `offsetW=${el.offsetWidth} flex="${elCs.flex}" position="${elCs.position}" padding="${elCs.paddingLeft}/${elCs.paddingRight}" ` +
-                    `beforeW="${bcs.width}" beforeBorderL="${bcs.borderLeftWidth}" beforeContent="${bcs.content}" ` +
-                    `afterRight="${acs.right}" afterWidth="${acs.width}" afterLeft="${acs.left}" afterContent="${acs.content}" afterFont="${acs.fontFamily.substring(0, 40)}"`
-                );
-                const dtRect = el.getBoundingClientRect();
-                const offsetP = el.offsetParent;
-                debugChatLog(
-                    `CHEVRON DIAG [${msgId}][${i}] dice-total-geo: ` +
-                    `rect.left=${dtRect.left.toFixed(1)} rect.right=${dtRect.right.toFixed(1)} rect.w=${dtRect.width.toFixed(1)} ` +
-                    `offsetLeft=${el.offsetLeft} offsetParent="${offsetP ? (offsetP.id || offsetP.className.trim().substring(0, 30) || offsetP.tagName) : 'null'}"`
-                );
-                debugChatLog(
-                    `CHEVRON DIAG [${msgId}][${i}] dice-result: ` +
-                    `offsetW=${result ? result.offsetWidth : 'n/a'} ` +
-                    `flexDir="${resCs ? resCs.flexDirection : 'n/a'}" display="${resCs ? resCs.display : 'n/a'}"`
-                );
-                debugChatLog(
-                    `CHEVRON DIAG [${msgId}][${i}] dice-roll: ` +
-                    `offsetW=${gp ? gp.offsetWidth : 'n/a'} cls="${gp ? gp.className.trim().substring(0, 60) : 'n/a'}" ` +
-                    `flex="${gpCs ? gpCs.flex : 'n/a'}" display="${gpCs ? gpCs.display : 'n/a'}" flexDir="${gpCs ? gpCs.flexDirection : 'n/a'}"`
-                );
-                debugChatLog(
-                    `CHEVRON DIAG [${msgId}][${i}] dice-roll-parent: ` +
-                    `offsetW=${ggp ? ggp.offsetWidth : 'n/a'} cls="${ggp ? ggp.className.trim().substring(0, 60) : 'n/a'}" ` +
-                    `display="${ggpCs ? ggpCs.display : 'n/a'}" flexDir="${ggpCs ? ggpCs.flexDirection : 'n/a'}"`
-                );
-                debugChatLog(
-                    `CHEVRON DIAG [${msgId}][${i}] dice-formula: ` +
-                    `offsetW=${formula ? formula.offsetWidth : 'n/a'} flex="${formula ? getComputedStyle(formula).flex : 'n/a'}"`
-                );
-            });
-        } else {
-            debugChatLog(`CHEVRON DIAG [${msgId}]: no .dice-result .dice-total found in card`);
-        }
-    }, 1000);
 
 }
 
