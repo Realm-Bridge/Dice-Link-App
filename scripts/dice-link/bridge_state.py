@@ -180,6 +180,20 @@ def send_chat_interaction_to_dlc(data):
     return False
 
 
+def send_chat_command_to_dlc(data):
+    """Forward a chat command typed in DLA's tray to DLC via the bridge."""
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.sendChatCommand(json.dumps(data))
+            log_bridge_state(f"Sent chatCommand to DLC: content={str(data.get('content', ''))[:60]}")
+            return True
+        except Exception as e:
+            log_bridge_state(f"Error sending chatCommand to DLC: {e}")
+            return False
+    return False
+
+
 def send_camera_frame_to_dlc(frame_b64: str):
     """Send a single camera frame to DLC via the bridge."""
     bridge = get_bridge()

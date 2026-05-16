@@ -25,6 +25,7 @@ class DLABridge(QObject):
     cameraFrameReady = pyqtSignal(str)
     cameraStreamEndReady = pyqtSignal()
     chatInteractionReady = pyqtSignal(str)
+    chatCommandReady = pyqtSignal(str)
 
     PING_INTERVAL_MS = 30000  # Send ping after 30s of silence from DLC
     PONG_TIMEOUT_MS = 2000    # Declare dead if no pong within 2s
@@ -333,3 +334,9 @@ class DLABridge(QObject):
             self.chatInteractionReady.emit(data_json)
         except Exception as e:
             self.log_vtt(f"[BRIDGE] ERROR sending chat interaction: {str(e)}")
+
+    def sendChatCommand(self, data_json: str):
+        try:
+            self.chatCommandReady.emit(data_json)
+        except Exception as e:
+            self.log_vtt(f"[BRIDGE] ERROR sending chat command: {str(e)}")

@@ -1223,6 +1223,12 @@ body {
     background: #1e1e3a;
 }
 
+.chat-tray-ctrl-btn.active {
+    border-color: var(--dlc-accent);
+    color: var(--dlc-accent);
+    background: rgba(111, 46, 154, 0.15);
+}
+
 .chat-tray-mod-value {
     min-width: 28px;
     text-align: center;

@@ -409,3 +409,100 @@ function handleChatRefStyles(message) {
     if (!node) { debugChatLog(`handleChatRefStyles: card ${id} not found in DOM`); return; }
     compareStyles(node, message.refStyles);
 }
+
+// ============================================================================
+// CHAT TRAY — button wiring
+// ============================================================================
+
+let _chatModifier = 0;
+let _chatAdvState = 'normal'; // 'normal' | 'adv' | 'dis'
+
+function _buildDiceFormula(die) {
+    let formula;
+    if (_chatAdvState === 'adv') {
+        formula = `/roll 2d${die}kh1`;
+    } else if (_chatAdvState === 'dis') {
+        formula = `/roll 2d${die}kl1`;
+    } else {
+        formula = `/roll 1d${die}`;
+    }
+    if (_chatModifier > 0) formula += `+${_chatModifier}`;
+    else if (_chatModifier < 0) formula += `${_chatModifier}`;
+    return formula;
+}
+
+function _sendChatMessage() {
+    const input = document.getElementById('chat-tray-input');
+    if (!input) return;
+    const content = input.value.trim();
+    if (!content) return;
+    sendMessage({ type: 'chatCommand', content });
+    input.value = '';
+}
+
+function initChatTray() {
+    // Modifier ± buttons
+    const modMinus = document.getElementById('chat-tray-mod-minus');
+    const modPlus  = document.getElementById('chat-tray-mod-plus');
+    const modValue = document.getElementById('chat-tray-mod-value');
+    if (modMinus && modPlus && modValue) {
+        modMinus.addEventListener('click', () => {
+            _chatModifier--;
+            modValue.textContent = _chatModifier;
+        });
+        modPlus.addEventListener('click', () => {
+            _chatModifier++;
+            modValue.textContent = _chatModifier;
+        });
+    }
+
+    // ADV / DIS — mutually exclusive toggles
+    const advBtn = document.getElementById('chat-tray-adv');
+    const disBtn = document.getElementById('chat-tray-dis');
+    if (advBtn && disBtn) {
+        advBtn.addEventListener('click', () => {
+            _chatAdvState = _chatAdvState === 'adv' ? 'normal' : 'adv';
+            advBtn.classList.toggle('active', _chatAdvState === 'adv');
+            disBtn.classList.remove('active');
+        });
+        disBtn.addEventListener('click', () => {
+            _chatAdvState = _chatAdvState === 'dis' ? 'normal' : 'dis';
+            disBtn.classList.toggle('active', _chatAdvState === 'dis');
+            advBtn.classList.remove('active');
+        });
+    }
+
+    // Visibility buttons — one active at a time
+    document.querySelectorAll('.chat-tray-vis-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.chat-tray-vis-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    // Die buttons — build and insert roll formula into input
+    document.querySelectorAll('.chat-tray-die-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = document.getElementById('chat-tray-input');
+            if (input) input.value = _buildDiceFormula(btn.dataset.die);
+        });
+    });
+
+    // Send button
+    const sendBtn = document.getElementById('chat-tray-send');
+    const inputEl = document.getElementById('chat-tray-input');
+    if (sendBtn) sendBtn.addEventListener('click', _sendChatMessage);
+    if (inputEl) {
+        // Enter sends, Shift+Enter inserts a newline
+        inputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                _sendChatMessage();
+            }
+        });
+    }
+
+    debugChatLog('initChatTray: wired up');
+}
+
+initChatTray();
