@@ -98,6 +98,9 @@ function initChatLog() {
     if (!_foundryStylesInjected && styleTexts.length > 0) {
         const layeredImports = [];
         const layerBlocks = [];
+        // Qt WebEngine does not resolve rem units correctly inside @scope { @layer {} }.
+        // Convert rem → px before injection so the browser sees only absolute values.
+        const rootFontSizePx = rootFontSize ? parseFloat(rootFontSize) : 16;
 
         for (const text of styleTexts) {
             const cleaned = text.replace(/^@import\s[^;]+;/gm, match => {
@@ -107,7 +110,8 @@ function initChatLog() {
             if (cleaned) {
                 const remapped = cleaned
                     .replace(/:root\b/g, ':where(#dla-sidebar)')
-                    .replace(/\bbody\.([\w-]+)/g, ':where(#dla-sidebar).$1');
+                    .replace(/\bbody\.([\w-]+)/g, ':where(#dla-sidebar).$1')
+                    .replace(/([\d.]+)rem\b/g, (_, n) => `${parseFloat(n) * rootFontSizePx}px`);
                 layerBlocks.push(remapped);
             }
         }
