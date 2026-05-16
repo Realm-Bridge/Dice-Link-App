@@ -516,11 +516,12 @@ function initChatTray() {
         _rebuildChatInput();
     });
 
-    // Visibility buttons — one active at a time
+    // Visibility buttons — one active at a time, forward to DLC to click Foundry's equivalent
     document.querySelectorAll('.chat-tray-vis-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.chat-tray-vis-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            sendMessage({ type: 'chatVisibility', mode: btn.dataset.mode });
         });
     });
 

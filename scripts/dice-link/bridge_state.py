@@ -180,6 +180,20 @@ def send_chat_interaction_to_dlc(data):
     return False
 
 
+def send_chat_visibility_to_dlc(data):
+    """Forward a chat visibility mode change from DLA's tray to DLC via the bridge."""
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.sendChatVisibility(json.dumps(data))
+            log_bridge_state(f"Sent chatVisibility to DLC: mode={data.get('mode')}")
+            return True
+        except Exception as e:
+            log_bridge_state(f"Error sending chatVisibility to DLC: {e}")
+            return False
+    return False
+
+
 def send_chat_command_to_dlc(data):
     """Forward a chat command typed in DLA's tray to DLC via the bridge."""
     bridge = get_bridge()
