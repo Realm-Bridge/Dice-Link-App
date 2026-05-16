@@ -1226,7 +1226,7 @@ body {
 .chat-tray-mod-value {
     min-width: 28px;
     text-align: center;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
     color: #ccc;
     flex-shrink: 0;
