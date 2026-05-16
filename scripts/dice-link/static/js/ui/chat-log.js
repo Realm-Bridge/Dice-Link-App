@@ -207,6 +207,8 @@ function initChatLog() {
             #vtt-chat-log ol#chat-log::-webkit-scrollbar { width: 6px; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-track { background: transparent; }
             #vtt-chat-log ol#chat-log::-webkit-scrollbar-thumb { background: #9f9275; border-radius: 3px; }
+            /* OVERFLOW TEST — temporary diagnostic: if ::after disappears, it was rendering outside dice-total's border box */
+            #vtt-chat-log .dice-result .dice-total { overflow: hidden; }
         `;
         document.head.appendChild(layout);
     }
@@ -523,7 +525,7 @@ function handleChatMessage(message) {
 
                 debugChatLog(
                     `CHEVRON DIAG [${msgId}][${i}] dice-total: ` +
-                    `offsetW=${el.offsetWidth} flex="${elCs.flex}" padding="${elCs.paddingLeft}/${elCs.paddingRight}" ` +
+                    `offsetW=${el.offsetWidth} flex="${elCs.flex}" position="${elCs.position}" padding="${elCs.paddingLeft}/${elCs.paddingRight}" ` +
                     `beforeW="${bcs.width}" beforeBorderL="${bcs.borderLeftWidth}" beforeContent="${bcs.content}" ` +
                     `afterRight="${acs.right}" afterContent="${acs.content}" afterFont="${acs.fontFamily.substring(0, 40)}"`
                 );
