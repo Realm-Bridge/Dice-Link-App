@@ -411,24 +411,59 @@ function handleChatRefStyles(message) {
 }
 
 // ============================================================================
-// CHAT TRAY — button wiring
+// CHAT TRAY — button wiring (mirrors dice-tray.js accumulation model)
 // ============================================================================
 
-let _chatModifier = 0;
-let _chatAdvState = 'normal'; // 'normal' | 'adv' | 'dis'
+let _chatTrayState = { dice: {}, modifier: 0, advMode: 'normal' };
 
-function _buildDiceFormula(die) {
-    let formula;
-    if (_chatAdvState === 'adv') {
-        formula = `/roll 2d${die}kh1`;
-    } else if (_chatAdvState === 'dis') {
-        formula = `/roll 2d${die}kl1`;
-    } else {
-        formula = `/roll 1d${die}`;
+function _buildChatTrayFormula() {
+    const { dice, modifier, advMode } = _chatTrayState;
+    const parts = [];
+    const dieOrder = [20, 12, 10, 8, 6, 4, 100];
+    for (const die of dieOrder) {
+        const count = dice[die] || 0;
+        if (count > 0) {
+            let notation = `${count}d${die}`;
+            if (die === 20) {
+                if (advMode === 'advantage')    notation = `${count}d20kh`;
+                else if (advMode === 'disadvantage') notation = `${count}d20kl`;
+            }
+            parts.push(notation);
+        }
     }
-    if (_chatModifier > 0) formula += `+${_chatModifier}`;
-    else if (_chatModifier < 0) formula += `${_chatModifier}`;
+    let formula = parts.join('+');
+    if (modifier > 0) formula += `+${modifier}`;
+    else if (modifier < 0) formula += `${modifier}`;
     return formula;
+}
+
+function _rebuildChatInput() {
+    const input = document.getElementById('chat-tray-input');
+    if (!input) return;
+    const formula = _buildChatTrayFormula();
+    input.value = formula ? `/roll ${formula}` : '';
+}
+
+function _updateChatModifierDisplay() {
+    const el = document.getElementById('chat-tray-mod-value');
+    if (!el) return;
+    const m = _chatTrayState.modifier;
+    el.textContent = m > 0 ? `+${m}` : `${m}`;
+}
+
+function _updateChatAdvDisButtons() {
+    const advBtn = document.getElementById('chat-tray-adv');
+    const disBtn = document.getElementById('chat-tray-dis');
+    if (advBtn) advBtn.classList.toggle('active', _chatTrayState.advMode === 'advantage');
+    if (disBtn) disBtn.classList.toggle('active', _chatTrayState.advMode === 'disadvantage');
+}
+
+function _resetChatTray() {
+    _chatTrayState = { dice: {}, modifier: 0, advMode: 'normal' };
+    const input = document.getElementById('chat-tray-input');
+    if (input) input.value = '';
+    _updateChatModifierDisplay();
+    _updateChatAdvDisButtons();
 }
 
 function _sendChatMessage() {
@@ -437,40 +472,39 @@ function _sendChatMessage() {
     const content = input.value.trim();
     if (!content) return;
     sendMessage({ type: 'chatCommand', content });
-    input.value = '';
+    _resetChatTray();
 }
 
 function initChatTray() {
-    // Modifier ± buttons
+    // Modifier ± — accumulate, rebuild formula
     const modMinus = document.getElementById('chat-tray-mod-minus');
     const modPlus  = document.getElementById('chat-tray-mod-plus');
-    const modValue = document.getElementById('chat-tray-mod-value');
-    if (modMinus && modPlus && modValue) {
-        modMinus.addEventListener('click', () => {
-            _chatModifier--;
-            modValue.textContent = _chatModifier;
-        });
-        modPlus.addEventListener('click', () => {
-            _chatModifier++;
-            modValue.textContent = _chatModifier;
-        });
-    }
+    if (modMinus) modMinus.addEventListener('click', () => {
+        _chatTrayState.modifier--;
+        _updateChatModifierDisplay();
+        _rebuildChatInput();
+    });
+    if (modPlus) modPlus.addEventListener('click', () => {
+        _chatTrayState.modifier++;
+        _updateChatModifierDisplay();
+        _rebuildChatInput();
+    });
 
-    // ADV / DIS — mutually exclusive toggles
+    // ADV — toggle advantage; clears disadvantage
     const advBtn = document.getElementById('chat-tray-adv');
+    if (advBtn) advBtn.addEventListener('click', () => {
+        _chatTrayState.advMode = _chatTrayState.advMode === 'advantage' ? 'normal' : 'advantage';
+        _updateChatAdvDisButtons();
+        _rebuildChatInput();
+    });
+
+    // DIS — toggle disadvantage; clears advantage
     const disBtn = document.getElementById('chat-tray-dis');
-    if (advBtn && disBtn) {
-        advBtn.addEventListener('click', () => {
-            _chatAdvState = _chatAdvState === 'adv' ? 'normal' : 'adv';
-            advBtn.classList.toggle('active', _chatAdvState === 'adv');
-            disBtn.classList.remove('active');
-        });
-        disBtn.addEventListener('click', () => {
-            _chatAdvState = _chatAdvState === 'dis' ? 'normal' : 'dis';
-            disBtn.classList.toggle('active', _chatAdvState === 'dis');
-            advBtn.classList.remove('active');
-        });
-    }
+    if (disBtn) disBtn.addEventListener('click', () => {
+        _chatTrayState.advMode = _chatTrayState.advMode === 'disadvantage' ? 'normal' : 'disadvantage';
+        _updateChatAdvDisButtons();
+        _rebuildChatInput();
+    });
 
     // Visibility buttons — one active at a time
     document.querySelectorAll('.chat-tray-vis-btn').forEach(btn => {
@@ -480,20 +514,29 @@ function initChatTray() {
         });
     });
 
-    // Die buttons — build and insert roll formula into input
+    // Die buttons — left-click adds, right-click removes; rebuilds formula
     document.querySelectorAll('.chat-tray-die-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const input = document.getElementById('chat-tray-input');
-            if (input) input.value = _buildDiceFormula(btn.dataset.die);
+            const die = parseInt(btn.dataset.die);
+            _chatTrayState.dice[die] = (_chatTrayState.dice[die] || 0) + 1;
+            _rebuildChatInput();
+        });
+        btn.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            const die = parseInt(btn.dataset.die);
+            const current = _chatTrayState.dice[die] || 0;
+            if (current > 0) {
+                _chatTrayState.dice[die] = current - 1;
+                _rebuildChatInput();
+            }
         });
     });
 
-    // Send button
+    // Send button + Enter key (Shift+Enter inserts newline)
     const sendBtn = document.getElementById('chat-tray-send');
     const inputEl = document.getElementById('chat-tray-input');
     if (sendBtn) sendBtn.addEventListener('click', _sendChatMessage);
     if (inputEl) {
-        // Enter sends, Shift+Enter inserts a newline
         inputEl.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
