@@ -83,10 +83,12 @@ class VTTViewingWindow(CustomWindow):
         self.vtt_view = vtt_view
         
         self.setGeometry(100, 100, 1200, 800)
-        
+
         # Add the VTT view into the content area
         self.content_layout.addWidget(vtt_view)
-        
+
+        self.showMaximized()
+
         log_vtt("[VIEWER] Viewing window created with custom title bar and resize grip")
     
     def closeEvent(self, event):
