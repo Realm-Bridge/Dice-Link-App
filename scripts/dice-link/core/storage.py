@@ -249,6 +249,7 @@ def save_roll_to_history(session_id, die_type, value):
             (session_id, campaign_id, die_type, int(value), now)
         )
         conn.commit()
+        logger.info(f"Saved roll: {die_type}={value} (session={session_id}, campaign={campaign_id})")
     except Exception as e:
         logger.error(f"Failed to save roll to history: {e}")
     finally:
