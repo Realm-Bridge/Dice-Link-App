@@ -1392,13 +1392,13 @@ body {
 }
 
 .camera-window-panel {
-    flex: 1;
-    min-width: 0;
+    width: 614px;
+    flex-shrink: 0;
 }
 
 .user-controls-panel {
-    width: 380px;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 380px;
     position: relative;
 }
 
@@ -1770,7 +1770,7 @@ body {
   position: absolute;
   top: 57px;
   left: 622px;
-  right: 36px;
+  width: 930px;
   background: var(--dlc-bg-section);
   border: 3px solid var(--dlc-border);
   border-radius: var(--border-radius-lg);
