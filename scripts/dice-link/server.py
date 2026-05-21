@@ -546,6 +546,15 @@ async def handle_ui_message(message: dict):
         original_roll_id = message.get("originalRollId")
         results = message.get("results", [])
 
+        from state import app_state
+        if app_state.current_session_id is not None:
+            from core.storage import save_roll_to_history
+            for die in results:
+                die_type = die.get("type")
+                value = die.get("value")
+                if die_type and value is not None:
+                    save_roll_to_history(app_state.current_session_id, die_type, value)
+
         result_data = {
             "type": "diceResult",
             "id": original_roll_id,

@@ -146,6 +146,18 @@ class DLABridge(QObject):
             else:
                 self.log_vtt("[BRIDGE] WARNING: No player found with isSelf=true in player modes data")
 
+            world_id = data.get('worldId')
+            world_title = data.get('worldTitle') or world_id
+            if world_id:
+                from state import app_state
+                if app_state.current_session_id is None:
+                    from core.storage import start_session
+                    session_id = start_session(world_id, world_title)
+                    app_state.current_session_id = session_id
+                    app_state.connection.world_id = world_id
+                    app_state.connection.world_title = world_title
+                    self.log_vtt(f"[BRIDGE] Session {session_id} started for world: {world_title}")
+
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receivePlayerModesUpdate")
         except Exception as e:

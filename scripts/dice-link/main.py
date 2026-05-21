@@ -152,6 +152,9 @@ def main():
     print(f"  Physical dice rolling for Foundry VTT")
     print(f"{'='*50}\n")
     
+    from core.storage import init_roll_db
+    init_roll_db()
+
     log_server("Starting Dice Link Desktop App...")
     log_startup(WEBSOCKET_HOST, WEBSOCKET_PORT)
     log_server(f"Server running on http://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")

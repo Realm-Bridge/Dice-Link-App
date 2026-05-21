@@ -12,6 +12,8 @@ class ConnectionState:
     player_name: str | None = None
     player_id: str | None = None
     version: str | None = None
+    world_id: str | None = None
+    world_title: str | None = None
 
 
 class AppState:
@@ -21,6 +23,7 @@ class AppState:
         self.connection = ConnectionState()
         self.ui_websockets: set = set()
         self.camera_stream_armed: bool = False
+        self.current_session_id: int | None = None
 
     def add_ui_websocket(self, websocket: Any):
         """Add a browser UI WebSocket connection"""

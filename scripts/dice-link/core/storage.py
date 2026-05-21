@@ -155,15 +155,104 @@ def save_window_size(width, height):
     save_config(config)
 
 
-# Future: SQLite session history functions
-def init_session_db():
-    """Initialize SQLite database for session history (v1.1+)."""
-    pass
+def get_rolls_db_path():
+    """Get path to rolls.db SQLite database."""
+    return get_appdata_path() / 'rolls.db'
 
 
-def save_roll_to_history(roll_data):
-    """Save roll result to session history (v1.1+)."""
-    pass
+def init_roll_db():
+    """Create rolls.db with campaigns, sessions, and rolls tables if they don't exist."""
+    import sqlite3
+    db_path = get_rolls_db_path()
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS campaigns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                world_id TEXT NOT NULL UNIQUE,
+                world_title TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
+                started_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS rolls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL REFERENCES sessions(id),
+                campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
+                die_type TEXT NOT NULL,
+                value INTEGER NOT NULL,
+                rolled_at TEXT NOT NULL
+            );
+        """)
+        conn.commit()
+        logger.info(f"Roll database ready at {db_path}")
+    except Exception as e:
+        logger.error(f"Failed to initialise roll database: {e}")
+    finally:
+        conn.close()
+
+
+def start_session(world_id, world_title):
+    """
+    Get or create the campaign for this world, then open a new session.
+    Returns the new session id (int).
+    """
+    import sqlite3
+    db_path = get_rolls_db_path()
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute(
+            "INSERT INTO campaigns (world_id, world_title) VALUES (?, ?) "
+            "ON CONFLICT(world_id) DO UPDATE SET world_title = excluded.world_title",
+            (world_id, world_title)
+        )
+        row = conn.execute(
+            "SELECT id FROM campaigns WHERE world_id = ?", (world_id,)
+        ).fetchone()
+        campaign_id = row[0]
+
+        now = datetime.utcnow().isoformat()
+        cursor = conn.execute(
+            "INSERT INTO sessions (campaign_id, started_at) VALUES (?, ?)",
+            (campaign_id, now)
+        )
+        session_id = cursor.lastrowid
+        conn.commit()
+        logger.info(f"Started session {session_id} for campaign '{world_title}' (world_id={world_id})")
+        return session_id
+    except Exception as e:
+        logger.error(f"Failed to start session: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def save_roll_to_history(session_id, die_type, value):
+    """Save one die result to the rolls table."""
+    import sqlite3
+    db_path = get_rolls_db_path()
+    conn = sqlite3.connect(str(db_path))
+    try:
+        row = conn.execute(
+            "SELECT campaign_id FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        if not row:
+            logger.warning(f"save_roll_to_history: session {session_id} not found")
+            return
+        campaign_id = row[0]
+        now = datetime.utcnow().isoformat()
+        conn.execute(
+            "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (session_id, campaign_id, die_type, int(value), now)
+        )
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to save roll to history: {e}")
+    finally:
+        conn.close()
 
 
 def get_session_history(limit=100):
