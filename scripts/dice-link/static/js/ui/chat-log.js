@@ -50,7 +50,6 @@ function handleChatSetup(message) {
         interfaceTheme: message.interfaceTheme || '',
         rootFontSize:  message.rootFontSize  || null,
         sidebarWidth:  message.sidebarWidth  || 300,
-        dnd5eDiagVars: message.dnd5eDiagVars || {},
     };
 }
 
@@ -88,7 +87,6 @@ function initChatLog() {
     const interfaceTheme   = setup.interfaceTheme   || '';
     const rootFontSize     = setup.rootFontSize     || null;
     const sidebarWidth       = setup.sidebarWidth       || 300;
-    const dnd5eDiagVars      = setup.dnd5eDiagVars      || {};
 
     // Inject Foundry's embedded CSS blocks into the main document inside a named CSS layer.
     // @layer(foundry) ensures every unlayered DLA rule wins any specificity clash.
@@ -312,58 +310,6 @@ function handleChatInit(message) {
     initChatLog();
 }
 
-// ============================================================================
-// STYLE DIFF — compares DLA-rendered card against Foundry reference styles
-// ============================================================================
-
-function compareStyles(card, refStyles) {
-    const cardId = card.dataset?.messageId || '?';
-    let diffs = 0;
-    let matches = 0;
-
-    for (const [sel, refList] of Object.entries(refStyles)) {
-        const dlaEls = card.querySelectorAll(sel);
-        refList.forEach((ref, i) => {
-            const el = dlaEls[i];
-            if (!el) {
-                debugChatLog(`STYLE DIFF [${sel}][${i}]: element missing in DLA`);
-                diffs++;
-                return;
-            }
-            const cs = getComputedStyle(el);
-            [
-                ['color',       ref.color,       cs.color],
-                ['bg',          ref.bg,          cs.backgroundColor],
-                ['borderStyle', ref.borderStyle, cs.borderStyle],
-                ['borderColor', ref.borderColor, cs.borderColor],
-                ['position',    ref.position,    cs.position],
-            ].forEach(([prop, foundry, dla]) => {
-                if (foundry !== dla) {
-                    debugChatLog(`STYLE DIFF [${sel}][${i}] ${prop}: foundry=${foundry} dla=${dla}`);
-                    diffs++;
-                } else {
-                    matches++;
-                }
-            });
-            if (ref.before) {
-                const bp = getComputedStyle(el, '::before');
-                if (ref.before.content !== bp.content)
-                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::before content: foundry=${ref.before.content} dla=${bp.content}`);
-                if (ref.before.fontFamily !== bp.fontFamily)
-                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::before font: foundry="${ref.before.fontFamily.substring(0, 80)}" dla="${bp.fontFamily.substring(0, 80)}"`);
-            }
-            if (ref.after) {
-                const ap = getComputedStyle(el, '::after');
-                if (ref.after.content !== ap.content)
-                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::after content: foundry=${ref.after.content} dla=${ap.content}`);
-                if (ref.after.fontFamily !== ap.fontFamily)
-                    debugChatLog(`STYLE DIFF [${sel}][${i}] ::after font: foundry="${ref.after.fontFamily.substring(0, 80)}" dla="${ap.fontFamily.substring(0, 80)}"`);
-            }
-        });
-    }
-    debugChatLog(`STYLE DIFF summary id=${cardId}: ${diffs} diffs, ${matches} matches`);
-}
-
 function handleChatMessage(message) {
     const id   = message.messageId;
     const html = message.html || '';
@@ -400,14 +346,6 @@ function handleChatMessage(message) {
         messageList.scrollTop = messageList.scrollHeight;
     }
 
-}
-
-function handleChatRefStyles(message) {
-    const id = message.messageId;
-    if (!id || !message.refStyles) return;
-    const node = messageList ? messageList.querySelector('[data-message-id="' + id + '"]') : null;
-    if (!node) { debugChatLog(`handleChatRefStyles: card ${id} not found in DOM`); return; }
-    compareStyles(node, message.refStyles);
 }
 
 // ============================================================================

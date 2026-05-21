@@ -214,10 +214,6 @@ function handleMessage(message) {
             handleChatMessage(message);
             break;
 
-        case 'chatRefStyles':
-            handleChatRefStyles(message);
-            break;
-
         case 'chatVisibilityState':
             handleChatVisibilityState(message);
             break;
