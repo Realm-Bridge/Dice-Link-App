@@ -101,6 +101,15 @@ class DLABridge(QObject):
             request_id = data.get('id', 'unknown')
             self.log_vtt(f"[BRIDGE] Received roll request #{request_id}")
             self.log_vtt(f"[BRIDGE] Roll: {data.get('roll', {}).get('title', 'Unknown')}")
+
+            from state import app_state
+            if app_state.next_roll_label is not None:
+                app_state.current_roll_label = app_state.next_roll_label
+                app_state.next_roll_label = None
+            else:
+                app_state.current_roll_label = data.get('title', '')
+            self.log_vtt(f"[BRIDGE] Roll label: '{app_state.current_roll_label}'")
+
             from bridge_state import send_roll_request_to_ui
             send_roll_request_to_ui(data)
         except json.JSONDecodeError:

@@ -531,7 +531,10 @@ async def handle_ui_message(message: dict):
         formula = message.get("formula", "")
         flavor = message.get("flavor", "Manual Dice Roll")
         log_server(f"Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
-        
+
+        from state import app_state
+        app_state.next_roll_label = formula
+
         success = send_dice_tray_roll_to_foundry(formula, flavor)
         
         await broadcast_to_ui({
@@ -547,13 +550,15 @@ async def handle_ui_message(message: dict):
         results = message.get("results", [])
 
         from state import app_state
+        roll_label = app_state.current_roll_label or ''
+        app_state.current_roll_label = None
         if app_state.current_session_id is not None:
             from core.storage import save_roll_to_history
             for die in results:
                 die_type = die.get("type")
                 value = die.get("value")
                 if die_type and value is not None:
-                    save_roll_to_history(app_state.current_session_id, die_type, value)
+                    save_roll_to_history(app_state.current_session_id, die_type, value, roll_label)
 
         result_data = {
             "type": "diceResult",

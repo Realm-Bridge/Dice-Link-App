@@ -24,6 +24,8 @@ class AppState:
         self.ui_websockets: set = set()
         self.camera_stream_armed: bool = False
         self.current_session_id: int | None = None
+        self.current_roll_label: str | None = None
+        self.next_roll_label: str | None = None
 
     def add_ui_websocket(self, websocket: Any):
         """Add a browser UI WebSocket connection"""

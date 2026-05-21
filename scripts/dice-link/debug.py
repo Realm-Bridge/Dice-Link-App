@@ -22,6 +22,7 @@ DEBUG_STARTUP_DIALOG = False
 DEBUG_DPI = False
 DEBUG_SNAP = False
 DEBUG_CHAT_LOG = True
+DEBUG_STORAGE = True
 
 # --- Log file ---
 # Live log: logs/dla.log — archived to dla_archive.log on every startup; contains only the current session.
@@ -183,5 +184,13 @@ def log_chat_log(message: str):
     """Log chat log pipeline events — DLC payload receipt, CSS counts, message counts."""
     if DEBUG_ENABLED and DEBUG_CHAT_LOG:
         line = f"[Chat Log] {message}"
+        print(line)
+        _write_log(line)
+
+
+def log_storage(message: str):
+    """Log dice roll storage events — database init, session start, roll saves."""
+    if DEBUG_ENABLED and DEBUG_STORAGE:
+        line = f"[Storage] {message}"
         print(line)
         _write_log(line)

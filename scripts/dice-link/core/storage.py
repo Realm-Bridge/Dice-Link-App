@@ -7,18 +7,18 @@ Future: SQLite for session history and query capabilities
 """
 
 import json
-import logging
 import os
+import sqlite3
 from pathlib import Path
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
+from debug import log_storage
 
 
 def get_appdata_path():
     """
     Get the AppData directory for DLA.
-    
+
     Returns:
         Path: Directory path (e.g., %APPDATA%/DiceLink)
     """
@@ -26,7 +26,7 @@ def get_appdata_path():
         base = os.getenv('APPDATA', os.path.expanduser('~'))
     else:  # Mac/Linux (future)
         base = os.path.expanduser('~/.config')
-    
+
     appdata_dir = Path(base) / 'DiceLink'
     appdata_dir.mkdir(parents=True, exist_ok=True)
     return appdata_dir
@@ -40,18 +40,17 @@ def get_config_path():
 def load_config():
     """
     Load user configuration from disk.
-    
+
     Returns:
         dict: Configuration settings
     """
     config_path = get_config_path()
-    
+
     if not config_path.exists():
-        # Return default config
         default_config = {
             'version': '1.0.0',
             'first_run': True,
-            'data_collection_consent': None,  # None = not asked, True/False = user choice
+            'data_collection_consent': None,
             'model_version': None,
             'camera_index': 0,
             'websocket_port': 8765,
@@ -59,38 +58,36 @@ def load_config():
         }
         save_config(default_config)
         return default_config
-    
+
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-        logger.info(f"Config loaded from {config_path}")
         return config
     except Exception as e:
-        logger.error(f"Failed to load config: {e}")
+        log_storage(f"Failed to load config: {e}")
         return {}
 
 
 def save_config(config):
     """
     Save user configuration to disk.
-    
+
     Args:
         config (dict): Configuration settings
     """
     config_path = get_config_path()
-    
+
     try:
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
-        logger.info(f"Config saved to {config_path}")
     except Exception as e:
-        logger.error(f"Failed to save config: {e}")
+        log_storage(f"Failed to save config: {e}")
 
 
 def get_training_data_dir():
     """
     Get directory for storing training images.
-    
+
     Returns:
         Path: training_data/ directory
     """
@@ -100,23 +97,14 @@ def get_training_data_dir():
 
 
 def save_training_sample(image_data, metadata):
-    """
-    Save a training sample (image + metadata) to disk.
-    
-    Args:
-        image_data (bytes): JPEG image data
-        metadata (dict): Roll metadata (dice type, result, timestamp, etc.)
-    """
-    # TODO: Implement training sample storage
-    # Format: training_data/{timestamp}_{uuid}.jpg + .json
-    logger.debug("Save training sample (stub)")
+    """Save a training sample (image + metadata) to disk. Stub — not yet implemented."""
     pass
 
 
 def get_models_dir():
     """
     Get directory for storing ONNX models.
-    
+
     Returns:
         Path: models/ directory
     """
@@ -128,7 +116,7 @@ def get_models_dir():
 def get_current_model_path():
     """
     Get path to current ONNX model.
-    
+
     Returns:
         Path: Path to dice_detection_v{version}.onnx
     """
@@ -161,8 +149,8 @@ def get_rolls_db_path():
 
 
 def init_roll_db():
-    """Create rolls.db with campaigns, sessions, and rolls tables if they don't exist."""
-    import sqlite3
+    """Create rolls.db with campaigns, sessions, and rolls tables if they don't exist.
+    Also migrates existing databases to add any new columns."""
     db_path = get_rolls_db_path()
     conn = sqlite3.connect(str(db_path))
     try:
@@ -183,13 +171,25 @@ def init_roll_db():
                 campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
                 die_type TEXT NOT NULL,
                 value INTEGER NOT NULL,
-                rolled_at TEXT NOT NULL
+                rolled_at TEXT NOT NULL,
+                roll_label TEXT NOT NULL DEFAULT ''
             );
         """)
         conn.commit()
-        logger.info(f"Roll database ready at {db_path}")
+
+        # Migrate existing databases — add columns introduced after initial release
+        for col_def in ["roll_label TEXT NOT NULL DEFAULT ''"]:
+            col_name = col_def.split()[0]
+            try:
+                conn.execute(f"ALTER TABLE rolls ADD COLUMN {col_def}")
+                conn.commit()
+                log_storage(f"Migrated rolls table: added column {col_name}")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
+        log_storage(f"Roll database ready at {db_path}")
     except Exception as e:
-        logger.error(f"Failed to initialise roll database: {e}")
+        log_storage(f"Failed to initialise roll database: {e}")
     finally:
         conn.close()
 
@@ -199,7 +199,6 @@ def start_session(world_id, world_title):
     Get or create the campaign for this world, then open a new session.
     Returns the new session id (int).
     """
-    import sqlite3
     db_path = get_rolls_db_path()
     conn = sqlite3.connect(str(db_path))
     try:
@@ -220,18 +219,17 @@ def start_session(world_id, world_title):
         )
         session_id = cursor.lastrowid
         conn.commit()
-        logger.info(f"Started session {session_id} for campaign '{world_title}' (world_id={world_id})")
+        log_storage(f"Started session {session_id} for campaign '{world_title}' (world_id={world_id})")
         return session_id
     except Exception as e:
-        logger.error(f"Failed to start session: {e}")
+        log_storage(f"Failed to start session: {e}")
         return None
     finally:
         conn.close()
 
 
-def save_roll_to_history(session_id, die_type, value):
+def save_roll_to_history(session_id, die_type, value, roll_label=''):
     """Save one die result to the rolls table."""
-    import sqlite3
     db_path = get_rolls_db_path()
     conn = sqlite3.connect(str(db_path))
     try:
@@ -239,19 +237,19 @@ def save_roll_to_history(session_id, die_type, value):
             "SELECT campaign_id FROM sessions WHERE id = ?", (session_id,)
         ).fetchone()
         if not row:
-            logger.warning(f"save_roll_to_history: session {session_id} not found")
+            log_storage(f"save_roll_to_history: session {session_id} not found")
             return
         campaign_id = row[0]
         now = datetime.utcnow().isoformat()
         conn.execute(
-            "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (session_id, campaign_id, die_type, int(value), now)
+            "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at, roll_label) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (session_id, campaign_id, die_type, int(value), now, roll_label)
         )
         conn.commit()
-        logger.info(f"Saved roll: {die_type}={value} (session={session_id}, campaign={campaign_id})")
+        log_storage(f"Saved roll: {die_type}={value} label='{roll_label}' (session={session_id}, campaign={campaign_id})")
     except Exception as e:
-        logger.error(f"Failed to save roll to history: {e}")
+        log_storage(f"Failed to save roll to history: {e}")
     finally:
         conn.close()
 
