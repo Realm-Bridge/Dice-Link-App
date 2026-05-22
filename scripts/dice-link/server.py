@@ -533,7 +533,7 @@ async def handle_ui_message(message: dict):
         log_server(f"Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
 
         from state import app_state
-        app_state.next_roll_label = formula
+        app_state.next_roll_label = "Manual Roll"
 
         success = send_dice_tray_roll_to_foundry(formula, flavor)
         
@@ -550,8 +550,9 @@ async def handle_ui_message(message: dict):
         results = message.get("results", [])
 
         from state import app_state
-        roll_label = app_state.current_roll_label or ''
+        roll_label = app_state.current_roll_label or app_state.next_roll_label or ''
         app_state.current_roll_label = None
+        app_state.next_roll_label = None
         if app_state.current_session_id is not None:
             from core.storage import save_roll_to_history
             for die in results:
