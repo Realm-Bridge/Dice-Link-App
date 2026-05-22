@@ -213,7 +213,7 @@ def start_session(world_id, world_title):
         ).fetchone()
         campaign_id = row[0]
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now().isoformat()
         cursor = conn.execute(
             "INSERT INTO sessions (campaign_id, started_at) VALUES (?, ?)",
             (campaign_id, now)
@@ -241,7 +241,7 @@ def save_roll_to_history(session_id, die_type, value, roll_label='', player_name
             log_storage(f"save_roll_to_history: session {session_id} not found")
             return
         campaign_id = row[0]
-        now = datetime.utcnow().isoformat()
+        now = datetime.now().isoformat()
         conn.execute(
             "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at, roll_label, player_name) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
