@@ -379,7 +379,7 @@ function _rebuildChatInput() {
     const input = document.getElementById('chat-tray-input');
     if (!input) return;
     const formula = _buildChatTrayFormula();
-    input.value = formula ? `/roll ${formula}` : '';
+    input.value = formula ? `/r ${formula}` : '';
 }
 
 function _updateChatModifierDisplay() {
