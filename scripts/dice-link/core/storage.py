@@ -172,13 +172,14 @@ def init_roll_db():
                 die_type TEXT NOT NULL,
                 value INTEGER NOT NULL,
                 rolled_at TEXT NOT NULL,
-                roll_label TEXT NOT NULL DEFAULT ''
+                roll_label TEXT NOT NULL DEFAULT '',
+                player_name TEXT NOT NULL DEFAULT ''
             );
         """)
         conn.commit()
 
         # Migrate existing databases — add columns introduced after initial release
-        for col_def in ["roll_label TEXT NOT NULL DEFAULT ''"]:
+        for col_def in ["roll_label TEXT NOT NULL DEFAULT ''", "player_name TEXT NOT NULL DEFAULT ''"]:
             col_name = col_def.split()[0]
             try:
                 conn.execute(f"ALTER TABLE rolls ADD COLUMN {col_def}")
@@ -228,7 +229,7 @@ def start_session(world_id, world_title):
         conn.close()
 
 
-def save_roll_to_history(session_id, die_type, value, roll_label=''):
+def save_roll_to_history(session_id, die_type, value, roll_label='', player_name=''):
     """Save one die result to the rolls table."""
     db_path = get_rolls_db_path()
     conn = sqlite3.connect(str(db_path))
@@ -242,12 +243,12 @@ def save_roll_to_history(session_id, die_type, value, roll_label=''):
         campaign_id = row[0]
         now = datetime.utcnow().isoformat()
         conn.execute(
-            "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at, roll_label) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (session_id, campaign_id, die_type, int(value), now, roll_label)
+            "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at, roll_label, player_name) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, campaign_id, die_type, int(value), now, roll_label, player_name)
         )
         conn.commit()
-        log_storage(f"Saved roll: {die_type}={value} label='{roll_label}' (session={session_id}, campaign={campaign_id})")
+        log_storage(f"Saved roll: {die_type}={value} label='{roll_label}' player='{player_name}' (session={session_id}, campaign={campaign_id})")
     except Exception as e:
         log_storage(f"Failed to save roll to history: {e}")
     finally:

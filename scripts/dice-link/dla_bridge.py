@@ -200,6 +200,9 @@ class DLABridge(QObject):
                 msg_id = data.get("messageId", "unknown")
                 html = data.get("html") or ""
                 log_chat_log(f"chatMessage received: messageId={msg_id}, html bytes={len(html)}")
+                roll_data = data.get("rollData")
+                if roll_data:
+                    self._save_chat_roll_data(msg_id, roll_data)
 
             elif msg_type == "chatDiagnostic":
                 event = data.get("event", "unknown")
@@ -218,6 +221,37 @@ class DLABridge(QObject):
             send_chat_message_to_ui(data)
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receiveChatMessage")
+
+    def _save_chat_roll_data(self, msg_id, roll_data):
+        """Record active dice results from a Foundry chat roll message to history."""
+        from state import app_state
+        if app_state.current_session_id is None:
+            return
+        from core.storage import save_roll_to_history
+        speaker = roll_data.get('speaker') or ''
+        flavor = roll_data.get('flavor') or ''
+        label = flavor if flavor else speaker
+        saved = 0
+        for roll in roll_data.get('rolls', []):
+            for die in roll.get('dice', []):
+                faces = die.get('faces', 0)
+                if not faces:
+                    continue
+                die_type = f"d{faces}"
+                for result in die.get('results', []):
+                    if result.get('active'):
+                        value = result.get('result')
+                        if value is not None:
+                            save_roll_to_history(
+                                app_state.current_session_id,
+                                die_type,
+                                int(value),
+                                label,
+                                player_name=speaker
+                            )
+                            saved += 1
+        if saved:
+            log_chat_log(f"Chat roll saved: {saved} die result(s), label='{label}', player='{speaker}' (msg={msg_id})")
 
     @pyqtSlot(str)
     def receiveButtonSelect(self, data_json):

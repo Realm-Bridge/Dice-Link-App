@@ -552,28 +552,9 @@ async def handle_ui_message(message: dict):
         results = message.get("results", [])
 
         from state import app_state
-        roll_label = app_state.current_roll_label or app_state.next_roll_label or ''
-        roll_mode = app_state.current_roll_mode
         app_state.current_roll_label = None
         app_state.next_roll_label = None
         app_state.current_roll_mode = None
-        if app_state.current_session_id is not None:
-            from core.storage import save_roll_to_history
-            from collections import defaultdict
-            dice_by_type = defaultdict(list)
-            for die in results:
-                die_type = die.get("type")
-                value = die.get("value")
-                if die_type and value is not None:
-                    dice_by_type[die_type].append(value)
-            for die_type, values in dice_by_type.items():
-                if len(values) == 2 and roll_mode == "advantage":
-                    save_roll_to_history(app_state.current_session_id, die_type, max(values), roll_label)
-                elif len(values) == 2 and roll_mode == "disadvantage":
-                    save_roll_to_history(app_state.current_session_id, die_type, min(values), roll_label)
-                else:
-                    for value in values:
-                        save_roll_to_history(app_state.current_session_id, die_type, value, roll_label)
 
         result_data = {
             "type": "diceResult",
