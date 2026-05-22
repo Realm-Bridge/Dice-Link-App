@@ -38,6 +38,7 @@ class DLABridge(QObject):
         self.pending_pong = False
         self.connection_check_timer = None
         self.pong_timeout_timer = None
+        self._recorded_chat_roll_ids = set()
         self.log_vtt("[BRIDGE] DLABridge created")
 
     # -------------------------------------------------------------------------
@@ -224,13 +225,15 @@ class DLABridge(QObject):
 
     def _save_chat_roll_data(self, msg_id, roll_data):
         """Record active dice results from a Foundry chat roll message to history."""
+        if msg_id in self._recorded_chat_roll_ids:
+            return
         from state import app_state
         if app_state.current_session_id is None:
             return
         from core.storage import save_roll_to_history
         speaker = roll_data.get('speaker') or ''
         flavor = roll_data.get('flavor') or ''
-        label = flavor if flavor else speaker
+        label = flavor if flavor else 'Manual Roll'
         saved = 0
         for roll in roll_data.get('rolls', []):
             for die in roll.get('dice', []):
@@ -251,6 +254,7 @@ class DLABridge(QObject):
                             )
                             saved += 1
         if saved:
+            self._recorded_chat_roll_ids.add(msg_id)
             log_chat_log(f"Chat roll saved: {saved} die result(s), label='{label}', player='{speaker}' (msg={msg_id})")
 
     @pyqtSlot(str)
