@@ -530,10 +530,12 @@ async def handle_ui_message(message: dict):
         # Dice tray roll from UI - forward to DLC via QWebChannel bridge
         formula = message.get("formula", "")
         flavor = message.get("flavor", "Manual Dice Roll")
-        log_server(f"Received diceTrayRoll from UI: formula={formula}, flavor={flavor}")
+        adv_mode = message.get("advMode", "normal")
+        log_server(f"Received diceTrayRoll from UI: formula={formula}, flavor={flavor}, advMode={adv_mode}")
 
         from state import app_state
         app_state.next_roll_label = "Manual Roll"
+        app_state.current_roll_mode = adv_mode if adv_mode != "normal" else None
 
         success = send_dice_tray_roll_to_foundry(formula, flavor)
         

@@ -131,7 +131,8 @@ function initDiceTray() {
       sendMessage({
         type: 'diceTrayRoll',
         formula: formula,
-        flavor: 'Manual Dice Roll'
+        flavor: 'Manual Dice Roll',
+        advMode: getDiceTrayState().advMode
       });
       
       // Reset tray after sending

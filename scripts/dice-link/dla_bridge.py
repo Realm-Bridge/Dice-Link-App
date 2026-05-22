@@ -126,6 +126,9 @@ class DLABridge(QObject):
             from state import app_state
             app_state.camera_stream_armed = True
             self.log_vtt("[BRIDGE] Camera stream armed - waiting for roll")
+            if app_state.current_roll_label is None and app_state.next_roll_label is None:
+                app_state.next_roll_label = "Manual Roll"
+                self.log_vtt("[BRIDGE] No roll label set — defaulting to 'Manual Roll'")
             from bridge_state import send_dice_request_to_ui
             send_dice_request_to_ui(data)
         except json.JSONDecodeError:
