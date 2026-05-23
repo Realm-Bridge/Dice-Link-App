@@ -183,8 +183,6 @@ function init() {
 
         document.getElementById('stat-total').textContent = d.total;
         document.getElementById('stat-avg').textContent   = d.avg;
-        document.getElementById('stat-high').textContent  = d.high;
-        document.getElementById('stat-low').textContent   = d.low;
 
         positionExpandBtn();
     }
