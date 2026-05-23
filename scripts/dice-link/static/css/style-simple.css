@@ -1162,12 +1162,41 @@ body {
     gap: 36px;
 }
 
-.vtt-chat-log-panel {
+/* Panel outer wrappers — hold the external label above each panel */
+.panel-labeled-outer {
+    display:        flex;
+    flex-direction: column;
+    gap:            6px;
+    min-height:     0;
+}
+
+.panel-ext-label {
+    font-size:      13px;
+    font-weight:    700;
+    color:          var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    display:        flex;
+    align-items:    center;
+    gap:            6px;
+    flex-shrink:    0;
+    padding-left:   6px;
+    line-height:    1;
+}
+.panel-ext-label i { color: var(--dlc-accent); font-size: 11px; }
+
+/* VTT Chat Log outer — takes over the absolute positioning */
+.vtt-chat-log-outer {
     position: absolute;
-    top: 57px;
-    left: 36px;
-    bottom: 36px;
-    width: 550px;
+    top:      57px;
+    left:     36px;
+    bottom:   36px;
+    width:    550px;
+}
+
+.vtt-chat-log-panel {
+    flex:       1;
+    min-height: 0;
 }
 
 /* Compact chat tray — sits at the bottom of the VTT Chat Log panel */
@@ -1392,9 +1421,19 @@ body {
     min-height: 0;
 }
 
+/* Camera labeled outer — holds the fixed width that camera panel used to own */
+.camera-labeled-outer {
+    width:          614px;
+    flex-shrink:    0;
+    display:        flex;
+    flex-direction: column;
+    gap:            6px;
+    min-height:     0;
+}
+
 .camera-window-panel {
-    width: 614px;
-    flex-shrink: 0;
+    flex:       1;
+    min-height: 0;
 }
 
 .user-controls-panel {
@@ -1404,10 +1443,10 @@ body {
 }
 
 .stats-panel-flipper {
-    flex: 1;
-    min-height: 0;
+    flex:        1;
+    min-height:  0;
     perspective: 4000px;
-    position: relative;
+    position:    relative;
 }
 
 /* Shared panel style — matches dice tray / player modes */
@@ -1770,18 +1809,27 @@ body {
    PLAYER MODES SECTION
    ============================================================================ */
 
-.player-modes-section {
+/* Player Modes outer — takes over the absolute positioning */
+.player-modes-outer {
   position: absolute;
-  top: 57px;
-  left: 622px;
-  width: 930px;
+  top:      57px;
+  left:     622px;
+  width:    930px;
+  height:   440px;
+  display:        flex;
+  flex-direction: column;
+  gap:            6px;
+}
+
+.player-modes-section {
+  flex:       1;
+  min-height: 0;
   background: var(--dlc-bg-section);
   border: 3px solid var(--dlc-border);
   border-radius: var(--border-radius-lg);
   padding: 24px;
   display: flex;
   flex-direction: column;
-  height: 420px;
   overflow: hidden;
 }
 
@@ -2106,6 +2154,15 @@ body {
     padding: 20px 56px;
 }
 
+/* Stats panel labeled outer — flex: 1 in .bottom-right */
+.stats-labeled-outer {
+    flex:           1;
+    display:        flex;
+    flex-direction: column;
+    gap:            6px;
+    min-height:     0;
+}
+
 /* ============================================================================
    DICE ROLL STATS PANEL  — matches DICE_STATS_MOCKUP.html v3
    ============================================================================ */
@@ -2160,7 +2217,27 @@ body {
 .stats-ctrl-divider { width: 1px; height: 28px; background: #30363d; flex-shrink: 0; }
 .stats-ctrl-spacer  { flex: 1; }
 
-/* Die toggles */
+/* Die type — multi-select dropdown in the controls bar */
+.stats-die-wrap {
+    flex-shrink: 0;
+    width:       135px;
+    height:      36px;
+    position:    relative;
+}
+.stats-die-wrap .stats-ms-trigger {
+    flex:   none;
+    height: 100%;
+}
+
+/* SVG die icons inside the die dropdown options */
+.stats-die-icon {
+    width:       20px;
+    height:      20px;
+    flex-shrink: 0;
+    opacity:     0.85;
+}
+
+/* Die toggles (legacy — kept for reference, no longer in HTML) */
 .stats-die-toggles { display: flex; gap: 3px; flex-shrink: 0; }
 
 .stats-die-toggle {
@@ -2247,15 +2324,57 @@ body {
 .stats-data-btn:hover              { border-color: var(--dlc-accent); color: var(--text-primary); }
 .stats-data-btn.btn-danger:hover   { border-color: var(--dlc-danger); color: var(--dlc-danger); }
 
-/* ── ROW 2 : Filter bar ── */
-.stats-filter-bar {
-    display:     flex;
-    gap:         8px;
-    flex-shrink: 0;
-    height:      50px;
-    align-items: stretch;
-    position:    relative;
-    z-index:     100;
+/* ── Content area: filter column (left) + chart column (right) ── */
+.stats-content-area {
+    flex:       1;
+    display:    flex;
+    min-height: 0;
+}
+
+.stats-filter-col {
+    width:          175px;
+    flex-shrink:    0;
+    display:        flex;
+    flex-direction: column;
+    gap:            10px;
+    padding:        10px 12px 0 0;
+    border-right:   1px solid #30363d;
+    position:       relative;
+    z-index:        10;
+    overflow:       visible;
+}
+
+/* In the filter column every ms-wrap fills the column width */
+.stats-filter-col .stats-ms-wrap {
+    width: 100%;
+    flex:  none;
+}
+
+/* In the filter column every trigger/select has a fixed height */
+.stats-filter-col .stats-ms-trigger,
+.stats-filter-col .stats-plain-select {
+    flex:   none;
+    height: 34px;
+}
+
+/* Cascade group switches to vertical stack in the filter column */
+.stats-filter-col .stats-cascade-group {
+    flex-direction: column;
+    width:          100%;
+    gap:            10px;
+}
+
+/* Dropdowns in filter column open rightward into chart area */
+.stats-filter-col .stats-ms-dropdown {
+    max-width: 240px;
+}
+
+.stats-chart-col {
+    flex:           1;
+    min-width:      0;
+    display:        flex;
+    flex-direction: column;
+    padding-left:   12px;
 }
 
 .stats-ms-wrap {

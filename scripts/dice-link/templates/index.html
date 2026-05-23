@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=73">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=74">
     <script src="https://kit.fontawesome.com/39d7cc98ef.js" crossorigin="anonymous"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
@@ -109,11 +109,9 @@
             </div>
 
             <!-- Player Modes Section -->
-            <div class="player-modes-section" id="player-modes-section">
-                <div class="section-header">
-                    <h3><i class="fas fa-users"></i> Player Modes</h3>
-                </div>
-
+            <div class="panel-labeled-outer player-modes-outer">
+                <span class="panel-ext-label"><i class="fas fa-users"></i> Player Modes</span>
+                <div class="player-modes-section" id="player-modes-section">
                 <div class="section-content">
                     <!-- Legend -->
                     <div class="mode-legend">
@@ -138,13 +136,13 @@
                     <!-- No Players Message -->
                     <p class="no-players" id="no-players" style="display: none;">No players connected.</p>
                 </div>
+                </div>
             </div>
 
             <!-- VTT Chat Log — full-height left column, positioned independently -->
-            <div class="panel-section vtt-chat-log-panel">
-                <div class="panel-section-header">
-                    <h3><i class="fas fa-comments"></i> VTT Chat Log</h3>
-                </div>
+            <div class="panel-labeled-outer vtt-chat-log-outer">
+                <span class="panel-ext-label"><i class="fas fa-comments"></i> VTT Chat Log</span>
+                <div class="panel-section vtt-chat-log-panel">
                 <div class="panel-section-content" id="vtt-chat-log">
                 </div>
                 <div class="chat-tray">
@@ -209,6 +207,7 @@
                         </button>
                     </div>
                 </div>
+                </div>
             </div>
 
             <!-- Bottom Section — right-side panels only -->
@@ -219,15 +218,14 @@
 
                     <!-- Top Row: Camera + Controls -->
                     <div class="bottom-right-top">
-                        <div class="panel-section camera-window-panel">
+                        <div class="panel-labeled-outer camera-labeled-outer">
+                            <span class="panel-ext-label"><i class="fas fa-camera"></i> Camera</span>
+                            <div class="panel-section camera-window-panel">
                             <div class="camera-controls" id="camera-controls-normal">
                                 <select id="camera-select" class="camera-select"></select>
                             </div>
                             <div class="camera-controls hidden" id="camera-controls-define">
                                 <span class="camera-define-hint">Click points around your tray boundary. Include the walls. Make sure the tray is empty.</span>
-                            </div>
-                            <div class="panel-section-header camera-panel-header">
-                                <h3><i class="fas fa-camera"></i> Camera</h3>
                             </div>
                             <div class="panel-section-content" id="camera-window"></div>
                             <canvas id="camera-display"></canvas>
@@ -238,6 +236,7 @@
                             <canvas id="tray-canvas" class="tray-canvas"></canvas>
                             <span id="camera-status" class="camera-status"></span>
                             <span id="camera-motion" class="camera-motion"></span>
+                            </div>
                         </div>
 
                         <div class="user-controls-panel" id="user-controls">
@@ -249,7 +248,9 @@
                     </div>
 
                     <!-- Bottom Row: Dice Roll Stats / Combat Tracker Flipper -->
-                    <div class="stats-panel-flipper" id="stats-panel-flipper">
+                    <div class="panel-labeled-outer stats-labeled-outer">
+                        <span class="panel-ext-label" id="stats-ext-label"><i class="fas fa-chart-bar"></i> Dice Roll Stats</span>
+                        <div class="stats-panel-flipper" id="stats-panel-flipper">
                         <div class="stats-panel-inner" id="stats-panel-inner">
 
                             <!-- FRONT: Stats Panel -->
@@ -257,24 +258,30 @@
 
                                 <!-- ROW 1: Controls bar -->
                                 <div class="stats-controls-bar">
-                                    <span class="stats-panel-title"><i class="fas fa-chart-bar"></i> Dice Roll Stats</span>
-                                    <div class="stats-ctrl-divider"></div>
 
-                                    <div class="stats-die-toggles" id="die-toggles">
-                                        <button class="stats-die-toggle" data-die="4">d4</button>
-                                        <button class="stats-die-toggle" data-die="6">d6</button>
-                                        <button class="stats-die-toggle" data-die="8">d8</button>
-                                        <button class="stats-die-toggle" data-die="10">d10</button>
-                                        <button class="stats-die-toggle" data-die="12">d12</button>
-                                        <button class="stats-die-toggle active" data-die="20">d20</button>
-                                        <button class="stats-die-toggle" data-die="100">d100</button>
+                                    <!-- Die type — multi-select dropdown with SVG icons -->
+                                    <div class="stats-ms-wrap stats-die-wrap" id="ms-die">
+                                        <div class="stats-ms-trigger" data-ms="die">
+                                            <span class="stats-ms-trigger-text">All Dice</span>
+                                            <span class="stats-ms-trigger-arrow">&#9660;</span>
+                                        </div>
+                                        <div class="stats-ms-dropdown" id="dd-die">
+                                            <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Dice</div>
+                                            <div class="stats-ms-option" data-value="4"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D4/d4-blank.svg" class="stats-die-icon" alt="d4"> d4</div>
+                                            <div class="stats-ms-option" data-value="6"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D6/d6-blank.svg" class="stats-die-icon" alt="d6"> d6</div>
+                                            <div class="stats-ms-option" data-value="8"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D8/d8-blank.svg" class="stats-die-icon" alt="d8"> d8</div>
+                                            <div class="stats-ms-option" data-value="10"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D10/d10-blank.svg" class="stats-die-icon" alt="d10"> d10</div>
+                                            <div class="stats-ms-option" data-value="12"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D12/d12-blank.svg" class="stats-die-icon" alt="d12"> d12</div>
+                                            <div class="stats-ms-option" data-value="20"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D20/d20-blank.svg" class="stats-die-icon" alt="d20"> d20</div>
+                                            <div class="stats-ms-option" data-value="100"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D100/d100-blank.svg" class="stats-die-icon" alt="d100"> d100</div>
+                                        </div>
                                     </div>
                                     <div class="stats-ctrl-divider"></div>
 
                                     <div class="stats-chart-type-toggle">
-                                        <button class="stats-chart-btn active" data-type="bar">Bar</button>
-                                        <button class="stats-chart-btn" data-type="doughnut">Donut</button>
-                                        <button class="stats-chart-btn" data-type="line">Line</button>
+                                        <button class="stats-chart-btn active" data-type="bar" title="Bar chart"><i class="fas fa-chart-bar"></i></button>
+                                        <button class="stats-chart-btn" data-type="doughnut" title="Donut chart"><i class="fas fa-chart-pie"></i></button>
+                                        <button class="stats-chart-btn" data-type="line" title="Line chart"><i class="fas fa-chart-line"></i></button>
                                     </div>
                                     <div class="stats-ctrl-divider"></div>
 
@@ -287,13 +294,13 @@
 
                                     <div class="stats-data-mgmt">
                                         <button class="stats-data-btn btn-danger" id="stats-clear-btn" title="Delete rolls matching current filters">
-                                            <i class="fas fa-trash-alt"></i> Clear
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                         <button class="stats-data-btn" id="stats-export-btn" title="Export matching rolls as CSV">
-                                            <i class="fas fa-file-export"></i> Export
+                                            <i class="fas fa-file-export"></i>
                                         </button>
                                         <button class="stats-data-btn" id="stats-import-btn" title="Import — merges with duplicate detection">
-                                            <i class="fas fa-file-import"></i> Import
+                                            <i class="fas fa-file-import"></i>
                                         </button>
                                         <div class="stats-ctrl-divider"></div>
                                         <button class="stats-data-btn btn-flip" onclick="statsFlipPanel()" title="Switch to Combat Tracker">
@@ -302,123 +309,131 @@
                                     </div>
                                 </div>
 
-                                <!-- ROW 2: Filter bar -->
-                                <div class="stats-filter-bar">
+                                <!-- Content area: left filter column + right chart -->
+                                <div class="stats-content-area">
 
-                                    <!-- World — fixed 130px, multi-select -->
-                                    <div class="stats-ms-wrap stats-w-130" id="ms-world">
-                                        <span class="stats-ms-label">World</span>
-                                        <div class="stats-ms-trigger" data-ms="world">
-                                            <span class="stats-ms-trigger-text">All Worlds</span>
-                                            <span class="stats-ms-trigger-arrow">&#9660;</span>
-                                        </div>
-                                        <div class="stats-ms-dropdown" id="dd-world">
-                                            <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Worlds</div>
-                                            <div class="stats-ms-option" data-value="strahd"><span class="stats-ms-check"></span>Curse of Strahd</div>
-                                            <div class="stats-ms-option" data-value="waterdeep"><span class="stats-ms-check"></span>Waterdeep: Dragon Heist</div>
-                                            <div class="stats-ms-option" data-value="icewind"><span class="stats-ms-check"></span>Icewind Dale</div>
-                                        </div>
-                                    </div>
+                                    <!-- Left: stacked filter dropdowns -->
+                                    <div class="stats-filter-col">
 
-                                    <!-- Session — fixed 118px, single-select -->
-                                    <div class="stats-ms-wrap stats-w-118">
-                                        <span class="stats-ms-label">Session</span>
-                                        <select class="stats-plain-select" id="filter-session">
-                                            <option value="all" selected>All Sessions</option>
-                                            <option value="current">Current Session</option>
-                                            <option value="last1">Last Session</option>
-                                            <option value="last5">Last 5 Sessions</option>
-                                            <option value="last10">Last 10 Sessions</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- Player — fixed 112px, multi-select -->
-                                    <div class="stats-ms-wrap stats-w-112" id="ms-player">
-                                        <span class="stats-ms-label">Player</span>
-                                        <div class="stats-ms-trigger" data-ms="player">
-                                            <span class="stats-ms-trigger-text">All Players</span>
-                                            <span class="stats-ms-trigger-arrow">&#9660;</span>
-                                        </div>
-                                        <div class="stats-ms-dropdown" id="dd-player">
-                                            <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Players</div>
-                                            <div class="stats-ms-option" data-value="alice"><span class="stats-ms-check"></span>Alice</div>
-                                            <div class="stats-ms-option" data-value="bob"><span class="stats-ms-check"></span>Bob</div>
-                                            <div class="stats-ms-option" data-value="carol"><span class="stats-ms-check"></span>Carol</div>
-                                            <div class="stats-ms-option" data-value="dm"><span class="stats-ms-check"></span>DM</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Cascade group -->
-                                    <div class="stats-cascade-group" id="cascade-group">
-
-                                        <!-- Roll Type -->
-                                        <div class="stats-ms-wrap stats-cascade" id="ms-rolltype">
-                                            <span class="stats-ms-label">Roll Type <span class="stats-auto-badge">auto</span></span>
-                                            <div class="stats-ms-trigger" data-ms="rolltype">
-                                                <span class="stats-ms-trigger-text">All Roll Types</span>
+                                        <!-- World — multi-select -->
+                                        <div class="stats-ms-wrap" id="ms-world">
+                                            <span class="stats-ms-label">World</span>
+                                            <div class="stats-ms-trigger" data-ms="world">
+                                                <span class="stats-ms-trigger-text">All Worlds</span>
                                                 <span class="stats-ms-trigger-arrow">&#9660;</span>
                                             </div>
-                                            <div class="stats-ms-dropdown" id="dd-rolltype">
-                                                <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Roll Types</div>
-                                                <div class="stats-ms-option" data-value="saving"><span class="stats-ms-check"></span>Saving Throw</div>
-                                                <div class="stats-ms-option" data-value="attack"><span class="stats-ms-check"></span>Attack Roll</div>
-                                                <div class="stats-ms-option" data-value="check"><span class="stats-ms-check"></span>Ability Check</div>
-                                                <div class="stats-ms-option" data-value="damage"><span class="stats-ms-check"></span>Damage Roll</div>
+                                            <div class="stats-ms-dropdown" id="dd-world">
+                                                <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Worlds</div>
+                                                <div class="stats-ms-option" data-value="strahd"><span class="stats-ms-check"></span>Curse of Strahd</div>
+                                                <div class="stats-ms-option" data-value="waterdeep"><span class="stats-ms-check"></span>Waterdeep: Dragon Heist</div>
+                                                <div class="stats-ms-option" data-value="icewind"><span class="stats-ms-check"></span>Icewind Dale</div>
                                             </div>
                                         </div>
 
-                                        <!-- Label -->
-                                        <div class="stats-ms-wrap stats-cascade" id="ms-label">
-                                            <span class="stats-ms-label">Label <span class="stats-auto-badge">auto</span></span>
-                                            <div class="stats-ms-trigger" data-ms="label">
-                                                <span class="stats-ms-trigger-text">All Labels</span>
+                                        <!-- Session — single-select -->
+                                        <div class="stats-ms-wrap">
+                                            <span class="stats-ms-label">Session</span>
+                                            <select class="stats-plain-select" id="filter-session">
+                                                <option value="all" selected>All Sessions</option>
+                                                <option value="current">Current Session</option>
+                                                <option value="last1">Last Session</option>
+                                                <option value="last5">Last 5 Sessions</option>
+                                                <option value="last10">Last 10 Sessions</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Player — multi-select -->
+                                        <div class="stats-ms-wrap" id="ms-player">
+                                            <span class="stats-ms-label">Player</span>
+                                            <div class="stats-ms-trigger" data-ms="player">
+                                                <span class="stats-ms-trigger-text">All Players</span>
                                                 <span class="stats-ms-trigger-arrow">&#9660;</span>
                                             </div>
-                                            <div class="stats-ms-dropdown" id="dd-label">
-                                                <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Labels</div>
-                                                <div class="stats-ms-option" data-value="str-save"><span class="stats-ms-check"></span>Strength Saving Throw</div>
-                                                <div class="stats-ms-option" data-value="dex-save"><span class="stats-ms-check"></span>Dexterity Saving Throw</div>
-                                                <div class="stats-ms-option" data-value="con-save"><span class="stats-ms-check"></span>Constitution Saving Throw</div>
-                                                <div class="stats-ms-option" data-value="wis-save"><span class="stats-ms-check"></span>Wisdom Saving Throw</div>
-                                                <div class="stats-ms-option" data-value="cha-save"><span class="stats-ms-check"></span>Charisma Saving Throw</div>
-                                                <div class="stats-ms-option" data-value="longsword"><span class="stats-ms-check"></span>Longsword Attack Roll</div>
-                                                <div class="stats-ms-option" data-value="shortsword"><span class="stats-ms-check"></span>Shortsword Damage Roll</div>
-                                                <div class="stats-ms-option" data-value="perception"><span class="stats-ms-check"></span>Perception Check</div>
+                                            <div class="stats-ms-dropdown" id="dd-player">
+                                                <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Players</div>
+                                                <div class="stats-ms-option" data-value="alice"><span class="stats-ms-check"></span>Alice</div>
+                                                <div class="stats-ms-option" data-value="bob"><span class="stats-ms-check"></span>Bob</div>
+                                                <div class="stats-ms-option" data-value="carol"><span class="stats-ms-check"></span>Carol</div>
+                                                <div class="stats-ms-option" data-value="dm"><span class="stats-ms-check"></span>DM</div>
                                             </div>
                                         </div>
 
-                                        <!-- Variant (hidden by default) -->
-                                        <div class="stats-ms-wrap stats-cascade" id="ms-variant" style="display:none">
-                                            <span class="stats-ms-label">Variant <span class="stats-auto-badge">auto</span></span>
-                                            <div class="stats-ms-trigger" data-ms="variant">
-                                                <span class="stats-ms-trigger-text">All Variants</span>
-                                                <span class="stats-ms-trigger-arrow">&#9660;</span>
+                                        <!-- Cascade group — now stacks vertically -->
+                                        <div class="stats-cascade-group" id="cascade-group">
+
+                                            <!-- Roll Type -->
+                                            <div class="stats-ms-wrap" id="ms-rolltype">
+                                                <span class="stats-ms-label">Roll Type <span class="stats-auto-badge">auto</span></span>
+                                                <div class="stats-ms-trigger" data-ms="rolltype">
+                                                    <span class="stats-ms-trigger-text">All Roll Types</span>
+                                                    <span class="stats-ms-trigger-arrow">&#9660;</span>
+                                                </div>
+                                                <div class="stats-ms-dropdown" id="dd-rolltype">
+                                                    <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Roll Types</div>
+                                                    <div class="stats-ms-option" data-value="saving"><span class="stats-ms-check"></span>Saving Throw</div>
+                                                    <div class="stats-ms-option" data-value="attack"><span class="stats-ms-check"></span>Attack Roll</div>
+                                                    <div class="stats-ms-option" data-value="check"><span class="stats-ms-check"></span>Ability Check</div>
+                                                    <div class="stats-ms-option" data-value="damage"><span class="stats-ms-check"></span>Damage Roll</div>
+                                                </div>
                                             </div>
-                                            <div class="stats-ms-dropdown" id="dd-variant">
-                                                <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Variants</div>
-                                                <div class="stats-ms-option" data-value="normal"><span class="stats-ms-check"></span>Normal</div>
-                                                <div class="stats-ms-option" data-value="advantage"><span class="stats-ms-check"></span>Advantage</div>
-                                                <div class="stats-ms-option" data-value="disadvantage"><span class="stats-ms-check"></span>Disadvantage</div>
+
+                                            <!-- Label -->
+                                            <div class="stats-ms-wrap" id="ms-label">
+                                                <span class="stats-ms-label">Label <span class="stats-auto-badge">auto</span></span>
+                                                <div class="stats-ms-trigger" data-ms="label">
+                                                    <span class="stats-ms-trigger-text">All Labels</span>
+                                                    <span class="stats-ms-trigger-arrow">&#9660;</span>
+                                                </div>
+                                                <div class="stats-ms-dropdown" id="dd-label">
+                                                    <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Labels</div>
+                                                    <div class="stats-ms-option" data-value="str-save"><span class="stats-ms-check"></span>Strength Saving Throw</div>
+                                                    <div class="stats-ms-option" data-value="dex-save"><span class="stats-ms-check"></span>Dexterity Saving Throw</div>
+                                                    <div class="stats-ms-option" data-value="con-save"><span class="stats-ms-check"></span>Constitution Saving Throw</div>
+                                                    <div class="stats-ms-option" data-value="wis-save"><span class="stats-ms-check"></span>Wisdom Saving Throw</div>
+                                                    <div class="stats-ms-option" data-value="cha-save"><span class="stats-ms-check"></span>Charisma Saving Throw</div>
+                                                    <div class="stats-ms-option" data-value="longsword"><span class="stats-ms-check"></span>Longsword Attack Roll</div>
+                                                    <div class="stats-ms-option" data-value="shortsword"><span class="stats-ms-check"></span>Shortsword Damage Roll</div>
+                                                    <div class="stats-ms-option" data-value="perception"><span class="stats-ms-check"></span>Perception Check</div>
+                                                </div>
                                             </div>
+
+                                            <!-- Variant (hidden by default) -->
+                                            <div class="stats-ms-wrap" id="ms-variant" style="display:none">
+                                                <span class="stats-ms-label">Variant <span class="stats-auto-badge">auto</span></span>
+                                                <div class="stats-ms-trigger" data-ms="variant">
+                                                    <span class="stats-ms-trigger-text">All Variants</span>
+                                                    <span class="stats-ms-trigger-arrow">&#9660;</span>
+                                                </div>
+                                                <div class="stats-ms-dropdown" id="dd-variant">
+                                                    <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Variants</div>
+                                                    <div class="stats-ms-option" data-value="normal"><span class="stats-ms-check"></span>Normal</div>
+                                                    <div class="stats-ms-option" data-value="advantage"><span class="stats-ms-check"></span>Advantage</div>
+                                                    <div class="stats-ms-option" data-value="disadvantage"><span class="stats-ms-check"></span>Disadvantage</div>
+                                                </div>
+                                            </div>
+
+                                        </div><!-- /cascade-group -->
+
+                                    </div><!-- /stats-filter-col -->
+
+                                    <!-- Right: chart -->
+                                    <div class="stats-chart-col">
+                                        <div class="stats-chart-area">
+                                            <canvas id="statsChart"></canvas>
+                                            <button class="stats-chart-expand-btn" id="stats-chart-expand-btn" title="Expand chart to full panel">
+                                                <i class="fas fa-expand-alt"></i>
+                                            </button>
                                         </div>
 
-                                    </div>
-                                </div>
+                                        <!-- Clear confirmation -->
+                                        <div class="stats-clear-confirm hidden" id="stats-clear-confirm">
+                                            <span>Delete all matching rolls? This cannot be undone.</span>
+                                            <button class="stats-confirm-yes" id="stats-clear-yes">Delete</button>
+                                            <button class="stats-confirm-no" id="stats-clear-no">Cancel</button>
+                                        </div>
+                                    </div><!-- /stats-chart-col -->
 
-                                <!-- ROW 3: Chart -->
-                                <div class="stats-chart-area">
-                                    <canvas id="statsChart"></canvas>
-                                    <button class="stats-chart-expand-btn" id="stats-chart-expand-btn" title="Expand chart to full panel">
-                                        <i class="fas fa-expand-alt"></i>
-                                    </button>
-                                </div>
-
-                                <!-- Clear confirmation -->
-                                <div class="stats-clear-confirm hidden" id="stats-clear-confirm">
-                                    <span>Delete all matching rolls? This cannot be undone.</span>
-                                    <button class="stats-confirm-yes" id="stats-clear-yes">Delete</button>
-                                    <button class="stats-confirm-no" id="stats-clear-no">Cancel</button>
-                                </div>
+                                </div><!-- /stats-content-area -->
 
                                 <!-- Hidden file input for import -->
                                 <input type="file" id="stats-import-input" accept=".csv" style="display:none">
@@ -428,10 +443,8 @@
                             <!-- BACK: Combat Tracker -->
                             <div class="stats-panel-face stats-panel-back">
 
-                                <!-- Controls bar -->
+                                <!-- Controls bar — no title, label is outside the panel -->
                                 <div class="stats-controls-bar">
-                                    <span class="stats-panel-title"><i class="fas fa-shield-alt"></i> Combat Tracker</span>
-                                    <div class="stats-ctrl-divider"></div>
                                     <span class="ct-round-badge" id="ct-round">Round 3</span>
                                     <div class="stats-ctrl-spacer"></div>
                                     <button class="stats-data-btn btn-end-turn" id="ct-end-turn-btn" disabled title="End your turn — active only when it is your turn">
@@ -472,7 +485,8 @@
                             </div><!-- /back -->
 
                         </div><!-- /stats-panel-inner -->
-                    </div><!-- /stats-panel-flipper -->
+                        </div><!-- /stats-panel-flipper -->
+                    </div><!-- /stats-labeled-outer -->
 
                 </div>
             </div>
@@ -613,7 +627,7 @@
     <script src="/static/js/chart.min.js"></script>
 
     <!-- Dice Roll Stats Panel -->
-    <script src="/static/js/ui/stats.js?v=4"></script>
+    <script src="/static/js/ui/stats.js?v=5"></script>
 
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>

@@ -55,7 +55,14 @@ const ctCondIcons = {
 // WINDOW-LEVEL HANDLERS (for onclick= attributes)
 // ══════════════════════════════════════════════════════════════
 window.statsFlipPanel = function () {
-    document.getElementById('stats-panel-flipper').classList.toggle('flipped');
+    const flipper = document.getElementById('stats-panel-flipper');
+    const label   = document.getElementById('stats-ext-label');
+    const flipped = flipper.classList.toggle('flipped');
+    if (label) {
+        label.innerHTML = flipped
+            ? '<i class="fas fa-shield-alt"></i> Combat Tracker'
+            : '<i class="fas fa-chart-bar"></i> Dice Roll Stats';
+    }
 };
 
 window.ctNextTurn = function () {
@@ -113,7 +120,7 @@ function init() {
 
     const smallDonutLegend = {
         display: true, position: 'right',
-        labels: { color: '#a0a0b0', font:{ size: 11 }, boxWidth: 14, padding: 8 }
+        labels: { color: '#a0a0b0', font:{ size: 14 }, boxWidth: 18, padding: 12 }
     };
 
     const largeDonutLegend = {
@@ -187,13 +194,12 @@ function init() {
         positionExpandBtn();
     }
 
-    // ── Die toggles — single-select, one always active ───────
-    document.querySelectorAll('.stats-die-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.classList.contains('active')) return;
-            document.querySelectorAll('.stats-die-toggle').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeDie = parseInt(btn.dataset.die, 10);
+    // ── Die type multi-select dropdown ───────────────────────
+    const msDie = new MultiSelect('die', 'dd-die', 'All Dice');
+    document.getElementById('dd-die')?.querySelectorAll('.stats-ms-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+            const sel = msDie.selected;
+            activeDie = sel.size === 1 ? parseInt([...sel][0], 10) : 20;
             refreshChart(activeDie, currentChartType);
         });
     });
@@ -270,7 +276,7 @@ function init() {
     const msVariant  = new MultiSelect('variant',  'dd-variant',  'All Variants');
 
     document.addEventListener('click', () => {
-        [msWorld, msPlayer, msRollType, msLabel, msVariant].forEach(ms => ms.close());
+        [msDie, msWorld, msPlayer, msRollType, msLabel, msVariant].forEach(ms => ms.close());
     });
 
     // ── Combat tracker ────────────────────────────────────────
