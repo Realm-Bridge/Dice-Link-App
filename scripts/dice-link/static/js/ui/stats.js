@@ -194,10 +194,24 @@ function init() {
         positionExpandBtn();
     }
 
-    // ── Die type native select ────────────────────────────────
-    document.getElementById('die-select')?.addEventListener('change', e => {
-        activeDie = parseInt(e.target.value, 10);
-        refreshChart(activeDie, currentChartType);
+    // ── Die picker ───────────────────────────────────────────
+    const diePick = document.getElementById('die-pick');
+    document.getElementById('die-pick-trigger')?.addEventListener('click', e => {
+        e.stopPropagation();
+        diePick.classList.toggle('open');
+    });
+    document.getElementById('die-pick-dd')?.querySelectorAll('.stats-die-pick-opt').forEach(opt => {
+        opt.addEventListener('click', e => {
+            e.stopPropagation();
+            const val = parseInt(opt.dataset.die, 10);
+            activeDie = val;
+            document.getElementById('die-pick-icon').src = `/static/DLC Dice/D${val}/d${val}-blank.svg`;
+            document.getElementById('die-pick-lbl').textContent = `d${val}`;
+            document.querySelectorAll('.stats-die-pick-opt').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            diePick.classList.remove('open');
+            refreshChart(activeDie, currentChartType);
+        });
     });
 
     // ── Chart type buttons ────────────────────────────────────
@@ -272,6 +286,7 @@ function init() {
     const msVariant  = new MultiSelect('variant',  'dd-variant',  'All Variants');
 
     document.addEventListener('click', () => {
+        diePick?.classList.remove('open');
         [msWorld, msPlayer, msRollType, msLabel, msVariant].forEach(ms => ms.close());
     });
 

@@ -2217,20 +2217,73 @@ body {
 .stats-ctrl-divider { width: 1px; height: 28px; background: #30363d; flex-shrink: 0; }
 .stats-ctrl-spacer  { flex: 1; }
 
-/* Die type — native select in the controls bar */
-.stats-die-select {
-    flex-shrink:   0;
-    width:         80px;
+/* Die picker — custom single-select with SVG icons */
+.stats-die-pick {
+    position:    relative;
+    flex-shrink: 0;
+}
+.stats-die-pick-trigger {
+    display:       flex;
+    align-items:   center;
+    gap:           5px;
+    padding:       0 8px;
     height:        36px;
-    font-size:     18px;
-    font-weight:   700;
-    color:         var(--dlc-accent-pink);
     background:    var(--dlc-bg-input);
     border:        1px solid #30363d;
     border-radius: 4px;
     cursor:        pointer;
-    text-align:    center;
+    white-space:   nowrap;
+    transition:    border-color 0.12s;
 }
+.stats-die-pick-trigger:hover,
+.stats-die-pick.open .stats-die-pick-trigger { border-color: var(--dlc-accent); }
+.stats-die-pick-icon {
+    width:       20px;
+    height:      20px;
+    flex-shrink: 0;
+    opacity:     0.85;
+    filter:      invert(1);
+}
+.stats-die-pick-lbl {
+    font-size:   16px;
+    font-weight: 700;
+    color:       var(--dlc-accent-pink);
+    min-width:   28px;
+}
+.stats-die-pick-caret {
+    font-size:  10px;
+    color:      var(--text-muted);
+    transition: transform 0.15s;
+}
+.stats-die-pick.open .stats-die-pick-caret { transform: rotate(180deg); }
+.stats-die-pick-dd {
+    display:       none;
+    position:      absolute;
+    top:           calc(100% + 4px);
+    left:          0;
+    background:    var(--dlc-bg-input);
+    border:        1px solid var(--dlc-accent);
+    border-radius: 4px;
+    padding:       4px 0;
+    z-index:       200;
+    min-width:     100%;
+    box-shadow:    0 4px 16px rgba(0,0,0,0.4);
+}
+.stats-die-pick.open .stats-die-pick-dd { display: block; }
+.stats-die-pick-opt {
+    display:     flex;
+    align-items: center;
+    gap:         6px;
+    padding:     5px 10px;
+    cursor:      pointer;
+    font-size:   15px;
+    font-weight: 600;
+    color:       var(--text-secondary);
+    white-space: nowrap;
+    transition:  background 0.1s, color 0.1s;
+}
+.stats-die-pick-opt:hover  { background: rgba(111,46,154,0.2); color: var(--text-primary); }
+.stats-die-pick-opt.active { color: var(--dlc-accent-pink); }
 
 /* Die toggles (legacy — kept for reference, no longer in HTML) */
 .stats-die-toggles { display: flex; gap: 3px; flex-shrink: 0; }
