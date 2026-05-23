@@ -2102,3 +2102,305 @@ body {
     padding: 20px 56px;
 }
 
+/* ============================================================================
+   DICE ROLL STATS PANEL
+   ============================================================================ */
+
+/* Override padding — stats panel manages its own internal spacing */
+.dice-roll-stats-panel {
+    padding: 18px;
+}
+
+#dice-roll-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+}
+
+/* ── Controls bar ── */
+.stats-controls-bar {
+    display:     flex;
+    align-items: center;
+    gap:         8px;
+    flex-shrink: 0;
+    height:      32px;
+}
+
+.stats-panel-title {
+    font-size:   13px;
+    font-weight: 700;
+    color:       var(--dlc-text-primary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    display:     flex;
+    align-items: center;
+    gap:         6px;
+}
+
+.stats-panel-title i { color: var(--dlc-accent); font-size: 11px; }
+
+.stats-ctrl-div {
+    width:      1px;
+    height:     20px;
+    background: rgba(111,46,154,0.4);
+    flex-shrink: 0;
+}
+
+.stats-ctrl-spacer { flex: 1; }
+
+/* Die type toggles */
+.stats-die-toggles {
+    display:     flex;
+    gap:         4px;
+    flex-shrink: 0;
+}
+
+.stats-die-btn {
+    padding:     2px 9px;
+    background:  var(--dlc-bg-input);
+    border:      1px solid rgba(111,46,154,0.3);
+    border-radius: 4px;
+    color:       var(--dlc-text-muted);
+    font-size:   12px;
+    font-weight: 700;
+    cursor:      pointer;
+    transition:  all 0.12s;
+    line-height: 1.8;
+    font-family: inherit;
+    user-select: none;
+}
+
+.stats-die-btn.active {
+    background:   rgba(111,46,154,0.25);
+    border-color: var(--dlc-accent);
+    color:        #c084fc;
+}
+
+.stats-die-btn:hover:not(.active) {
+    border-color: rgba(111,46,154,0.6);
+    color:        var(--dlc-text-secondary);
+}
+
+/* ── Filter row ── */
+.stats-filter-row {
+    display:     flex;
+    align-items: center;
+    gap:         5px;
+    flex-shrink: 0;
+}
+
+.stats-drop-wrap {
+    position:    relative;
+    flex-shrink: 0;
+}
+
+.stats-filter-btn {
+    height:      28px;
+    padding:     0 9px;
+    background:  var(--dlc-bg-input);
+    border:      1px solid rgba(111,46,154,0.35);
+    border-radius: 4px;
+    color:       var(--dlc-text-secondary);
+    font-size:   12px;
+    font-family: inherit;
+    cursor:      pointer;
+    white-space: nowrap;
+    transition:  border-color 0.12s, color 0.12s;
+}
+
+.stats-filter-btn:hover {
+    border-color: var(--dlc-accent);
+    color:        var(--dlc-text-primary);
+}
+
+.stats-filter-select {
+    height:     28px;
+    padding:    0 7px;
+    background: var(--dlc-bg-input);
+    border:     1px solid rgba(111,46,154,0.35);
+    border-radius: 4px;
+    color:      var(--dlc-text-secondary);
+    font-size:  12px;
+    font-family: inherit;
+    cursor:     pointer;
+}
+
+.stats-filter-select:focus { outline: none; border-color: var(--dlc-accent); }
+
+.stats-drop-panel {
+    position:   absolute;
+    top:        calc(100% + 4px);
+    left:       0;
+    min-width:  160px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--dlc-bg-dark);
+    border:     1px solid var(--dlc-border);
+    border-radius: 6px;
+    padding:    4px 0;
+    z-index:    100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.stats-drop-panel.hidden { display: none; }
+
+.stats-drop-item {
+    display:     flex;
+    align-items: center;
+    gap:         7px;
+    padding:     4px 11px;
+    font-size:   12px;
+    color:       var(--dlc-text-secondary);
+    cursor:      pointer;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.stats-drop-item:hover { background: rgba(111,46,154,0.15); color: var(--dlc-text-primary); }
+
+.stats-drop-item input[type="checkbox"] { accent-color: var(--dlc-accent); flex-shrink: 0; }
+
+.stats-cascade {
+    display:     flex;
+    align-items: center;
+    gap:         5px;
+    flex-shrink: 0;
+}
+
+/* ── Chart type buttons ── */
+.stats-chart-btns { display: flex; gap: 4px; flex-shrink: 0; }
+
+.stats-chart-btn {
+    width:       28px;
+    height:      28px;
+    background:  var(--dlc-bg-input);
+    border:      1px solid rgba(111,46,154,0.3);
+    border-radius: 4px;
+    color:       var(--dlc-text-muted);
+    font-size:   12px;
+    cursor:      pointer;
+    display:     flex;
+    align-items: center;
+    justify-content: center;
+    transition:  all 0.12s;
+}
+
+.stats-chart-btn.active {
+    background:   rgba(111,46,154,0.25);
+    border-color: var(--dlc-accent);
+    color:        #c084fc;
+}
+
+.stats-chart-btn:hover:not(.active) {
+    border-color: rgba(111,46,154,0.6);
+    color:        var(--dlc-text-secondary);
+}
+
+/* ── Data buttons ── */
+.stats-data-btn {
+    width:       28px;
+    height:      28px;
+    background:  var(--dlc-bg-input);
+    border:      1px solid rgba(111,46,154,0.3);
+    border-radius: 4px;
+    color:       var(--dlc-text-muted);
+    font-size:   12px;
+    cursor:      pointer;
+    display:     flex;
+    align-items: center;
+    justify-content: center;
+    transition:  all 0.12s;
+    flex-shrink: 0;
+}
+
+.stats-data-btn:hover           { border-color: var(--dlc-accent); color: var(--dlc-text-secondary); }
+.stats-data-btn-danger:hover    { border-color: var(--dlc-danger); color: var(--dlc-danger); }
+
+/* ── Main area ── */
+.stats-main {
+    flex:           1;
+    display:        flex;
+    flex-direction: column;
+    gap:            6px;
+    min-height:     0;
+    overflow:       hidden;
+}
+
+/* Headline strip */
+.stats-headline {
+    display:        flex;
+    flex-shrink:    0;
+    border-bottom:  1px solid rgba(111,46,154,0.2);
+    padding-bottom: 5px;
+}
+
+.stats-hl-item {
+    flex:           1;
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    gap:            1px;
+    border-right:   1px solid rgba(111,46,154,0.15);
+    padding:        0 6px;
+}
+
+.stats-hl-item:last-child { border-right: none; }
+
+.stats-hl-value {
+    font-size:   20px;
+    font-weight: 700;
+    color:       #c084fc;
+    line-height: 1;
+}
+
+.stats-hl-label {
+    font-size:      10px;
+    color:          var(--dlc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Chart wrapper */
+.stats-chart-wrap {
+    flex:        1;
+    min-height:  0;
+    position:    relative;
+}
+
+.stats-chart-wrap canvas {
+    width:  100% !important;
+    height: 100% !important;
+}
+
+/* ── Clear confirmation bar ── */
+.stats-clear-confirm {
+    display:     flex;
+    align-items: center;
+    gap:         10px;
+    padding:     6px 10px;
+    background:  rgba(239,68,68,0.1);
+    border:      1px solid var(--dlc-danger);
+    border-radius: 5px;
+    font-size:   12px;
+    color:       var(--dlc-text-secondary);
+    flex-shrink: 0;
+}
+
+.stats-clear-confirm.hidden { display: none; }
+
+.stats-confirm-yes,
+.stats-confirm-no {
+    padding:     3px 12px;
+    border-radius: 4px;
+    border:      none;
+    font-size:   12px;
+    font-family: inherit;
+    cursor:      pointer;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.stats-confirm-yes { background: var(--dlc-danger); color: white; }
+.stats-confirm-no  { background: var(--dlc-bg-input); color: var(--dlc-text-secondary); border: 1px solid rgba(111,46,154,0.3); }
+

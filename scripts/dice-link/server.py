@@ -73,6 +73,92 @@ async def get_dice_ranges():
     return JSONResponse(DICE_RANGES)
 
 
+# ============== Roll Stats Endpoints ==============
+
+def _parse_list_param(value: str, cast=str):
+    if not value or value == 'all':
+        return ['all']
+    return [cast(v.strip()) for v in value.split(',') if v.strip()]
+
+
+@app.get("/api/roll-stats")
+async def get_roll_stats(
+    die_types:     str = 'all',
+    world_ids:     str = 'all',
+    session_scope: str = 'all',
+    player_names:  str = 'all',
+    label_filter:  str = 'all',
+):
+    from core.storage import query_roll_stats
+    return JSONResponse(query_roll_stats(
+        die_types     = _parse_list_param(die_types),
+        world_ids     = _parse_list_param(world_ids, int),
+        session_scope = session_scope,
+        player_names  = _parse_list_param(player_names),
+        label_filter  = _parse_list_param(label_filter),
+    ))
+
+
+@app.delete("/api/roll-stats")
+async def clear_roll_stats(
+    die_types:     str = 'all',
+    world_ids:     str = 'all',
+    session_scope: str = 'all',
+    player_names:  str = 'all',
+    label_filter:  str = 'all',
+):
+    from core.storage import delete_rolls
+    deleted = delete_rolls(
+        die_types     = _parse_list_param(die_types),
+        world_ids     = _parse_list_param(world_ids, int),
+        session_scope = session_scope,
+        player_names  = _parse_list_param(player_names),
+        label_filter  = _parse_list_param(label_filter),
+    )
+    return JSONResponse({'deleted': deleted})
+
+
+@app.get("/api/roll-stats/export")
+async def export_roll_stats(
+    die_types:     str = 'all',
+    world_ids:     str = 'all',
+    session_scope: str = 'all',
+    player_names:  str = 'all',
+    label_filter:  str = 'all',
+):
+    import csv, io
+    from core.storage import get_rolls_for_export
+    rows = get_rolls_for_export(
+        die_types     = _parse_list_param(die_types),
+        world_ids     = _parse_list_param(world_ids, int),
+        session_scope = session_scope,
+        player_names  = _parse_list_param(player_names),
+        label_filter  = _parse_list_param(label_filter),
+    )
+    buf = io.StringIO()
+    fields = ['rolled_at', 'player_name', 'die_type', 'value', 'roll_label', 'world_title']
+    writer = csv.DictWriter(buf, fieldnames=fields)
+    writer.writeheader()
+    writer.writerows(rows)
+    filename = 'dice-stats'
+    if die_types  != 'all': filename += f'-{die_types.replace(",", "-")}'
+    if world_ids  != 'all': filename += f'-worlds-{world_ids}'
+    filename += '.csv'
+    return Response(
+        content     = buf.getvalue(),
+        media_type  = 'text/csv',
+        headers     = {'Content-Disposition': f'attachment; filename={filename}'},
+    )
+
+
+@app.post("/api/roll-stats/import")
+async def import_roll_stats(request: Request):
+    from core.storage import import_rolls_from_csv
+    body = await request.json()
+    result = import_rolls_from_csv(body.get('rows', []))
+    return JSONResponse(result)
+
+
 # ============== Camera Endpoints ==============
 
 @app.get("/api/cameras")

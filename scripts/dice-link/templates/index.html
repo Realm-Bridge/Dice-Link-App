@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=70">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=71">
     <script src="https://kit.fontawesome.com/39d7cc98ef.js" crossorigin="anonymous"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
@@ -250,10 +250,87 @@
 
                     <!-- Bottom Row: Dice Roll Stats -->
                     <div class="panel-section dice-roll-stats-panel">
-                        <div class="panel-section-header">
-                            <h3><i class="fas fa-chart-bar"></i> Dice Roll Stats</h3>
-                        </div>
                         <div class="panel-section-content" id="dice-roll-stats">
+
+                            <!-- Controls bar -->
+                            <div class="stats-controls-bar">
+                                <span class="stats-panel-title"><i class="fas fa-chart-bar"></i> Dice Roll Stats</span>
+                                <div class="stats-ctrl-div"></div>
+                                <div class="stats-die-toggles">
+                                    <button class="stats-die-btn active" data-die="d4">d4</button>
+                                    <button class="stats-die-btn active" data-die="d6">d6</button>
+                                    <button class="stats-die-btn active" data-die="d8">d8</button>
+                                    <button class="stats-die-btn active" data-die="d10">d10</button>
+                                    <button class="stats-die-btn active" data-die="d12">d12</button>
+                                    <button class="stats-die-btn active" data-die="d20">d20</button>
+                                    <button class="stats-die-btn active" data-die="d100">d100</button>
+                                </div>
+                                <div class="stats-ctrl-div"></div>
+                                <div class="stats-filter-row">
+                                    <div class="stats-drop-wrap">
+                                        <button class="stats-filter-btn" id="stats-world-btn" onclick="statsToggleDrop('stats-world-panel')">All Campaigns</button>
+                                        <div class="stats-drop-panel hidden" id="stats-world-panel"></div>
+                                    </div>
+                                    <select class="stats-filter-select" id="stats-session-select">
+                                        <option value="all">All Sessions</option>
+                                        <option value="last10">Last 10 Sessions</option>
+                                        <option value="last5">Last 5 Sessions</option>
+                                        <option value="last1">Last Session</option>
+                                        <option value="current">Current Session</option>
+                                    </select>
+                                    <div class="stats-drop-wrap">
+                                        <button class="stats-filter-btn" id="stats-player-btn" onclick="statsToggleDrop('stats-player-panel')">All Players</button>
+                                        <div class="stats-drop-panel hidden" id="stats-player-panel"></div>
+                                    </div>
+                                    <div class="stats-cascade" id="stats-cascade"></div>
+                                </div>
+                                <div class="stats-ctrl-spacer"></div>
+                                <div class="stats-chart-btns">
+                                    <button class="stats-chart-btn active" data-chart="bar" title="Bar chart"><i class="fas fa-chart-bar"></i></button>
+                                    <button class="stats-chart-btn" data-chart="doughnut" title="Donut chart"><i class="fas fa-circle-notch"></i></button>
+                                    <button class="stats-chart-btn" data-chart="line" title="Line chart"><i class="fas fa-chart-line"></i></button>
+                                </div>
+                                <div class="stats-ctrl-div"></div>
+                                <button class="stats-data-btn" id="stats-export-btn" title="Export CSV"><i class="fas fa-download"></i></button>
+                                <button class="stats-data-btn" id="stats-import-btn" title="Import CSV"><i class="fas fa-upload"></i></button>
+                                <button class="stats-data-btn stats-data-btn-danger" id="stats-clear-btn" title="Clear rolls"><i class="fas fa-trash"></i></button>
+                            </div>
+
+                            <!-- Main area: headline numbers + chart -->
+                            <div class="stats-main">
+                                <div class="stats-headline">
+                                    <div class="stats-hl-item">
+                                        <span class="stats-hl-value" id="stats-total">—</span>
+                                        <span class="stats-hl-label">Rolls</span>
+                                    </div>
+                                    <div class="stats-hl-item">
+                                        <span class="stats-hl-value" id="stats-avg">—</span>
+                                        <span class="stats-hl-label">Average</span>
+                                    </div>
+                                    <div class="stats-hl-item">
+                                        <span class="stats-hl-value" id="stats-highest">—</span>
+                                        <span class="stats-hl-label">Highest</span>
+                                    </div>
+                                    <div class="stats-hl-item">
+                                        <span class="stats-hl-value" id="stats-lowest">—</span>
+                                        <span class="stats-hl-label">Lowest</span>
+                                    </div>
+                                </div>
+                                <div class="stats-chart-wrap">
+                                    <canvas id="stats-chart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Clear confirmation (hidden until Clear is clicked) -->
+                            <div class="stats-clear-confirm hidden" id="stats-clear-confirm">
+                                <span>Delete all matching rolls? This cannot be undone.</span>
+                                <button class="stats-confirm-yes" id="stats-clear-yes">Delete</button>
+                                <button class="stats-confirm-no" id="stats-clear-no">Cancel</button>
+                            </div>
+
+                            <!-- Hidden file input for import -->
+                            <input type="file" id="stats-import-input" accept=".csv" style="display:none">
+
                         </div>
                     </div>
 
@@ -373,6 +450,12 @@
     <script src="/static/js/ui/window-control.js?v=1"></script>
     <script src="/static/js/ui/camera.js?v=16"></script>
     <script src="/static/js/ui/chat-log.js?v=12"></script>
+
+    <!-- Chart.js (bundled locally — no CDN dependency) -->
+    <script src="/static/js/chart.min.js"></script>
+
+    <!-- Dice Roll Stats Panel -->
+    <script src="/static/js/ui/stats.js?v=1"></script>
 
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>
