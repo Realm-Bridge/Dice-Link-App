@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=74">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=75">
     <script src="https://kit.fontawesome.com/39d7cc98ef.js" crossorigin="anonymous"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
@@ -256,68 +256,14 @@
                             <!-- FRONT: Stats Panel -->
                             <div class="stats-panel-face stats-panel-front">
 
-                                <!-- ROW 1: Controls bar -->
-                                <div class="stats-controls-bar">
-
-                                    <!-- Die type — multi-select dropdown with SVG icons -->
-                                    <div class="stats-ms-wrap stats-die-wrap" id="ms-die">
-                                        <div class="stats-ms-trigger" data-ms="die">
-                                            <span class="stats-ms-trigger-text">All Dice</span>
-                                            <span class="stats-ms-trigger-arrow">&#9660;</span>
-                                        </div>
-                                        <div class="stats-ms-dropdown" id="dd-die">
-                                            <div class="stats-ms-option all-option" data-value="all"><span class="stats-ms-check"><i class="fas fa-check"></i></span>All Dice</div>
-                                            <div class="stats-ms-option" data-value="4"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D4/d4-blank.svg" class="stats-die-icon" alt="d4"> d4</div>
-                                            <div class="stats-ms-option" data-value="6"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D6/d6-blank.svg" class="stats-die-icon" alt="d6"> d6</div>
-                                            <div class="stats-ms-option" data-value="8"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D8/d8-blank.svg" class="stats-die-icon" alt="d8"> d8</div>
-                                            <div class="stats-ms-option" data-value="10"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D10/d10-blank.svg" class="stats-die-icon" alt="d10"> d10</div>
-                                            <div class="stats-ms-option" data-value="12"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D12/d12-blank.svg" class="stats-die-icon" alt="d12"> d12</div>
-                                            <div class="stats-ms-option" data-value="20"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D20/d20-blank.svg" class="stats-die-icon" alt="d20"> d20</div>
-                                            <div class="stats-ms-option" data-value="100"><span class="stats-ms-check"></span><img src="/static/DLC Dice/D100/d100-blank.svg" class="stats-die-icon" alt="d100"> d100</div>
-                                        </div>
-                                    </div>
-                                    <div class="stats-ctrl-divider"></div>
-
-                                    <div class="stats-chart-type-toggle">
-                                        <button class="stats-chart-btn active" data-type="bar" title="Bar chart"><i class="fas fa-chart-bar"></i></button>
-                                        <button class="stats-chart-btn" data-type="doughnut" title="Donut chart"><i class="fas fa-chart-pie"></i></button>
-                                        <button class="stats-chart-btn" data-type="line" title="Line chart"><i class="fas fa-chart-line"></i></button>
-                                    </div>
-                                    <div class="stats-ctrl-divider"></div>
-
-                                    <div class="stats-headline-stats">
-                                        <div class="stats-stat-pill"><span class="stats-stat-num" id="stat-total">82</span><span class="stats-stat-lbl">Rolls</span></div>
-                                        <div class="stats-stat-pill"><span class="stats-stat-num" id="stat-avg">10.8</span><span class="stats-stat-lbl">Avg</span></div>
-                                    </div>
-
-                                    <div class="stats-ctrl-spacer"></div>
-
-                                    <div class="stats-data-mgmt">
-                                        <button class="stats-data-btn btn-danger" id="stats-clear-btn" title="Delete rolls matching current filters">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                        <button class="stats-data-btn" id="stats-export-btn" title="Export matching rolls as CSV">
-                                            <i class="fas fa-file-export"></i>
-                                        </button>
-                                        <button class="stats-data-btn" id="stats-import-btn" title="Import — merges with duplicate detection">
-                                            <i class="fas fa-file-import"></i>
-                                        </button>
-                                        <div class="stats-ctrl-divider"></div>
-                                        <button class="stats-data-btn btn-flip" onclick="statsFlipPanel()" title="Switch to Combat Tracker">
-                                            <i class="fas fa-exchange-alt"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Content area: left filter column + right chart -->
+                                <!-- Content area: left filter column (full height) + right chart column -->
                                 <div class="stats-content-area">
 
-                                    <!-- Left: stacked filter dropdowns -->
+                                    <!-- Left: stacked filter dropdowns — icon + trigger per row, no labels -->
                                     <div class="stats-filter-col">
 
-                                        <!-- World — multi-select -->
                                         <div class="stats-ms-wrap" id="ms-world">
-                                            <span class="stats-ms-label">World</span>
+                                            <button class="stats-filter-icon" title="World / Campaign"><i class="fas fa-globe"></i></button>
                                             <div class="stats-ms-trigger" data-ms="world">
                                                 <span class="stats-ms-trigger-text">All Worlds</span>
                                                 <span class="stats-ms-trigger-arrow">&#9660;</span>
@@ -330,9 +276,8 @@
                                             </div>
                                         </div>
 
-                                        <!-- Session — single-select -->
                                         <div class="stats-ms-wrap">
-                                            <span class="stats-ms-label">Session</span>
+                                            <button class="stats-filter-icon" title="Session scope"><i class="fas fa-clock"></i></button>
                                             <select class="stats-plain-select" id="filter-session">
                                                 <option value="all" selected>All Sessions</option>
                                                 <option value="current">Current Session</option>
@@ -342,9 +287,8 @@
                                             </select>
                                         </div>
 
-                                        <!-- Player — multi-select -->
                                         <div class="stats-ms-wrap" id="ms-player">
-                                            <span class="stats-ms-label">Player</span>
+                                            <button class="stats-filter-icon" title="Player"><i class="fas fa-user"></i></button>
                                             <div class="stats-ms-trigger" data-ms="player">
                                                 <span class="stats-ms-trigger-text">All Players</span>
                                                 <span class="stats-ms-trigger-arrow">&#9660;</span>
@@ -358,12 +302,11 @@
                                             </div>
                                         </div>
 
-                                        <!-- Cascade group — now stacks vertically -->
+                                        <!-- Cascade group — vertical stack -->
                                         <div class="stats-cascade-group" id="cascade-group">
 
-                                            <!-- Roll Type -->
                                             <div class="stats-ms-wrap" id="ms-rolltype">
-                                                <span class="stats-ms-label">Roll Type <span class="stats-auto-badge">auto</span></span>
+                                                <button class="stats-filter-icon" title="Roll type (auto-grouped)"><i class="fas fa-dice"></i></button>
                                                 <div class="stats-ms-trigger" data-ms="rolltype">
                                                     <span class="stats-ms-trigger-text">All Roll Types</span>
                                                     <span class="stats-ms-trigger-arrow">&#9660;</span>
@@ -377,9 +320,8 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Label -->
                                             <div class="stats-ms-wrap" id="ms-label">
-                                                <span class="stats-ms-label">Label <span class="stats-auto-badge">auto</span></span>
+                                                <button class="stats-filter-icon" title="Roll label (auto-grouped)"><i class="fas fa-tag"></i></button>
                                                 <div class="stats-ms-trigger" data-ms="label">
                                                     <span class="stats-ms-trigger-text">All Labels</span>
                                                     <span class="stats-ms-trigger-arrow">&#9660;</span>
@@ -397,9 +339,8 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Variant (hidden by default) -->
                                             <div class="stats-ms-wrap" id="ms-variant" style="display:none">
-                                                <span class="stats-ms-label">Variant <span class="stats-auto-badge">auto</span></span>
+                                                <button class="stats-filter-icon" title="Variant (auto-grouped)"><i class="fas fa-code-branch"></i></button>
                                                 <div class="stats-ms-trigger" data-ms="variant">
                                                     <span class="stats-ms-trigger-text">All Variants</span>
                                                     <span class="stats-ms-trigger-arrow">&#9660;</span>
@@ -416,8 +357,53 @@
 
                                     </div><!-- /stats-filter-col -->
 
-                                    <!-- Right: chart -->
+                                    <!-- Right: controls bar at top, chart below -->
                                     <div class="stats-chart-col">
+
+                                        <!-- Controls bar — sits at top of the right column -->
+                                        <div class="stats-controls-bar">
+                                            <select class="stats-plain-select stats-die-select" id="die-select" title="Die type">
+                                                <option value="4">d4</option>
+                                                <option value="6">d6</option>
+                                                <option value="8">d8</option>
+                                                <option value="10">d10</option>
+                                                <option value="12">d12</option>
+                                                <option value="20" selected>d20</option>
+                                                <option value="100">d100</option>
+                                            </select>
+                                            <div class="stats-ctrl-divider"></div>
+
+                                            <div class="stats-chart-type-toggle">
+                                                <button class="stats-chart-btn active" data-type="bar" title="Bar chart"><i class="fas fa-chart-bar"></i></button>
+                                                <button class="stats-chart-btn" data-type="doughnut" title="Donut chart"><i class="fas fa-chart-pie"></i></button>
+                                                <button class="stats-chart-btn" data-type="line" title="Line chart"><i class="fas fa-chart-line"></i></button>
+                                            </div>
+                                            <div class="stats-ctrl-divider"></div>
+
+                                            <div class="stats-headline-stats">
+                                                <div class="stats-stat-pill"><span class="stats-stat-num" id="stat-total">82</span><span class="stats-stat-lbl">Rolls</span></div>
+                                                <div class="stats-stat-pill"><span class="stats-stat-num" id="stat-avg">10.8</span><span class="stats-stat-lbl">Avg</span></div>
+                                            </div>
+
+                                            <div class="stats-ctrl-spacer"></div>
+
+                                            <div class="stats-data-mgmt">
+                                                <button class="stats-data-btn btn-danger" id="stats-clear-btn" title="Delete rolls matching current filters">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                                <button class="stats-data-btn" id="stats-export-btn" title="Export matching rolls as CSV">
+                                                    <i class="fas fa-file-export"></i>
+                                                </button>
+                                                <button class="stats-data-btn" id="stats-import-btn" title="Import — merges with duplicate detection">
+                                                    <i class="fas fa-file-import"></i>
+                                                </button>
+                                                <div class="stats-ctrl-divider"></div>
+                                                <button class="stats-data-btn btn-flip" onclick="statsFlipPanel()" title="Switch to Combat Tracker">
+                                                    <i class="fas fa-exchange-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         <div class="stats-chart-area">
                                             <canvas id="statsChart"></canvas>
                                             <button class="stats-chart-expand-btn" id="stats-chart-expand-btn" title="Expand chart to full panel">
@@ -431,6 +417,7 @@
                                             <button class="stats-confirm-yes" id="stats-clear-yes">Delete</button>
                                             <button class="stats-confirm-no" id="stats-clear-no">Cancel</button>
                                         </div>
+
                                     </div><!-- /stats-chart-col -->
 
                                 </div><!-- /stats-content-area -->
@@ -627,7 +614,7 @@
     <script src="/static/js/chart.min.js"></script>
 
     <!-- Dice Roll Stats Panel -->
-    <script src="/static/js/ui/stats.js?v=5"></script>
+    <script src="/static/js/ui/stats.js?v=6"></script>
 
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>

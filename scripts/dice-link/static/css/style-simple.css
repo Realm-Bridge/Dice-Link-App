@@ -2217,24 +2217,19 @@ body {
 .stats-ctrl-divider { width: 1px; height: 28px; background: #30363d; flex-shrink: 0; }
 .stats-ctrl-spacer  { flex: 1; }
 
-/* Die type — multi-select dropdown in the controls bar */
-.stats-die-wrap {
-    flex-shrink: 0;
-    width:       135px;
-    height:      36px;
-    position:    relative;
-}
-.stats-die-wrap .stats-ms-trigger {
-    flex:   none;
-    height: 100%;
-}
-
-/* SVG die icons inside the die dropdown options */
-.stats-die-icon {
-    width:       20px;
-    height:      20px;
-    flex-shrink: 0;
-    opacity:     0.85;
+/* Die type — native select in the controls bar */
+.stats-die-select {
+    flex-shrink:   0;
+    width:         80px;
+    height:        36px;
+    font-size:     18px;
+    font-weight:   700;
+    color:         var(--dlc-accent-pink);
+    background:    var(--dlc-bg-input);
+    border:        1px solid #30363d;
+    border-radius: 4px;
+    cursor:        pointer;
+    text-align:    center;
 }
 
 /* Die toggles (legacy — kept for reference, no longer in HTML) */
@@ -2336,32 +2331,55 @@ body {
     flex-shrink:    0;
     display:        flex;
     flex-direction: column;
-    gap:            10px;
-    padding:        10px 12px 0 0;
+    gap:            5px;
+    padding:        8px 10px 0 0;
     border-right:   1px solid #30363d;
     position:       relative;
     z-index:        10;
     overflow:       visible;
 }
 
-/* In the filter column every ms-wrap fills the column width */
+/* Each filter row: icon on the left, trigger/select fills the rest */
 .stats-filter-col .stats-ms-wrap {
-    width: 100%;
-    flex:  none;
+    display:     flex;
+    flex-direction: row;
+    align-items: center;
+    gap:         6px;
+    width:       100%;
+    flex:        none;
 }
 
-/* In the filter column every trigger/select has a fixed height */
+/* Icon button to the left of each filter */
+.stats-filter-icon {
+    width:           22px;
+    flex-shrink:     0;
+    background:      none;
+    border:          none;
+    color:           var(--dlc-accent);
+    cursor:          pointer;
+    font-size:       14px;
+    padding:         0;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    opacity:         0.8;
+    transition:      opacity 0.12s;
+}
+.stats-filter-icon:hover { opacity: 1; }
+
+/* Trigger and plain-select fill remaining column width */
 .stats-filter-col .stats-ms-trigger,
 .stats-filter-col .stats-plain-select {
-    flex:   none;
-    height: 34px;
+    flex:   1;
+    height: 30px;
+    min-width: 0;
 }
 
-/* Cascade group switches to vertical stack in the filter column */
+/* Cascade group: vertical stack, tight gap */
 .stats-filter-col .stats-cascade-group {
     flex-direction: column;
     width:          100%;
-    gap:            10px;
+    gap:            5px;
 }
 
 /* Dropdowns in filter column open rightward into chart area */

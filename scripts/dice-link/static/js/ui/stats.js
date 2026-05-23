@@ -194,14 +194,10 @@ function init() {
         positionExpandBtn();
     }
 
-    // ── Die type multi-select dropdown ───────────────────────
-    const msDie = new MultiSelect('die', 'dd-die', 'All Dice');
-    document.getElementById('dd-die')?.querySelectorAll('.stats-ms-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-            const sel = msDie.selected;
-            activeDie = sel.size === 1 ? parseInt([...sel][0], 10) : 20;
-            refreshChart(activeDie, currentChartType);
-        });
+    // ── Die type native select ────────────────────────────────
+    document.getElementById('die-select')?.addEventListener('change', e => {
+        activeDie = parseInt(e.target.value, 10);
+        refreshChart(activeDie, currentChartType);
     });
 
     // ── Chart type buttons ────────────────────────────────────
@@ -276,7 +272,7 @@ function init() {
     const msVariant  = new MultiSelect('variant',  'dd-variant',  'All Variants');
 
     document.addEventListener('click', () => {
-        [msDie, msWorld, msPlayer, msRollType, msLabel, msVariant].forEach(ms => ms.close());
+        [msWorld, msPlayer, msRollType, msLabel, msVariant].forEach(ms => ms.close());
     });
 
     // ── Combat tracker ────────────────────────────────────────
