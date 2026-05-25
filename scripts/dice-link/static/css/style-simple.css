@@ -2287,7 +2287,8 @@ body {
     display:         flex;
     align-items:     center;
     justify-content: center;
-    padding:         6px 10px;
+    height:          36px;
+    padding:         0 10px;
     cursor:          pointer;
     transition:      background 0.1s;
 }
