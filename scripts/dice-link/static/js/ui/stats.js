@@ -10,6 +10,8 @@ let currentData = { labels: [], values: [], total: 0, average: '—' };
 let activeDie        = 20;
 let currentChartType = 'bar';
 let modalChart       = null;
+let allLabels        = [];
+const cascadeFilters = { rollType: new Set(), label: new Set(), variant: new Set() };
 
 // ══════════════════════════════════════════════════════════════
 // COMBAT TRACKER DATA
@@ -214,12 +216,16 @@ function init() {
     }
 
     function buildFilterParams() {
-        const params = new URLSearchParams({ die_types: activeDie });
+        const params = new URLSearchParams({ die_types: 'd' + activeDie });
         const sessionEl = document.getElementById('filter-session');
         if (sessionEl && sessionEl.value !== 'all') params.set('session_scope', sessionEl.value);
         if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
         if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
-        if (msLabel.selected.size  > 0) params.set('label_filter', [...msLabel.selected].join(','));
+        const labelSel = cascadeFilters.variant.size  > 0 ? cascadeFilters.variant
+                       : cascadeFilters.label.size    > 0 ? cascadeFilters.label
+                       : cascadeFilters.rollType.size > 0 ? cascadeFilters.rollType
+                       : null;
+        if (labelSel) params.set('label_filter', [...labelSel].join(','));
         return params;
     }
 
@@ -240,10 +246,13 @@ function init() {
             };
 
             refreshChart(currentChartType);
+            allLabels = data.labels || [];
+            updateCascade();
             populateDropdown(msWorld,  data.worlds  || [], w => String(w.id), w => w.title);
             populateDropdown(msPlayer, data.players || [], p => p,            p => p);
-            populateDropdown(msLabel,  data.labels  || [], l => l,            l => l);
-        } catch (_) {}
+        } catch (err) {
+            console.error('[Stats] fetchAndRender failed:', err);
+        }
     }
 
     function populateDropdown(ms, items, valueFn, labelFn) {
@@ -265,6 +274,107 @@ function init() {
             ms.dropdown.appendChild(div);
         });
         ms._renderOnly();
+    }
+
+    // ── Cascade helpers ───────────────────────────────────────
+
+    function findGroups(labels, excludedPhrases = []) {
+        if (labels.length < 2) return [];
+        const excluded    = new Set(excludedPhrases.map(p => p.toLowerCase()));
+        const phraseCount = new Map();
+        labels.forEach(label => {
+            const words = label.trim().split(/\s+/);
+            const seen  = new Set();
+            for (let len = 2; len <= 3; len++) {
+                for (let i = 0; i <= words.length - len; i++) {
+                    const phrase = words.slice(i, i + len).join(' ');
+                    if (!excluded.has(phrase.toLowerCase()) && !seen.has(phrase)) {
+                        seen.add(phrase);
+                        phraseCount.set(phrase, (phraseCount.get(phrase) || 0) + 1);
+                    }
+                }
+            }
+        });
+        return [...phraseCount.entries()]
+            .filter(([, count]) => count >= 2)
+            .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+            .map(([phrase]) => phrase);
+    }
+
+    function labelsMatchingPhrases(labels, phrases) {
+        if (!phrases || phrases.size === 0) return labels;
+        return labels.filter(l => [...phrases].some(p => l.includes(p)));
+    }
+
+    function setCascadeLevel(ms, items) {
+        if (!ms || !ms.dropdown) return;
+        ms.dropdown.querySelectorAll('.stats-ms-option:not(.all-option)').forEach(el => el.remove());
+        const itemSet = new Set(items);
+        for (const s of [...ms.selected]) {
+            if (!itemSet.has(s)) ms.selected.delete(s);
+        }
+        items.forEach(item => {
+            const div = document.createElement('div');
+            div.className     = 'stats-ms-option';
+            div.dataset.value = item;
+            div.innerHTML     = `<span class="stats-ms-check"></span>${item}`;
+            div.addEventListener('click', e => {
+                e.stopPropagation();
+                ms.selected.has(item) ? ms.selected.delete(item) : ms.selected.add(item);
+                ms._renderOnly();
+                onCascadeChange(ms);
+            });
+            ms.dropdown.appendChild(div);
+        });
+        ms._renderOnly();
+    }
+
+    function updateCascade() {
+        // Level 1 — Roll Type: groups from all labels
+        const l1Groups = findGroups(allLabels);
+        setCascadeLevel(msRollType, l1Groups.length > 0 ? l1Groups : allLabels);
+
+        // Level 2 — Label: sub-groups (or individual labels) within Roll Type selection
+        if (cascadeFilters.rollType.size > 0) {
+            const l1Filtered = labelsMatchingPhrases(allLabels, cascadeFilters.rollType);
+            const l2Groups   = findGroups(l1Filtered, [...cascadeFilters.rollType]);
+            setCascadeLevel(msLabel, l2Groups.length > 0 ? l2Groups : l1Filtered);
+        } else {
+            setCascadeLevel(msLabel, allLabels);
+        }
+
+        // Level 3 — Variant: sub-groups (or individual labels) within Label selection
+        const variantWrap = document.getElementById('ms-variant');
+        if (cascadeFilters.label.size > 0) {
+            const l2Base     = labelsMatchingPhrases(allLabels, cascadeFilters.rollType);
+            const l2Filtered = labelsMatchingPhrases(l2Base, cascadeFilters.label);
+            const usedPhrases = [...cascadeFilters.rollType, ...cascadeFilters.label];
+            const l3Groups   = findGroups(l2Filtered, usedPhrases);
+            setCascadeLevel(msVariant, l3Groups.length > 0 ? l3Groups : l2Filtered);
+            if (variantWrap) variantWrap.style.display = '';
+        } else {
+            cascadeFilters.variant.clear();
+            setCascadeLevel(msVariant, []);
+            if (variantWrap) variantWrap.style.display = 'none';
+        }
+    }
+
+    function onCascadeChange(ms) {
+        if (ms === msRollType) {
+            cascadeFilters.rollType = new Set(ms.selected);
+            cascadeFilters.label.clear();
+            cascadeFilters.variant.clear();
+            msLabel.selected.clear();
+            msVariant.selected.clear();
+        } else if (ms === msLabel) {
+            cascadeFilters.label = new Set(ms.selected);
+            cascadeFilters.variant.clear();
+            msVariant.selected.clear();
+        } else {
+            cascadeFilters.variant = new Set(ms.selected);
+        }
+        updateCascade();
+        fetchAndRender();
     }
 
     // ── Die picker ───────────────────────────────────────────
@@ -339,11 +449,11 @@ function init() {
     });
 
     // ── MultiSelect dropdowns ────────────────────────────────
-    const msWorld    = new MultiSelect('world',    'dd-world',    'All Worlds');
-    const msPlayer   = new MultiSelect('player',   'dd-player',   'All Players');
-    const msRollType = new MultiSelect('rolltype', 'dd-rolltype', 'All Roll Types');
-    const msLabel    = new MultiSelect('label',    'dd-label',    'All Labels');
-    const msVariant  = new MultiSelect('variant',  'dd-variant',  'All Variants');
+    const msWorld    = new MultiSelect('world',    'dd-world',    'All Worlds',      () => fetchAndRender());
+    const msPlayer   = new MultiSelect('player',   'dd-player',   'All Players',     () => fetchAndRender());
+    const msRollType = new MultiSelect('rolltype', 'dd-rolltype', 'All Roll Types',  ms => onCascadeChange(ms));
+    const msLabel    = new MultiSelect('label',    'dd-label',    'All Labels',      ms => onCascadeChange(ms));
+    const msVariant  = new MultiSelect('variant',  'dd-variant',  'All Variants',    ms => onCascadeChange(ms));
 
     document.getElementById('filter-session')?.addEventListener('change', fetchAndRender);
 
@@ -434,11 +544,12 @@ function init() {
 // CUSTOM MULTI-SELECT
 // ══════════════════════════════════════════════════════════════
 class MultiSelect {
-    constructor(msKey, dropdownId, allLabel) {
+    constructor(msKey, dropdownId, allLabel, onChange = null) {
         this.trigger  = document.querySelector(`[data-ms="${msKey}"]`);
         this.dropdown = document.getElementById(dropdownId);
         this.allLabel = allLabel;
         this.selected = new Set();
+        this.onChange = onChange;
         this._bind();
     }
     _bind() {
@@ -451,6 +562,7 @@ class MultiSelect {
                 if (val === 'all') { this.selected.clear(); }
                 else { this.selected.has(val) ? this.selected.delete(val) : this.selected.add(val); }
                 this._render();
+                if (this.onChange) this.onChange(this);
             });
         });
     }
