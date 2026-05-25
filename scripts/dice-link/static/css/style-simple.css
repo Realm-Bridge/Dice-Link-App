@@ -2244,17 +2244,9 @@ body {
     opacity:     1;
 }
 .stats-die-pick-opt .stats-die-pick-icon {
-    width:  30px;
-    height: 30px;
-}
-.stats-die-pick-opt[data-die="6"]   .stats-die-pick-icon,
-.stats-die-pick-opt[data-die="8"]   .stats-die-pick-icon,
-.stats-die-pick-opt[data-die="10"]  .stats-die-pick-icon,
-.stats-die-pick-opt[data-die="12"]  .stats-die-pick-icon,
-.stats-die-pick-opt[data-die="20"]  .stats-die-pick-icon,
-.stats-die-pick-opt[data-die="100"] .stats-die-pick-icon {
-    width:  33px;
-    height: 33px;
+    width:       calc(100% - 4px);
+    height:      calc(100% - 4px);
+    object-fit:  contain;
 }
 .stats-die-pick-lbl {
     font-size:   16px;
