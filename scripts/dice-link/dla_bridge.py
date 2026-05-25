@@ -226,36 +226,50 @@ class DLABridge(QObject):
     def _save_chat_roll_data(self, msg_id, roll_data):
         """Record active dice results from a Foundry chat roll message to history."""
         if msg_id in self._recorded_chat_roll_ids:
+            log_chat_log(f"Chat roll already recorded, skipping (msg={msg_id})")
             return
         from state import app_state
         if app_state.current_session_id is None:
+            log_chat_log(f"Chat roll skipped: no active session (msg={msg_id})")
             return
         from core.storage import save_roll_to_history
         speaker = roll_data.get('speaker') or ''
-        flavor = roll_data.get('flavor') or ''
-        label = flavor if flavor else 'Manual Roll'
+        flavor  = roll_data.get('flavor') or ''
+        label   = flavor if flavor else 'Manual Roll'
+        rolls   = roll_data.get('rolls', [])
+        log_chat_log(f"Processing chat roll: {len(rolls)} roll group(s), label='{label}', player='{speaker}' (msg={msg_id})")
         saved = 0
-        for roll in roll_data.get('rolls', []):
-            for die in roll.get('dice', []):
-                faces = die.get('faces', 0)
+        for roll_idx, roll in enumerate(rolls):
+            dice = roll.get('dice', [])
+            log_chat_log(f"  Roll group {roll_idx}: {len(dice)} die type(s)")
+            for die in dice:
+                faces   = die.get('faces', 0)
+                results = die.get('results', [])
                 if not faces:
+                    log_chat_log(f"    d? (faces=0): skipped — {len(results)} result(s) present")
                     continue
-                die_type = f"d{faces}"
-                for result in die.get('results', []):
-                    if result.get('active'):
-                        value = result.get('result')
-                        if value is not None:
-                            save_roll_to_history(
-                                app_state.current_session_id,
-                                die_type,
-                                int(value),
-                                label,
-                                player_name=speaker
-                            )
-                            saved += 1
+                active_count = sum(1 for r in results if r.get('active'))
+                log_chat_log(f"    d{faces}: {len(results)} result(s), {active_count} active")
+                for result in results:
+                    active = result.get('active')
+                    value  = result.get('result')
+                    if active and value is not None:
+                        save_roll_to_history(
+                            app_state.current_session_id,
+                            f"d{faces}",
+                            int(value),
+                            label,
+                            player_name=speaker
+                        )
+                        saved += 1
+                        log_chat_log(f"      Saved: d{faces}={value}")
+                    else:
+                        log_chat_log(f"      Skipped: d{faces}={value} active={active}")
         if saved:
             self._recorded_chat_roll_ids.add(msg_id)
-            log_chat_log(f"Chat roll saved: {saved} die result(s), label='{label}', player='{speaker}' (msg={msg_id})")
+            log_chat_log(f"Chat roll complete: {saved} die result(s) saved (msg={msg_id})")
+        else:
+            log_chat_log(f"Chat roll complete: 0 results saved (msg={msg_id})")
 
     @pyqtSlot(str)
     def receiveButtonSelect(self, data_json):

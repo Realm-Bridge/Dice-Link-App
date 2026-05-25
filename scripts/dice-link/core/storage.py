@@ -274,8 +274,9 @@ def _resolve_session_scope(cur, scope):
     if not scope or scope == 'all':
         return None
     if scope == 'current':
-        row = cur.execute('SELECT id FROM sessions ORDER BY started_at DESC LIMIT 1').fetchone()
-        return [row[0]] if row else []
+        from state import app_state
+        session_id = app_state.current_session_id
+        return [session_id] if session_id is not None else []
     n = {'last1': 1, 'last5': 5, 'last10': 10}.get(scope)
     if n:
         rows = cur.execute('SELECT id FROM sessions ORDER BY started_at DESC LIMIT ?', (n,)).fetchall()

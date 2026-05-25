@@ -257,7 +257,10 @@ function init() {
 
     function populateDropdown(ms, items, valueFn, labelFn) {
         ms.dropdown.querySelectorAll('.stats-ms-option:not(.all-option)').forEach(el => el.remove());
-        ms.selected.clear();
+        const newValues = new Set(items.map(valueFn));
+        for (const s of [...ms.selected]) {
+            if (!newValues.has(s)) ms.selected.delete(s);
+        }
         items.forEach(item => {
             const val = valueFn(item);
             const lbl = labelFn(item);
@@ -295,10 +298,34 @@ function init() {
                 }
             }
         });
-        return [...phraseCount.entries()]
-            .filter(([, count]) => count >= 2)
+        // Phrases that cover ALL labels are not differentiating — exclude them
+        const candidates = [...phraseCount.entries()]
+            .filter(([, count]) => count >= 2 && count < labels.length)
             .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
             .map(([phrase]) => phrase);
+        // Deduplication: discard phrase A if a longer phrase B covers the same label set
+        const phraseLabels = new Map(candidates.map(p => [
+            p, new Set(labels.filter(l => l.toLowerCase().includes(p.toLowerCase())))
+        ]));
+        return candidates.filter(pA => !candidates.some(pB => {
+            if (pB === pA || pB.length <= pA.length) return false;
+            if (!pB.toLowerCase().includes(pA.toLowerCase())) return false;
+            const sA = phraseLabels.get(pA), sB = phraseLabels.get(pB);
+            return sB.size === sA.size && [...sB].every(l => sA.has(l));
+        }));
+    }
+
+    function stripLabel(fullLabel, phrases) {
+        let text = fullLabel;
+        for (const phrase of phrases) {
+            text = text.replace(new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
+        }
+        text = text.replace(/\s*\(\s*\)\s*/g, ' ')
+                   .replace(/^\s*[\(\[\-\|]\s*/, '')
+                   .replace(/\s*[\)\]\-\|]\s*$/, '')
+                   .replace(/\s+/g, ' ')
+                   .trim();
+        return text || fullLabel;
     }
 
     function labelsMatchingPhrases(labels, phrases) {
@@ -309,18 +336,20 @@ function init() {
     function setCascadeLevel(ms, items) {
         if (!ms || !ms.dropdown) return;
         ms.dropdown.querySelectorAll('.stats-ms-option:not(.all-option)').forEach(el => el.remove());
-        const itemSet = new Set(items);
+        const valueSet = new Set(items.map(i => typeof i === 'string' ? i : i.value));
         for (const s of [...ms.selected]) {
-            if (!itemSet.has(s)) ms.selected.delete(s);
+            if (!valueSet.has(s)) ms.selected.delete(s);
         }
         items.forEach(item => {
+            const value = typeof item === 'string' ? item : item.value;
+            const text  = typeof item === 'string' ? item : item.text;
             const div = document.createElement('div');
             div.className     = 'stats-ms-option';
-            div.dataset.value = item;
-            div.innerHTML     = `<span class="stats-ms-check"></span>${item}`;
+            div.dataset.value = value;
+            div.innerHTML     = `<span class="stats-ms-check"></span>${text}`;
             div.addEventListener('click', e => {
                 e.stopPropagation();
-                ms.selected.has(item) ? ms.selected.delete(item) : ms.selected.add(item);
+                ms.selected.has(value) ? ms.selected.delete(value) : ms.selected.add(value);
                 ms._renderOnly();
                 onCascadeChange(ms);
             });
@@ -334,24 +363,46 @@ function init() {
         const l1Groups = findGroups(allLabels);
         setCascadeLevel(msRollType, l1Groups.length > 0 ? l1Groups : allLabels);
 
-        // Level 2 — Label: sub-groups (or individual labels) within Roll Type selection
+        // Level 2 — Label: sub-groups or stripped individual labels within Roll Type selection
         if (cascadeFilters.rollType.size > 0) {
             const l1Filtered = labelsMatchingPhrases(allLabels, cascadeFilters.rollType);
             const l2Groups   = findGroups(l1Filtered, [...cascadeFilters.rollType]);
-            setCascadeLevel(msLabel, l2Groups.length > 0 ? l2Groups : l1Filtered);
+            if (l2Groups.length > 0) {
+                setCascadeLevel(msLabel, l2Groups);
+            } else {
+                setCascadeLevel(msLabel, l1Filtered.map(lbl => ({
+                    value: lbl,
+                    text:  stripLabel(lbl, [...cascadeFilters.rollType])
+                })));
+            }
         } else {
             setCascadeLevel(msLabel, allLabels);
         }
 
-        // Level 3 — Variant: sub-groups (or individual labels) within Label selection
+        // Level 3 — Variant: sub-groups or stripped individual labels within Label selection
         const variantWrap = document.getElementById('ms-variant');
         if (cascadeFilters.label.size > 0) {
-            const l2Base     = labelsMatchingPhrases(allLabels, cascadeFilters.rollType);
-            const l2Filtered = labelsMatchingPhrases(l2Base, cascadeFilters.label);
+            const l2Base      = cascadeFilters.rollType.size > 0
+                ? labelsMatchingPhrases(allLabels, cascadeFilters.rollType)
+                : allLabels;
+            const l2Filtered  = labelsMatchingPhrases(l2Base, cascadeFilters.label);
             const usedPhrases = [...cascadeFilters.rollType, ...cascadeFilters.label];
-            const l3Groups   = findGroups(l2Filtered, usedPhrases);
-            setCascadeLevel(msVariant, l3Groups.length > 0 ? l3Groups : l2Filtered);
-            if (variantWrap) variantWrap.style.display = '';
+            const l3Groups    = findGroups(l2Filtered, usedPhrases);
+            if (l3Groups.length > 0) {
+                setCascadeLevel(msVariant, l3Groups);
+                if (variantWrap) variantWrap.style.display = '';
+            } else {
+                const stripped      = l2Filtered.map(lbl => ({ value: lbl, text: stripLabel(lbl, usedPhrases) }));
+                const distinctTexts = new Set(stripped.map(s => s.text));
+                if (distinctTexts.size > 1) {
+                    setCascadeLevel(msVariant, stripped);
+                    if (variantWrap) variantWrap.style.display = '';
+                } else {
+                    cascadeFilters.variant.clear();
+                    setCascadeLevel(msVariant, []);
+                    if (variantWrap) variantWrap.style.display = 'none';
+                }
+            }
         } else {
             cascadeFilters.variant.clear();
             setCascadeLevel(msVariant, []);
