@@ -2279,13 +2279,14 @@ body {
     display:         flex;
     align-items:     center;
     justify-content: center;
-    height:          40px;
+    height:          42px;
     padding:         0;
     cursor:          pointer;
     transition:      background 0.1s;
 }
 .stats-die-pick-opt:hover  { background: rgba(111,46,154,0.2); color: var(--text-primary); }
 .stats-die-pick-opt.active { color: var(--dlc-accent-pink); }
+.stats-die-pick-opt[data-die="4"] { padding: 2px; }
 
 /* Die toggles (legacy — kept for reference, no longer in HTML) */
 .stats-die-toggles { display: flex; gap: 3px; flex-shrink: 0; }
