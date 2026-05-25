@@ -2247,6 +2247,15 @@ body {
     width:  30px;
     height: 30px;
 }
+.stats-die-pick-opt[data-die="6"]   .stats-die-pick-icon,
+.stats-die-pick-opt[data-die="8"]   .stats-die-pick-icon,
+.stats-die-pick-opt[data-die="10"]  .stats-die-pick-icon,
+.stats-die-pick-opt[data-die="12"]  .stats-die-pick-icon,
+.stats-die-pick-opt[data-die="20"]  .stats-die-pick-icon,
+.stats-die-pick-opt[data-die="100"] .stats-die-pick-icon {
+    width:  33px;
+    height: 33px;
+}
 .stats-die-pick-lbl {
     font-size:   16px;
     font-weight: 700;
