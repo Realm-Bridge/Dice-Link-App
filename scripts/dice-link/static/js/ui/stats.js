@@ -213,14 +213,18 @@ function init() {
         positionExpandBtn();
     }
 
-    async function fetchAndRender() {
+    function buildFilterParams() {
         const params = new URLSearchParams({ die_types: activeDie });
-
         const sessionEl = document.getElementById('filter-session');
         if (sessionEl && sessionEl.value !== 'all') params.set('session_scope', sessionEl.value);
         if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
         if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
         if (msLabel.selected.size  > 0) params.set('label_filter', [...msLabel.selected].join(','));
+        return params;
+    }
+
+    async function fetchAndRender() {
+        const params = buildFilterParams();
 
         try {
             const res  = await fetch(`/api/roll-stats?${params}`);
@@ -357,15 +361,66 @@ function init() {
     });
     document.getElementById('stats-clear-yes')?.addEventListener('click', async () => {
         document.getElementById('stats-clear-confirm')?.classList.add('hidden');
-        const params = new URLSearchParams({ die_types: activeDie });
-        const sessionEl = document.getElementById('filter-session');
-        if (sessionEl && sessionEl.value !== 'all') params.set('session_scope', sessionEl.value);
-        if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
-        if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
-        if (msLabel.selected.size  > 0) params.set('label_filter', [...msLabel.selected].join(','));
-        await fetch(`/api/roll-stats?${params}`, { method: 'DELETE' });
+        await fetch(`/api/roll-stats?${buildFilterParams()}`, { method: 'DELETE' });
         fetchAndRender();
     });
+
+    // ── Export ────────────────────────────────────────────────
+    document.getElementById('stats-export-btn')?.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = `/api/roll-stats/export?${buildFilterParams()}`;
+        a.click();
+    });
+
+    // ── Import ────────────────────────────────────────────────
+    const importInput = document.createElement('input');
+    importInput.type   = 'file';
+    importInput.accept = '.csv';
+    importInput.style.display = 'none';
+    document.body.appendChild(importInput);
+
+    document.getElementById('stats-import-btn')?.addEventListener('click', () => {
+        importInput.value = '';
+        importInput.click();
+    });
+
+    importInput.addEventListener('change', async () => {
+        const file = importInput.files[0];
+        if (!file) return;
+        const text = await file.text();
+        const rows = parseCSV(text);
+        if (!rows.length) return;
+        await fetch('/api/roll-stats/import', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ rows }),
+        });
+        fetchAndRender();
+    });
+
+    function parseCSV(text) {
+        const lines = text.trim().split('\n');
+        if (lines.length < 2) return [];
+        const headers = splitCSVLine(lines[0]);
+        return lines.slice(1).map(line => {
+            const values = splitCSVLine(line);
+            const obj = {};
+            headers.forEach((h, i) => { obj[h.trim()] = (values[i] || '').trim(); });
+            return obj;
+        });
+    }
+
+    function splitCSVLine(line) {
+        const result = [];
+        let current = '', inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            if (line[i] === '"') { inQuotes = !inQuotes; }
+            else if (line[i] === ',' && !inQuotes) { result.push(current); current = ''; }
+            else { current += line[i]; }
+        }
+        result.push(current);
+        return result;
+    }
 
     // ── Initial load ──────────────────────────────────────────
     fetchAndRender();
