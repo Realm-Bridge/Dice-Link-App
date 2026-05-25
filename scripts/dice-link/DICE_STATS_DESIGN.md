@@ -1,7 +1,7 @@
 # Dice Roll Stats Panel — Design Document
 
 Source of truth for the dice stats dashboard. Update this file as decisions are made or revised.
-Last updated: 2026-05-25
+Last updated: 2026-05-25 (session 2 — cascade implemented, all major bugs fixed)
 
 ---
 
@@ -83,50 +83,26 @@ They form a cascading label grouping system. The cascade is data-driven — no c
 #### Roll Type
 - Multi-select dropdown. Always visible.
 - Icon: dice (`fa-dice`)
-- Populated automatically from roll_label data — the first level of grouping.
-- Groups emerge by finding word-sequence phrases (bigrams, trigrams) that appear in 2+ labels.
-  Example: if rolls include "Strength Saving Throw", "Wisdom Saving Throw", "Charisma Saving Throw",
-  the phrase "Saving Throw" surfaces as a group.
+- Populated entirely in the front-end (stats.js) from `data.labels` returned by the API — no separate back-end endpoint needed.
+- Groups emerge by finding word-sequence phrases (bigrams, trigrams) that appear in 2+ labels but NOT in all labels (a phrase appearing in every label is not a useful group — it's a constant).
+- Deduplication: if a shorter phrase and a longer phrase cover the exact same set of labels, the shorter one is discarded and the longer (more specific) kept. Example: with only "Wisdom Saving Throw (Advantage)" and "Wisdom Saving Throw (Disadvantage)" in the DB, "Saving Throw" and "Wisdom Saving" are both discarded because "Wisdom Saving Throw" covers the same labels and is more specific. Once other saving throw types appear (Strength, Dexterity), "Saving Throw" will cover a different (larger) label set and will appear as the group.
 - Selecting one or more groups narrows the Label dropdown to labels matching those groups.
-
-> **Current state:** Roll Type has hardcoded fake placeholder options in the HTML.
-> These must be removed. Real options will be populated from the API.
-> The back-end grouping algorithm is not yet built.
+- If no groups are found, Roll Type shows all individual labels.
 
 #### Label — multi-select dropdown
 - Icon: tag (`fa-tag`)
 - Second level of the cascade.
-- Shows labels that contain the selected Roll Type phrase(s), or all labels if Roll Type is at ALL.
-- Populated from `data.labels` in the API response.
+- If Roll Type is at ALL: shows all individual labels from `data.labels`.
+- If a Roll Type group is selected: shows the matching individual labels with the selected Roll Type phrase stripped from the display text, so only the differentiating part is shown. Example: "Wisdom Saving Throw" selected → Label shows "Advantage" and "Disadvantage" (not the full repeated label). The full label is stored internally and sent to the API for accurate filtering.
+- If further sub-groups exist within the filtered labels (e.g. another bigram appears across 2+ but not all), those groups are shown instead of individual stripped labels.
 - Selecting specific labels narrows to those exact roll_label values.
-
-> **Current state:** Populated from API correctly. Fake hardcoded options in HTML must be removed.
 
 #### Variant — multi-select dropdown
 - Icon: code-branch (`fa-code-branch`)
-- Hidden by default (`display: none`). Appears only when the data warrants a third grouping level.
+- Hidden by default (`display: none`). Appears automatically only when selecting at the Label level reveals further distinct sub-items after stripping all parent phrases.
+- If only one distinct stripped value remains (i.e. there is nothing further to differentiate), Variant stays hidden.
 - Tooltip: "Variant (auto-grouped)"
-- Third level of the cascade — sub-grouping within the selected Label(s).
-
-> **DESIGN PENDING CONFIRMATION** — see notes below.
-
----
-
-## Variant — Design To Be Confirmed
-
-The Variant dropdown was designed and built during the 2026-05-23 session but its detailed
-design was not written into this document at the time. The following is the current understanding
-based on what was built, pending owner confirmation:
-
-The Variant level is the third tier of the label cascade. After Roll Type narrows by category
-(e.g. "Saving Throw") and Label narrows by specific label (e.g. "Strength Saving Throw"),
-Variant would surface any further sub-groupings within those results — for example, if
-"Strength Saving Throw" has multiple variants recorded (perhaps labelled differently by
-different systems or homebrew). It is hidden because in most cases the cascade will not
-need a third level.
-
-**Owner must confirm:** what exactly Variant represents, when it should appear, and what
-data it is populated from. Do not build the back-end for this until confirmed.
+- Third level of the cascade — same stripping logic as Label, removing both Roll Type and Label phrases from display text.
 
 ---
 
@@ -234,21 +210,22 @@ Same filter parameters as above. Deletes matching rolls.
 | File | Role |
 |------|------|
 | `static/js/chart.min.js` | Chart.js bundled locally |
-| `static/js/ui/stats.js` | All stats panel logic (v11 as of 2026-05-25) |
+| `static/js/ui/stats.js` | All stats panel logic (v13 as of 2026-05-25 session 2) |
 | `static/css/style-simple.css` | Stats panel CSS (v86 as of 2026-05-25) |
-| `templates/index.html` | Panel HTML (CSS v86, stats.js v11 as of 2026-05-25) |
+| `templates/index.html` | Panel HTML (CSS v86, stats.js v13 as of 2026-05-25 session 2) |
 
 ---
 
 ## Open Items
 
-- [ ] Fix die_type prefix bug: front-end must send `d20` not `20`
-- [ ] Remove hardcoded fake options from Roll Type dropdown in HTML
-- [ ] Remove hardcoded fake options from Label dropdown in HTML
-- [ ] Remove hardcoded fake options from World dropdown in HTML
-- [ ] Remove hardcoded fake options from Player dropdown in HTML
-- [ ] Confirm Variant design with owner (see Variant section above)
-- [ ] Build back-end label grouping algorithm (bigrams/trigrams) for Roll Type cascade
-- [ ] Build Variant cascade logic once design is confirmed
+- [x] Fix die_type prefix bug: front-end must send `d20` not `20` — done 2026-05-25
+- [x] Remove hardcoded fake options from all dropdowns in HTML — done 2026-05-25
+- [x] Confirm Variant design with owner — confirmed 2026-05-25 (see cascade section above)
+- [x] Build label grouping algorithm (bigrams/trigrams) for Roll Type cascade — done in stats.js v13 (front-end only; no separate back-end needed)
+- [x] Build Variant cascade logic — done in stats.js v13
+- [x] Fix player dropdown clearing selection on every re-fetch — done 2026-05-25
+- [x] Fix "Current Session" filter returning most recent DB session instead of live session — done 2026-05-25 in storage.py
+- [ ] Investigate why damage rolls (d6, d8 etc.) are missing from the database — per-die diagnostic logging added to `dla_bridge.py` `_save_chat_roll_data` on 2026-05-25; needs a live test to read the log output and diagnose the cause
 - [ ] Re-enable Clear button once panel is stable
 - [ ] Confirm whether Die Type should remain single-select or revert to multi-select toggles
+- [ ] New UI for filter boxes: expanding selection box, no scrolling, all options visible — discussed but not yet designed or implemented; user to specify further
