@@ -2238,14 +2238,14 @@ body {
 .stats-die-pick-trigger:hover,
 .stats-die-pick.open .stats-die-pick-trigger { border-color: var(--dlc-accent); }
 .stats-die-pick-icon {
-    width:       20px;
-    height:      20px;
+    width:       28px;
+    height:      28px;
     flex-shrink: 0;
     opacity:     1;
 }
 .stats-die-pick-opt .stats-die-pick-icon {
-    width:  26px;
-    height: 26px;
+    width:  30px;
+    height: 30px;
 }
 .stats-die-pick-lbl {
     font-size:   16px;
@@ -2420,12 +2420,28 @@ body {
 }
 .stats-filter-icon:hover { opacity: 1; }
 
-/* Trigger and plain-select fill remaining column width */
+/* Trigger and select-wrap fill remaining column width */
 .stats-filter-col .stats-ms-trigger,
-.stats-filter-col .stats-plain-select {
-    flex:   1;
-    height: 30px;
+.stats-filter-col .stats-select-wrap {
+    flex:      1;
+    height:    30px;
     min-width: 0;
+}
+.stats-select-wrap {
+    position: relative;
+}
+.stats-select-wrap .stats-plain-select {
+    width:  100%;
+    height: 100%;
+}
+.stats-select-arrow {
+    position:       absolute;
+    right:          6px;
+    top:            50%;
+    transform:      translateY(-50%);
+    font-size:      12px;
+    color:          var(--text-muted);
+    pointer-events: none;
 }
 
 /* Cascade group: vertical stack, tight gap */
@@ -2573,7 +2589,6 @@ body {
 
 /* Session — native select styled to match */
 .stats-plain-select {
-    flex:        1;
     padding:     0 20px 0 6px;
     background:  var(--dlc-bg-input);
     border:      1px solid #30363d;
@@ -2584,9 +2599,6 @@ body {
     cursor:      pointer;
     appearance:  none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='%236e7681'%3E%3Cpolygon points='0,0 10,0 5,6'%3E%3C/polygon%3E%3C/svg%3E");
-    background-repeat:   no-repeat;
-    background-position: right 6px center;
     min-height:  0;
 }
 .stats-plain-select:focus { outline: none; border-color: var(--dlc-accent); }
@@ -2615,12 +2627,11 @@ body {
     overflow-y:     auto;
     padding:        2px 0;
 }
-.stats-donut-legend.visible { display: block; }
+.stats-donut-legend.visible { display: flex; align-items: center; }
 .sdl-cols {
-    display:   flex;
+    display:        flex;
     flex-direction: row;
-    gap:       10px;
-    height:    100%;
+    gap:            10px;
 }
 .sdl-col {
     display:        flex;
@@ -2645,8 +2656,8 @@ body {
 
 .stats-chart-expand-btn {
     position:        absolute;
-    left:            0;
-    top:             0;
+    left:            50%;
+    top:             50%;
     transform:       translate(-50%, -50%);
     width:           34px;
     height:          34px;
@@ -2662,6 +2673,7 @@ body {
     transition:      all 0.15s;
     z-index:         10;
 }
+.stats-chart-expand-btn.visible { display: flex; }
 .stats-chart-expand-btn:hover { border-color: var(--dlc-accent-pink); color: var(--dlc-accent-pink); background: rgba(15,20,25,0.95); }
 
 /* ── Clear confirmation ── */

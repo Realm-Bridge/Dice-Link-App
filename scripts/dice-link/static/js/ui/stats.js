@@ -168,12 +168,7 @@ function init() {
     function positionExpandBtn() {
         const btn = document.getElementById('stats-chart-expand-btn');
         if (!btn) return;
-        if (currentChartType !== 'doughnut') { btn.style.display = 'none'; return; }
-        const ca = chart.chartArea;
-        if (!ca) { btn.style.display = 'none'; return; }
-        btn.style.left    = ((ca.left + ca.right)  / 2) + 'px';
-        btn.style.top     = ((ca.top  + ca.bottom) / 2) + 'px';
-        btn.style.display = 'flex';
+        btn.classList.toggle('visible', currentChartType === 'doughnut');
     }
 
     function refreshDonutLegend(die) {
@@ -241,7 +236,6 @@ function init() {
             const val = parseInt(opt.dataset.die, 10);
             activeDie = val;
             document.getElementById('die-pick-icon').src = `/static/DLC Dice/D${val}/d${val}-blank.svg`;
-            document.getElementById('die-pick-lbl').textContent = `d${val}`;
             document.querySelectorAll('.stats-die-pick-opt').forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
             diePick.classList.remove('open');
