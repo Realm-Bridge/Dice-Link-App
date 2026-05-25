@@ -3,17 +3,9 @@
 (function () {
 
 // ══════════════════════════════════════════════════════════════
-// SAMPLE DATA
+// LIVE DATA STATE
 // ══════════════════════════════════════════════════════════════
-const diceData = {
-    4:   { labels:['1','2','3','4'],                                                                                                                        values:[15,12,18,11],                               total:56,  avg:'2.5',  high:4,   low:1  },
-    6:   { labels:['1','2','3','4','5','6'],                                                                                                                values:[8,11,9,14,7,10],                            total:59,  avg:'3.6',  high:6,   low:1  },
-    8:   { labels:['1','2','3','4','5','6','7','8'],                                                                                                        values:[5,8,7,9,6,8,5,7],                           total:55,  avg:'4.5',  high:8,   low:1  },
-    10:  { labels:['1','2','3','4','5','6','7','8','9','10'],                                                                                               values:[4,6,8,5,7,9,4,6,5,4],                       total:58,  avg:'5.3',  high:10,  low:1  },
-    12:  { labels:['1','2','3','4','5','6','7','8','9','10','11','12'],                                                                                     values:[3,5,4,6,5,7,4,5,6,3,4,3],                  total:55,  avg:'6.4',  high:12,  low:1  },
-    20:  { labels:['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'],                                              values:[3,2,4,3,2,4,3,5,4,6,5,4,7,5,6,4,5,3,4,3], total:82,  avg:'10.8', high:20,  low:1  },
-    100: { labels:['10','20','30','40','50','60','70','80','90','100'],                                                                                     values:[2,3,4,2,5,3,4,2,3,1],                       total:29,  avg:'52',   high:100, low:10 }
-};
+let currentData = { labels: [], values: [], total: 0, average: '—' };
 
 let activeDie        = 20;
 let currentChartType = 'bar';
@@ -125,29 +117,28 @@ function init() {
         labels: { color: '#e7f6ff', font:{ size: 14 }, boxWidth: 20, padding: 14 }
     };
 
-    function buildDataset(die, type, context) {
-        const d = diceData[die];
+    function buildDataset(type, context) {
         if (type === 'bar') return {
-            label: `d${die}`, data: d.values,
+            label: `d${activeDie}`, data: currentData.values,
             backgroundColor: makeBarGrad(context),
             borderWidth: 0, borderRadius: 3, borderSkipped: false
         };
         if (type === 'line') return {
-            label: `d${die}`, data: d.values,
+            label: `d${activeDie}`, data: currentData.values,
             backgroundColor: 'rgba(111,46,154,0.18)', borderColor: '#a78bfa',
             borderWidth: 2, fill: true, tension: 0.35,
             pointBackgroundColor: '#a78bfa', pointRadius: 3, pointHoverRadius: 5
         };
         return {
-            label: `d${die}`, data: d.values,
-            backgroundColor: generateDonutPalette(d.values.length),
+            label: `d${activeDie}`, data: currentData.values,
+            backgroundColor: generateDonutPalette(currentData.values.length),
             borderColor: '#2a3547', borderWidth: 2, hoverOffset: 6
         };
     }
 
     const chart = new Chart(ctx, {
         type: 'bar',
-        data: { labels: diceData[20].labels, datasets: [buildDataset(20, 'bar', ctx)] },
+        data: { labels: [], datasets: [] },
         options: {
             responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
             plugins: {
@@ -171,16 +162,15 @@ function init() {
         btn.classList.toggle('visible', currentChartType === 'doughnut');
     }
 
-    function refreshDonutLegend(die) {
+    function refreshDonutLegend() {
         const el = document.getElementById('stats-donut-legend');
         if (!el) return;
         if (currentChartType !== 'doughnut') { el.classList.remove('visible'); return; }
 
-        const d      = diceData[die];
-        const colors = generateDonutPalette(d.values.length);
-        const n      = d.labels.length;
+        const colors = generateDonutPalette(currentData.values.length);
+        const n      = currentData.labels.length;
         const half   = Math.ceil(n / 2);
-        const items  = d.labels.map((lbl, i) => ({ label: lbl, color: colors[i] }));
+        const items  = currentData.labels.map((lbl, i) => ({ label: lbl, color: colors[i] }));
 
         function makeCol(slice) {
             const col = document.createElement('div');
@@ -208,20 +198,69 @@ function init() {
         el.classList.add('visible');
     }
 
-    function refreshChart(die, type) {
-        const d = diceData[die];
-        chart.config.type   = type;
-        chart.data.labels   = d.labels;
-        chart.data.datasets = [buildDataset(die, type, ctx)];
+    function refreshChart(type) {
+        chart.config.type    = type;
+        chart.data.labels    = currentData.labels;
+        chart.data.datasets  = currentData.labels.length ? [buildDataset(type, ctx)] : [];
         chart.options.scales = type === 'doughnut' ? {} : axisDefaults;
         chart.options.plugins.legend = smallDonutLegend;
         chart.update();
 
-        document.getElementById('stat-total').textContent = d.total;
-        document.getElementById('stat-avg').textContent   = d.avg;
+        document.getElementById('stat-total').textContent = currentData.total;
+        document.getElementById('stat-avg').textContent   = currentData.average;
 
-        refreshDonutLegend(die);
+        refreshDonutLegend();
         positionExpandBtn();
+    }
+
+    async function fetchAndRender() {
+        const params = new URLSearchParams({ die_types: activeDie });
+
+        const sessionEl = document.getElementById('filter-session');
+        if (sessionEl && sessionEl.value !== 'all') params.set('session_scope', sessionEl.value);
+        if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
+        if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
+        if (msLabel.selected.size  > 0) params.set('label_filter', [...msLabel.selected].join(','));
+
+        try {
+            const res  = await fetch(`/api/roll-stats?${params}`);
+            const data = await res.json();
+
+            const dist = data.distribution || {};
+            const keys = Object.keys(dist).sort((a, b) => parseInt(a) - parseInt(b));
+            currentData = {
+                labels:  keys,
+                values:  keys.map(k => dist[k]),
+                total:   data.total   || 0,
+                average: data.average != null ? String(data.average) : '—',
+            };
+
+            refreshChart(currentChartType);
+            populateDropdown(msWorld,  data.worlds  || [], w => String(w.id), w => w.title);
+            populateDropdown(msPlayer, data.players || [], p => p,            p => p);
+            populateDropdown(msLabel,  data.labels  || [], l => l,            l => l);
+        } catch (_) {}
+    }
+
+    function populateDropdown(ms, items, valueFn, labelFn) {
+        ms.dropdown.querySelectorAll('.stats-ms-option:not(.all-option)').forEach(el => el.remove());
+        ms.selected.clear();
+        items.forEach(item => {
+            const val = valueFn(item);
+            const lbl = labelFn(item);
+            const div = document.createElement('div');
+            div.className    = 'stats-ms-option';
+            div.dataset.value = val;
+            div.innerHTML    = `<span class="stats-ms-check"></span>${lbl}`;
+            div.addEventListener('click', e => {
+                e.stopPropagation();
+                ms.selected.has(val) ? ms.selected.delete(val) : ms.selected.add(val);
+                ms._renderOnly();
+                fetchAndRender();
+            });
+            ms.dropdown.appendChild(div);
+        });
+        ms._renderOnly();
     }
 
     // ── Die picker ───────────────────────────────────────────
@@ -239,7 +278,7 @@ function init() {
             document.querySelectorAll('.stats-die-pick-opt').forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
             diePick.classList.remove('open');
-            refreshChart(activeDie, currentChartType);
+            fetchAndRender();
         });
     });
 
@@ -249,7 +288,7 @@ function init() {
             document.querySelectorAll('.stats-chart-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentChartType = btn.dataset.type;
-            refreshChart(activeDie, currentChartType);
+            refreshChart(currentChartType);
         });
     });
 
@@ -260,14 +299,13 @@ function init() {
         modal.classList.add('open');
         document.getElementById('modal-die-label').textContent = `d${activeDie}`;
 
-        const d    = diceData[activeDie];
         const mCtx = document.getElementById('statsChartModal').getContext('2d');
 
         if (modalChart) { modalChart.destroy(); modalChart = null; }
 
         modalChart = new Chart(mCtx, {
             type: 'doughnut',
-            data: { labels: d.labels, datasets: [buildDataset(activeDie, 'doughnut', mCtx)] },
+            data: { labels: currentData.labels, datasets: [buildDataset('doughnut', mCtx)] },
             options: {
                 responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
                 plugins: {
@@ -296,17 +334,6 @@ function init() {
         if (e.target === this) closeModal();
     });
 
-    // ── Data buttons ──────────────────────────────────────────
-    document.getElementById('stats-clear-btn')?.addEventListener('click', () => {
-        document.getElementById('stats-clear-confirm')?.classList.remove('hidden');
-    });
-    document.getElementById('stats-clear-no')?.addEventListener('click', () => {
-        document.getElementById('stats-clear-confirm')?.classList.add('hidden');
-    });
-    document.getElementById('stats-clear-yes')?.addEventListener('click', () => {
-        document.getElementById('stats-clear-confirm')?.classList.add('hidden');
-    });
-
     // ── MultiSelect dropdowns ────────────────────────────────
     const msWorld    = new MultiSelect('world',    'dd-world',    'All Worlds');
     const msPlayer   = new MultiSelect('player',   'dd-player',   'All Players');
@@ -314,10 +341,34 @@ function init() {
     const msLabel    = new MultiSelect('label',    'dd-label',    'All Labels');
     const msVariant  = new MultiSelect('variant',  'dd-variant',  'All Variants');
 
+    document.getElementById('filter-session')?.addEventListener('change', fetchAndRender);
+
     document.addEventListener('click', () => {
         diePick?.classList.remove('open');
         [msWorld, msPlayer, msRollType, msLabel, msVariant].forEach(ms => ms.close());
     });
+
+    // ── Clear / confirm ───────────────────────────────────────
+    document.getElementById('stats-clear-btn')?.addEventListener('click', () => {
+        document.getElementById('stats-clear-confirm')?.classList.remove('hidden');
+    });
+    document.getElementById('stats-clear-no')?.addEventListener('click', () => {
+        document.getElementById('stats-clear-confirm')?.classList.add('hidden');
+    });
+    document.getElementById('stats-clear-yes')?.addEventListener('click', async () => {
+        document.getElementById('stats-clear-confirm')?.classList.add('hidden');
+        const params = new URLSearchParams({ die_types: activeDie });
+        const sessionEl = document.getElementById('filter-session');
+        if (sessionEl && sessionEl.value !== 'all') params.set('session_scope', sessionEl.value);
+        if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
+        if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
+        if (msLabel.selected.size  > 0) params.set('label_filter', [...msLabel.selected].join(','));
+        await fetch(`/api/roll-stats?${params}`, { method: 'DELETE' });
+        fetchAndRender();
+    });
+
+    // ── Initial load ──────────────────────────────────────────
+    fetchAndRender();
 
     // ── Combat tracker ────────────────────────────────────────
     ctBuildCarousel();
@@ -362,6 +413,7 @@ class MultiSelect {
         this.dropdown?.classList.remove('open');
         this.trigger?.classList.remove('open');
     }
+    _renderOnly() { this._render(); }
     _render() {
         const isAll  = this.selected.size === 0;
         const allOpt = this.dropdown.querySelector('.all-option');
