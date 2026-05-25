@@ -118,10 +118,7 @@ function init() {
         y: { grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#6e7681', font:{ size:9 }, stepSize:1 }, border:{ color:'rgba(255,255,255,0.08)' }, beginAtZero:true }
     };
 
-    const smallDonutLegend = {
-        display: true, position: 'right',
-        labels: { color: '#a0a0b0', font:{ size: 14 }, boxWidth: 18, padding: 12 }
-    };
+    const smallDonutLegend = { display: false };
 
     const largeDonutLegend = {
         display: true, position: 'right',
@@ -179,18 +176,56 @@ function init() {
         btn.style.display = 'flex';
     }
 
+    function refreshDonutLegend(die) {
+        const el = document.getElementById('stats-donut-legend');
+        if (!el) return;
+        if (currentChartType !== 'doughnut') { el.classList.remove('visible'); return; }
+
+        const d      = diceData[die];
+        const colors = generateDonutPalette(d.values.length);
+        const n      = d.labels.length;
+        const half   = Math.ceil(n / 2);
+        const items  = d.labels.map((lbl, i) => ({ label: lbl, color: colors[i] }));
+
+        function makeCol(slice) {
+            const col = document.createElement('div');
+            col.className = 'sdl-col';
+            slice.forEach(({ label, color }) => {
+                const row = document.createElement('div');
+                row.className = 'sdl-item';
+                row.innerHTML = `<span class="sdl-swatch" style="background:${color}"></span>${label}`;
+                col.appendChild(row);
+            });
+            return col;
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'sdl-cols';
+        if (n <= 10) {
+            wrap.appendChild(makeCol(items));
+        } else {
+            wrap.appendChild(makeCol(items.slice(0, half)));
+            wrap.appendChild(makeCol(items.slice(half)));
+        }
+
+        el.innerHTML = '';
+        el.appendChild(wrap);
+        el.classList.add('visible');
+    }
+
     function refreshChart(die, type) {
         const d = diceData[die];
         chart.config.type   = type;
         chart.data.labels   = d.labels;
         chart.data.datasets = [buildDataset(die, type, ctx)];
         chart.options.scales = type === 'doughnut' ? {} : axisDefaults;
-        chart.options.plugins.legend = type === 'doughnut' ? smallDonutLegend : { display: false };
+        chart.options.plugins.legend = smallDonutLegend;
         chart.update();
 
         document.getElementById('stat-total').textContent = d.total;
         document.getElementById('stat-avg').textContent   = d.avg;
 
+        refreshDonutLegend(die);
         positionExpandBtn();
     }
 
