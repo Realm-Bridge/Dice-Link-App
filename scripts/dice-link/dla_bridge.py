@@ -235,7 +235,7 @@ class DLABridge(QObject):
         from core.storage import save_roll_to_history
         speaker = roll_data.get('speaker') or ''
         flavor  = roll_data.get('flavor') or ''
-        label   = flavor if flavor else 'Manual Roll'
+        label   = flavor or app_state.current_roll_label or 'Manual Roll'
         rolls   = roll_data.get('rolls', [])
         log_chat_log(f"Processing chat roll: {len(rolls)} roll group(s), label='{label}', player='{speaker}' (msg={msg_id})")
         saved = 0
