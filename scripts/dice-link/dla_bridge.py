@@ -38,7 +38,7 @@ class DLABridge(QObject):
         self.pending_pong = False
         self.connection_check_timer = None
         self.pong_timeout_timer = None
-        self._recorded_chat_roll_ids = set()
+        self._recorded_chat_roll_ids = {}  # msg_id -> set of die faces already saved
         self.log_vtt("[BRIDGE] DLABridge created")
 
     # -------------------------------------------------------------------------
@@ -225,18 +225,16 @@ class DLABridge(QObject):
 
     def _save_chat_roll_data(self, msg_id, roll_data):
         """Record active dice results from a Foundry chat roll message to history."""
-        if msg_id in self._recorded_chat_roll_ids:
-            log_chat_log(f"Chat roll already recorded, skipping (msg={msg_id})")
-            return
         from state import app_state
         if app_state.current_session_id is None:
             log_chat_log(f"Chat roll skipped: no active session (msg={msg_id})")
             return
         from core.storage import save_roll_to_history
-        speaker = roll_data.get('speaker') or ''
-        flavor  = roll_data.get('flavor') or ''
-        label   = flavor or app_state.current_roll_label or 'Manual Roll'
-        rolls   = roll_data.get('rolls', [])
+        speaker        = roll_data.get('speaker') or ''
+        flavor         = roll_data.get('flavor') or ''
+        label          = flavor or app_state.current_roll_label or 'Manual Roll'
+        rolls          = roll_data.get('rolls', [])
+        recorded_faces = self._recorded_chat_roll_ids.get(msg_id, set())
         log_chat_log(f"Processing chat roll: {len(rolls)} roll group(s), label='{label}', player='{speaker}' (msg={msg_id})")
         saved = 0
         for roll_idx, roll in enumerate(rolls):
@@ -247,6 +245,9 @@ class DLABridge(QObject):
                 results = die.get('results', [])
                 if not faces:
                     log_chat_log(f"    d? (faces=0): skipped — {len(results)} result(s) present")
+                    continue
+                if faces in recorded_faces:
+                    log_chat_log(f"    d{faces}: already recorded, skipping")
                     continue
                 active_count = sum(1 for r in results if r.get('active'))
                 log_chat_log(f"    d{faces}: {len(results)} result(s), {active_count} active")
@@ -265,8 +266,9 @@ class DLABridge(QObject):
                         log_chat_log(f"      Saved: d{faces}={value}")
                     else:
                         log_chat_log(f"      Skipped: d{faces}={value} active={active}")
+                recorded_faces.add(faces)
+        self._recorded_chat_roll_ids[msg_id] = recorded_faces
         if saved:
-            self._recorded_chat_roll_ids.add(msg_id)
             log_chat_log(f"Chat roll complete: {saved} die result(s) saved (msg={msg_id})")
         else:
             log_chat_log(f"Chat roll complete: 0 results saved (msg={msg_id})")
