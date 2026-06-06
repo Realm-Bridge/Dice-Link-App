@@ -1562,7 +1562,7 @@ body {
 
 .camera-btn {
     flex: 1;
-    height: 47px;
+    height: 40px;
     padding: 0 10px;
     background: rgba(24, 31, 43, 0.85);
     border: 1px solid var(--dlc-border);
@@ -1580,6 +1580,9 @@ body {
     background: rgba(111, 46, 154, 0.2);
     border-color: var(--dlc-accent);
 }
+
+#camera-start-btn, #camera-define-tray-btn { flex: 7; }
+#camera-boundary-btn { flex: 11; }
 
 .camera-toggle-btn {
     padding: 5px 16px;
