@@ -10,8 +10,6 @@ let currentData = { labels: [], values: [], total: 0, average: '—' };
 let activeDie        = 20;
 let currentChartType = 'bar';
 let modalChart       = null;
-let allLabels        = [];
-const cascadeFilters = { rollType: new Set(), label: new Set(), variant: new Set() };
 
 // ══════════════════════════════════════════════════════════════
 // COMBAT TRACKER DATA
@@ -221,11 +219,6 @@ function init() {
         if (sessionEl && sessionEl.value !== 'all') params.set('session_scope', sessionEl.value);
         if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
         if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
-        const labelSel = cascadeFilters.variant.size  > 0 ? cascadeFilters.variant
-                       : cascadeFilters.label.size    > 0 ? cascadeFilters.label
-                       : cascadeFilters.rollType.size > 0 ? cascadeFilters.rollType
-                       : null;
-        if (labelSel) params.set('label_filter', [...labelSel].join(','));
         return params;
     }
 
@@ -246,8 +239,6 @@ function init() {
             };
 
             refreshChart(currentChartType);
-            allLabels = data.labels || [];
-            updateCascade();
             populateDropdown(msWorld,  data.worlds  || [], w => String(w.id), w => w.title);
             populateDropdown(msPlayer, data.players || [], p => p,            p => p);
         } catch (err) {
@@ -277,155 +268,6 @@ function init() {
             ms.dropdown.appendChild(div);
         });
         ms._renderOnly();
-    }
-
-    // ── Cascade helpers ───────────────────────────────────────
-
-    function findGroups(labels, excludedPhrases = []) {
-        if (labels.length < 2) return [];
-        const excluded    = new Set(excludedPhrases.map(p => p.toLowerCase()));
-        const phraseCount = new Map();
-        labels.forEach(label => {
-            const words = label.trim().split(/\s+/);
-            const seen  = new Set();
-            for (let len = 2; len <= 3; len++) {
-                for (let i = 0; i <= words.length - len; i++) {
-                    const phrase = words.slice(i, i + len).join(' ');
-                    if (!excluded.has(phrase.toLowerCase()) && !seen.has(phrase)) {
-                        seen.add(phrase);
-                        phraseCount.set(phrase, (phraseCount.get(phrase) || 0) + 1);
-                    }
-                }
-            }
-        });
-        // Phrases that cover ALL labels are not differentiating — exclude them
-        const candidates = [...phraseCount.entries()]
-            .filter(([, count]) => count >= 2 && count < labels.length)
-            .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
-            .map(([phrase]) => phrase);
-        // Deduplication: discard phrase A if a longer phrase B covers the same label set
-        const phraseLabels = new Map(candidates.map(p => [
-            p, new Set(labels.filter(l => l.toLowerCase().includes(p.toLowerCase())))
-        ]));
-        return candidates.filter(pA => !candidates.some(pB => {
-            if (pB === pA || pB.length <= pA.length) return false;
-            if (!pB.toLowerCase().includes(pA.toLowerCase())) return false;
-            const sA = phraseLabels.get(pA), sB = phraseLabels.get(pB);
-            return sB.size === sA.size && [...sB].every(l => sA.has(l));
-        }));
-    }
-
-    function stripLabel(fullLabel, phrases) {
-        let text = fullLabel;
-        for (const phrase of phrases) {
-            text = text.replace(new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
-        }
-        text = text.replace(/\s*\(\s*\)\s*/g, ' ')
-                   .replace(/^\s*[\(\[\-\|]\s*/, '')
-                   .replace(/\s*[\)\]\-\|]\s*$/, '')
-                   .replace(/\s+/g, ' ')
-                   .trim();
-        return text || fullLabel;
-    }
-
-    function labelsMatchingPhrases(labels, phrases) {
-        if (!phrases || phrases.size === 0) return labels;
-        return labels.filter(l => [...phrases].some(p => l.includes(p)));
-    }
-
-    function setCascadeLevel(ms, items) {
-        if (!ms || !ms.dropdown) return;
-        ms.dropdown.querySelectorAll('.stats-ms-option:not(.all-option)').forEach(el => el.remove());
-        const valueSet = new Set(items.map(i => typeof i === 'string' ? i : i.value));
-        for (const s of [...ms.selected]) {
-            if (!valueSet.has(s)) ms.selected.delete(s);
-        }
-        items.forEach(item => {
-            const value = typeof item === 'string' ? item : item.value;
-            const text  = typeof item === 'string' ? item : item.text;
-            const div = document.createElement('div');
-            div.className     = 'stats-ms-option';
-            div.dataset.value = value;
-            div.innerHTML     = `<span class="stats-ms-check"></span>${text}`;
-            div.addEventListener('click', e => {
-                e.stopPropagation();
-                ms.selected.has(value) ? ms.selected.delete(value) : ms.selected.add(value);
-                ms._renderOnly();
-                onCascadeChange(ms);
-            });
-            ms.dropdown.appendChild(div);
-        });
-        ms._renderOnly();
-    }
-
-    function updateCascade() {
-        // Level 1 — Roll Type: groups from all labels
-        const l1Groups = findGroups(allLabels);
-        setCascadeLevel(msRollType, l1Groups.length > 0 ? l1Groups : allLabels);
-
-        // Level 2 — Label: sub-groups or stripped individual labels within Roll Type selection
-        if (cascadeFilters.rollType.size > 0) {
-            const l1Filtered = labelsMatchingPhrases(allLabels, cascadeFilters.rollType);
-            const l2Groups   = findGroups(l1Filtered, [...cascadeFilters.rollType]);
-            if (l2Groups.length > 0) {
-                setCascadeLevel(msLabel, l2Groups);
-            } else {
-                setCascadeLevel(msLabel, l1Filtered.map(lbl => ({
-                    value: lbl,
-                    text:  stripLabel(lbl, [...cascadeFilters.rollType])
-                })));
-            }
-        } else {
-            setCascadeLevel(msLabel, allLabels);
-        }
-
-        // Level 3 — Variant: sub-groups or stripped individual labels within Label selection
-        const variantWrap = document.getElementById('ms-variant');
-        if (cascadeFilters.label.size > 0) {
-            const l2Base      = cascadeFilters.rollType.size > 0
-                ? labelsMatchingPhrases(allLabels, cascadeFilters.rollType)
-                : allLabels;
-            const l2Filtered  = labelsMatchingPhrases(l2Base, cascadeFilters.label);
-            const usedPhrases = [...cascadeFilters.rollType, ...cascadeFilters.label];
-            const l3Groups    = findGroups(l2Filtered, usedPhrases);
-            if (l3Groups.length > 0) {
-                setCascadeLevel(msVariant, l3Groups);
-                if (variantWrap) variantWrap.style.display = '';
-            } else {
-                const stripped      = l2Filtered.map(lbl => ({ value: lbl, text: stripLabel(lbl, usedPhrases) }));
-                const distinctTexts = new Set(stripped.map(s => s.text));
-                if (distinctTexts.size > 1) {
-                    setCascadeLevel(msVariant, stripped);
-                    if (variantWrap) variantWrap.style.display = '';
-                } else {
-                    cascadeFilters.variant.clear();
-                    setCascadeLevel(msVariant, []);
-                    if (variantWrap) variantWrap.style.display = 'none';
-                }
-            }
-        } else {
-            cascadeFilters.variant.clear();
-            setCascadeLevel(msVariant, []);
-            if (variantWrap) variantWrap.style.display = 'none';
-        }
-    }
-
-    function onCascadeChange(ms) {
-        if (ms === msRollType) {
-            cascadeFilters.rollType = new Set(ms.selected);
-            cascadeFilters.label.clear();
-            cascadeFilters.variant.clear();
-            msLabel.selected.clear();
-            msVariant.selected.clear();
-        } else if (ms === msLabel) {
-            cascadeFilters.label = new Set(ms.selected);
-            cascadeFilters.variant.clear();
-            msVariant.selected.clear();
-        } else {
-            cascadeFilters.variant = new Set(ms.selected);
-        }
-        updateCascade();
-        fetchAndRender();
     }
 
     // ── Die picker ───────────────────────────────────────────
@@ -500,17 +342,14 @@ function init() {
     });
 
     // ── MultiSelect dropdowns ────────────────────────────────
-    const msWorld    = new MultiSelect('world',    'dd-world',    'All Worlds',      () => fetchAndRender());
-    const msPlayer   = new MultiSelect('player',   'dd-player',   'All Players',     () => fetchAndRender());
-    const msRollType = new MultiSelect('rolltype', 'dd-rolltype', 'All Roll Types',  ms => onCascadeChange(ms));
-    const msLabel    = new MultiSelect('label',    'dd-label',    'All Labels',      ms => onCascadeChange(ms));
-    const msVariant  = new MultiSelect('variant',  'dd-variant',  'All Variants',    ms => onCascadeChange(ms));
+    const msWorld  = new MultiSelect('world',  'dd-world',  'All Worlds',  () => fetchAndRender());
+    const msPlayer = new MultiSelect('player', 'dd-player', 'All Players', () => fetchAndRender());
 
     document.getElementById('filter-session')?.addEventListener('change', fetchAndRender);
 
     document.addEventListener('click', () => {
         diePick?.classList.remove('open');
-        [msWorld, msPlayer, msRollType, msLabel, msVariant].forEach(ms => ms.close());
+        [msWorld, msPlayer].forEach(ms => ms.close());
     });
 
     // ── Clear / confirm ───────────────────────────────────────

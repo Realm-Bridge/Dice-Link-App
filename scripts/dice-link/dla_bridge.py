@@ -39,6 +39,7 @@ class DLABridge(QObject):
         self.connection_check_timer = None
         self.pong_timeout_timer = None
         self._recorded_chat_roll_ids = {}  # msg_id -> set of die faces already saved
+        self._chat_roll_labels       = {}  # msg_id -> label captured on first sight
         self.log_vtt("[BRIDGE] DLABridge created")
 
     # -------------------------------------------------------------------------
@@ -232,7 +233,9 @@ class DLABridge(QObject):
         from core.storage import save_roll_to_history
         speaker        = roll_data.get('speaker') or ''
         flavor         = roll_data.get('flavor') or ''
-        label          = flavor or app_state.current_roll_label or 'Manual Roll'
+        if msg_id not in self._chat_roll_labels:
+            self._chat_roll_labels[msg_id] = flavor or app_state.current_roll_label or 'Manual Roll'
+        label          = self._chat_roll_labels[msg_id]
         rolls          = roll_data.get('rolls', [])
         recorded_faces = self._recorded_chat_roll_ids.get(msg_id, set())
         log_chat_log(f"Processing chat roll: {len(rolls)} roll group(s), label='{label}', player='{speaker}' (msg={msg_id})")

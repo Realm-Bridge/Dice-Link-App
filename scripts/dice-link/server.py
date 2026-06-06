@@ -638,7 +638,6 @@ async def handle_ui_message(message: dict):
         results = message.get("results", [])
 
         from state import app_state
-        app_state.current_roll_label = None
         app_state.next_roll_label = None
         app_state.current_roll_mode = None
 
