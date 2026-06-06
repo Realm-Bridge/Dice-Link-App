@@ -380,30 +380,66 @@ function init() {
         [msWorld, msPlayer].forEach(ms => ms.close());
     });
 
-    // ── Clear / confirm ───────────────────────────────────────
+    // ── Modal helper ─────────────────────────────────────────
+    function showStatsModal({ title, body, buttons }) {
+        document.getElementById('stats-modal-title').textContent = title;
+        document.getElementById('stats-modal-body').textContent  = body;
+        const btnsEl = document.getElementById('stats-modal-buttons');
+        btnsEl.innerHTML = '';
+        (buttons || []).forEach(({ label, className, onClick }) => {
+            const btn = document.createElement('button');
+            btn.textContent = label;
+            btn.className   = className || 'stats-modal-btn';
+            btn.addEventListener('click', () => {
+                document.getElementById('stats-modal').classList.remove('open');
+                onClick?.();
+            });
+            btnsEl.appendChild(btn);
+        });
+        document.getElementById('stats-modal').classList.add('open');
+    }
+
+    // ── Delete ────────────────────────────────────────────────
     document.getElementById('stats-clear-btn')?.addEventListener('click', () => {
-        document.getElementById('stats-clear-confirm')?.classList.remove('hidden');
+        showStatsModal({
+            title: 'Delete Rolls',
+            body:  'Do you want to delete only the rolls you are currently looking at, or delete everything?',
+            buttons: [
+                { label: 'Current Selection', className: 'stats-modal-btn btn-danger', onClick: () => confirmDelete(false) },
+                { label: 'All Data',           className: 'stats-modal-btn btn-danger', onClick: () => confirmDelete(true)  },
+                { label: 'Cancel',             className: 'stats-modal-btn' },
+            ],
+        });
     });
-    document.getElementById('stats-clear-no')?.addEventListener('click', () => {
-        document.getElementById('stats-clear-confirm')?.classList.add('hidden');
-    });
-    document.getElementById('stats-clear-yes')?.addEventListener('click', async () => {
-        document.getElementById('stats-clear-confirm')?.classList.add('hidden');
-        await fetch(`/api/roll-stats?${buildFilterParams()}`, { method: 'DELETE' });
-        fetchAndRender();
-    });
+
+    function confirmDelete(all) {
+        showStatsModal({
+            title: 'Are you sure?',
+            body:  'This cannot be undone. Deleted rolls cannot be recovered.',
+            buttons: [
+                { label: 'Yes, Delete', className: 'stats-modal-btn btn-danger', onClick: async () => {
+                    const url = all ? '/api/roll-stats' : `/api/roll-stats?${buildFilterParams()}`;
+                    await fetch(url, { method: 'DELETE' });
+                    fetchAndRender();
+                }},
+                { label: 'Cancel', className: 'stats-modal-btn' },
+            ],
+        });
+    }
 
     // ── Export ────────────────────────────────────────────────
     document.getElementById('stats-export-btn')?.addEventListener('click', () => {
         const a = document.createElement('a');
-        a.href = `/api/roll-stats/export?${buildFilterParams()}`;
+        a.href = '/api/roll-stats/export';
         a.click();
     });
 
     // ── Import ────────────────────────────────────────────────
+    const REQUIRED_COLUMNS = ['rolled_at', 'player_name', 'die_type', 'value', 'roll_label', 'world_title'];
+
     const importInput = document.createElement('input');
-    importInput.type   = 'file';
-    importInput.accept = '.csv';
+    importInput.type         = 'file';
+    importInput.accept       = '.csv';
     importInput.style.display = 'none';
     document.body.appendChild(importInput);
 
@@ -415,15 +451,55 @@ function init() {
     importInput.addEventListener('change', async () => {
         const file = importInput.files[0];
         if (!file) return;
+
         const text = await file.text();
+
+        if (!text.trim()) {
+            showStatsModal({ title: 'Import Failed', body: 'The file is empty.', buttons: [{ label: 'OK', className: 'stats-modal-btn' }] });
+            return;
+        }
+
         const rows = parseCSV(text);
-        if (!rows.length) return;
-        await fetch('/api/roll-stats/import', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ rows }),
+        if (!rows.length) {
+            showStatsModal({ title: 'Import Failed', body: 'The file contains no data rows.', buttons: [{ label: 'OK', className: 'stats-modal-btn' }] });
+            return;
+        }
+
+        const headers = Object.keys(rows[0]);
+        const missing = REQUIRED_COLUMNS.filter(c => !headers.includes(c));
+        if (missing.length) {
+            showStatsModal({
+                title: 'Import Failed',
+                body:  `Missing columns: ${missing.join(', ')}. The file may not be a Dice Link export.`,
+                buttons: [{ label: 'OK', className: 'stats-modal-btn' }],
+            });
+            return;
+        }
+
+        let result;
+        try {
+            const resp = await fetch('/api/roll-stats/import', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ rows }),
+            });
+            result = await resp.json();
+        } catch (e) {
+            showStatsModal({ title: 'Import Failed', body: 'Could not reach the server.', buttons: [{ label: 'OK', className: 'stats-modal-btn' }] });
+            return;
+        }
+
+        if (result.error) {
+            showStatsModal({ title: 'Import Failed', body: result.error, buttons: [{ label: 'OK', className: 'stats-modal-btn' }] });
+            return;
+        }
+
+        const skippedNote = result.skipped > 0 ? `, ${result.skipped} skipped as duplicates` : '';
+        showStatsModal({
+            title: 'Import Complete',
+            body:  `${result.imported} roll${result.imported !== 1 ? 's' : ''} imported${skippedNote}.`,
+            buttons: [{ label: 'OK', className: 'stats-modal-btn', onClick: () => fetchAndRender() }],
         });
-        fetchAndRender();
     });
 
     function parseCSV(text) {

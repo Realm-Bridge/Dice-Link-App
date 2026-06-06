@@ -154,9 +154,12 @@ async def export_roll_stats(
 @app.post("/api/roll-stats/import")
 async def import_roll_stats(request: Request):
     from core.storage import import_rolls_from_csv
-    body = await request.json()
-    result = import_rolls_from_csv(body.get('rows', []))
-    return JSONResponse(result)
+    try:
+        body = await request.json()
+        result = import_rolls_from_csv(body.get('rows', []))
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'imported': 0, 'skipped': 0, 'error': str(e)})
 
 
 # ============== Camera Endpoints ==============

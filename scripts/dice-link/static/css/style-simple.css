@@ -2812,6 +2812,63 @@ body {
 .cc-item.dead .cc-avatar { filter: grayscale(0.85); opacity: 0.45; }
 
 
+/* ── Stats general-purpose modal ── */
+.stats-modal-overlay {
+    display:         none;
+    position:        fixed;
+    inset:           0;
+    background:      rgba(0, 0, 0, 0.75);
+    z-index:         9999;
+    align-items:     center;
+    justify-content: center;
+}
+.stats-modal-overlay.open { display: flex; }
+
+.stats-modal-inner {
+    background:     var(--dlc-bg-section);
+    border:         3px solid var(--dlc-border);
+    border-radius:  10px;
+    padding:        28px 32px;
+    min-width:      360px;
+    max-width:      520px;
+    display:        flex;
+    flex-direction: column;
+    gap:            16px;
+}
+
+.stats-modal-title {
+    font-size:   18px;
+    font-weight: 700;
+    color:       var(--text-primary);
+}
+
+.stats-modal-body {
+    font-size:   14px;
+    color:       var(--text-secondary);
+    line-height: 1.5;
+}
+
+.stats-modal-buttons {
+    display:         flex;
+    gap:             10px;
+    justify-content: flex-end;
+    flex-wrap:       wrap;
+}
+
+.stats-modal-btn {
+    padding:       8px 18px;
+    border:        1px solid var(--dlc-border);
+    border-radius: 6px;
+    background:    var(--dlc-bg-panel);
+    color:         var(--text-primary);
+    font-size:     13px;
+    cursor:        pointer;
+    transition:    border-color 0.15s, color 0.15s;
+}
+.stats-modal-btn:hover            { border-color: var(--dlc-accent); color: var(--dlc-accent); }
+.stats-modal-btn.btn-danger       { border-color: var(--danger-red); color: var(--danger-red); }
+.stats-modal-btn.btn-danger:hover { background: var(--danger-red); color: #fff; }
+
 /* ── Chart modal ── */
 .chart-modal-overlay {
     position:        fixed;

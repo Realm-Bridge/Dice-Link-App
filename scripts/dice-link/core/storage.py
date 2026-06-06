@@ -486,9 +486,9 @@ def import_rolls_from_csv(rows):
             imported += 1
         conn.commit()
         log_storage(f"Imported {imported} rolls, skipped {skipped} duplicates")
-        return {'imported': imported, 'skipped': skipped}
+        return {'imported': imported, 'skipped': skipped, 'error': None}
     except Exception as e:
         log_storage(f"Failed to import rolls: {e}")
-        return {'imported': 0, 'skipped': 0}
+        return {'imported': 0, 'skipped': 0, 'error': str(e)}
     finally:
         conn.close()

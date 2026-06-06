@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=90">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=91">
     <script src="https://kit.fontawesome.com/39d7cc98ef.js" crossorigin="anonymous"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
@@ -320,7 +320,7 @@
                                     <div class="stats-ctrl-spacer"></div>
 
                                     <div class="stats-data-mgmt">
-                                        <button class="stats-data-btn btn-danger" id="stats-clear-btn" title="Delete rolls matching current filters" disabled>
+                                        <button class="stats-data-btn btn-danger" id="stats-clear-btn" title="Delete rolls">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                         <button class="stats-data-btn" id="stats-export-btn" title="Export matching rolls as CSV">
@@ -343,15 +343,6 @@
                                     <div class="stats-donut-legend" id="stats-donut-legend"></div>
                                 </div>
 
-                                <!-- Clear confirmation -->
-                                <div class="stats-clear-confirm hidden" id="stats-clear-confirm">
-                                    <span>Delete all matching rolls? This cannot be undone.</span>
-                                    <button class="stats-confirm-yes" id="stats-clear-yes">Delete</button>
-                                    <button class="stats-confirm-no" id="stats-clear-no">Cancel</button>
-                                </div>
-
-                                <!-- Hidden file input for import -->
-                                <input type="file" id="stats-import-input" accept=".csv" style="display:none">
 
                             </div><!-- /front -->
 
@@ -412,6 +403,15 @@
                 <img src="/static/Logos/New_logo.png" alt="Realm Bridge" class="footer-realm-bridge-icon" draggable="false" />
             </a>
         </footer>
+    </div>
+
+    <!-- General-purpose stats modal -->
+    <div class="stats-modal-overlay" id="stats-modal">
+        <div class="stats-modal-inner">
+            <div class="stats-modal-title" id="stats-modal-title"></div>
+            <div class="stats-modal-body" id="stats-modal-body"></div>
+            <div class="stats-modal-buttons" id="stats-modal-buttons"></div>
+        </div>
     </div>
 
     <!-- Full-panel chart modal -->
@@ -537,7 +537,7 @@
     <script src="/static/js/chart.min.js"></script>
 
     <!-- Dice Roll Stats Panel -->
-    <script src="/static/js/ui/stats.js?v=16"></script>
+    <script src="/static/js/ui/stats.js?v=17"></script>
 
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>
