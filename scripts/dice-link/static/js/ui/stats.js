@@ -24,18 +24,20 @@ const combatants = [
     { name:'Zephyr',        init:5,  hp:52, maxHp:58,  ac:15, color:'#7c3aed', isPlayer:true,  hpPublic:true,  acPublic:true,  conditions:[] },
 ];
 
-let ctTurn  = 0;
-let ctRound = 3;
-let ctIsGM  = true;
+let ctTurn        = 0;
+let ctRound       = 3;
+let ctIsGM        = true;
+let ctDirection   = 1;
+let ctFirstRender = true;
 
 const ctPos = {
-    '-3':{ x:-315, y:58, scale:0.37, opacity:0.18 },
-    '-2':{ x:-222, y:36, scale:0.54, opacity:0.46 },
-    '-1':{ x:-126, y:16, scale:0.73, opacity:0.74 },
-     '0':{ x:0,   y:0,  scale:1.00, opacity:1.00 },
-     '1':{ x:126,  y:16, scale:0.73, opacity:0.74 },
-     '2':{ x:222,  y:36, scale:0.54, opacity:0.46 },
-     '3':{ x:315,  y:58, scale:0.37, opacity:0.18 },
+    '-3': { x: -315, scale: 0.37, opacity: 0.18 },
+    '-2': { x: -222, scale: 0.54, opacity: 0.46 },
+    '-1': { x: -126, scale: 0.73, opacity: 0.74 },
+     '0': { x: 0,    scale: 1.00, opacity: 1.00 },
+     '1': { x: 126,  scale: 0.73, opacity: 0.74 },
+     '2': { x: 222,  scale: 0.54, opacity: 0.46 },
+     '3': { x: 315,  scale: 0.37, opacity: 0.18 },
 };
 
 const ctCondIcons = {
@@ -58,12 +60,14 @@ window.statsFlipPanel = function () {
 };
 
 window.ctNextTurn = function () {
+    ctDirection = 1;
     ctTurn = (ctTurn + 1) % combatants.length;
     if (ctTurn === 0) ctRound++;
     ctRenderAll();
 };
 
 window.ctPrevTurn = function () {
+    ctDirection = -1;
     const prev = ctTurn;
     ctTurn = (ctTurn - 1 + combatants.length) % combatants.length;
     if (prev === 0) ctRound = Math.max(1, ctRound - 1);
@@ -532,21 +536,44 @@ function ctBuildCarousel() {
 }
 
 function ctRenderCarousel() {
-    const n = combatants.length;
-    document.querySelectorAll('.cc-item').forEach((el, i) => {
-        const c   = combatants[i];
-        let rel   = ((i - ctTurn) % n + n) % n;
-        if (rel > Math.floor(n / 2)) rel -= n;
-        const key  = Math.max(-3, Math.min(3, rel)).toString();
-        const pos  = ctPos[key];
-        const hide = Math.abs(rel) > 3;
+    const n     = combatants.length;
+    const items = Array.from(document.querySelectorAll('.cc-item'));
 
+    // Pre-position the incoming item silently off the correct edge so it
+    // enters from that side only — never crossing the visible area.
+    if (!ctFirstRender) {
+        const enterIdx = ((ctTurn + ctDirection * 3) % n + n) % n;
+        const enterEl  = items[enterIdx];
+        if (enterEl) {
+            const offX = ctDirection > 0 ? 420 : -420;
+            enterEl.style.transition = 'none';
+            enterEl.style.opacity    = '0';
+            enterEl.style.transform  = `translateX(calc(-50% + ${offX}px)) translateY(-50%) scale(0.2)`;
+            enterEl.offsetHeight;
+            enterEl.style.transition = '';
+        }
+    }
+    ctFirstRender = false;
+
+    items.forEach((el, i) => {
+        const c      = combatants[i];
+        let rel      = ((i - ctTurn) % n + n) % n;
+        if (rel > Math.floor(n / 2)) rel -= n;
         el.setAttribute('data-rel', rel);
-        el.style.opacity   = hide ? '0' : String(pos.opacity);
-        el.style.zIndex    = hide ? '0' : String(4 - Math.abs(rel));
-        el.style.transform = hide
-            ? `translateX(calc(-50% + ${rel > 0 ? 400 : -400}px)) translateY(-50%) scale(0.2)`
-            : `translateX(calc(-50% + ${pos.x}px)) translateY(calc(-50% + ${pos.y}px)) scale(${pos.scale})`;
+        const absRel = Math.abs(rel);
+
+        if (absRel > 3) {
+            el.style.transition = 'none';
+            el.style.opacity    = '0';
+            el.style.zIndex     = '0';
+            el.style.transform  = `translateX(calc(-50% + ${rel > 0 ? 420 : -420}px)) translateY(-50%) scale(0.2)`;
+        } else {
+            const pos          = ctPos[rel.toString()];
+            el.style.transition = '';
+            el.style.opacity   = String(pos.opacity);
+            el.style.zIndex    = String(4 - absRel);
+            el.style.transform = `translateX(calc(-50% + ${pos.x}px)) translateY(-50%) scale(${pos.scale})`;
+        }
 
         const showHp = ctIsGM || c.hpPublic;
         const hpBar  = el.querySelector('.cc-hp-bar');
@@ -604,40 +631,16 @@ function ctRenderLeft() {
     left.innerHTML = html;
 }
 
-function ctRenderList() {
-    const list = document.getElementById('ct-initiative-list');
-    if (!list) return;
-    list.innerHTML = combatants.map((c, i) => {
-        const active = i === ctTurn ? 'ct-active' : '';
-        const dead   = c.hp === 0   ? 'ct-dead'   : '';
-        const showHp = ctIsGM || c.hpPublic;
-        const pct    = c.maxHp > 0  ? c.hp / c.maxHp * 100 : 0;
-        const hpEl   = showHp
-            ? `<div class="init-hp-mini"><div class="init-hp-mini-fill" style="width:${pct}%;background:${ctHpColor(c.hp,c.maxHp)}"></div></div>`
-            : `<span class="init-locked"><i class="fas fa-lock"></i></span>`;
-        const dots = c.conditions.map(() => `<span class="init-cond-dot"></span>`).join('');
-        return `<div class="init-row ${active} ${dead}">
-            <span class="init-score">${c.init}</span>
-            <span class="init-mini-avatar" style="background:${c.color}">${c.name[0]}</span>
-            <span class="init-name">${c.name}</span>
-            ${dots}${hpEl}
-        </div>`;
-    }).join('');
-}
 
 function ctRenderAll() {
     const roundEl = document.getElementById('ct-round');
     if (roundEl) roundEl.textContent = `Round ${ctRound}`;
-
-    const prevArrow = document.getElementById('ct-arrow-prev');
-    if (prevArrow) prevArrow.classList.toggle('arrow-hidden', !ctIsGM);
 
     const endBtn = document.getElementById('ct-end-turn-btn');
     if (endBtn) endBtn.disabled = ctIsGM || !combatants[ctTurn].isPlayer;
 
     ctRenderCarousel();
     ctRenderLeft();
-    ctRenderList();
 }
 
 // ══════════════════════════════════════════════════════════════
