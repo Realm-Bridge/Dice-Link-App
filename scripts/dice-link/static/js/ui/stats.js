@@ -10,6 +10,7 @@ let currentData = { labels: [], values: [], total: 0, average: '—' };
 let activeDie        = 20;
 let currentChartType = 'bar';
 let modalChart       = null;
+let sessionScope     = 'all';
 
 // ══════════════════════════════════════════════════════════════
 // COMBAT TRACKER DATA
@@ -217,8 +218,7 @@ function init() {
 
     function buildFilterParams() {
         const params = new URLSearchParams({ die_types: 'd' + activeDie });
-        const sessionEl = document.getElementById('filter-session');
-        if (sessionEl && sessionEl.value !== 'all') params.set('session_scope', sessionEl.value);
+        if (sessionScope !== 'all') params.set('session_scope', sessionScope);
         if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
         if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
         return params;
@@ -347,10 +347,36 @@ function init() {
     const msWorld  = new MultiSelect('world',  'dd-world',  'All Worlds',  () => fetchAndRender());
     const msPlayer = new MultiSelect('player', 'dd-player', 'All Players', () => fetchAndRender());
 
-    document.getElementById('filter-session')?.addEventListener('change', fetchAndRender);
+    // ── Session single-select dropdown ───────────────────────
+    const sessionTrigger = document.getElementById('session-trigger');
+    const sessionDd      = document.getElementById('dd-session');
+
+    sessionTrigger?.addEventListener('click', e => {
+        e.stopPropagation();
+        const open = sessionDd.classList.toggle('open');
+        sessionTrigger.classList.toggle('open', open);
+    });
+
+    sessionDd?.querySelectorAll('.stats-ms-option').forEach(opt => {
+        opt.addEventListener('click', e => {
+            e.stopPropagation();
+            sessionScope = opt.dataset.value;
+            sessionDd.querySelectorAll('.stats-ms-option').forEach(o => {
+                const sel = o.dataset.value === sessionScope;
+                o.classList.toggle('selected', sel);
+                o.querySelector('.stats-ms-check').innerHTML = sel ? '<i class="fas fa-check"></i>' : '';
+            });
+            sessionTrigger.classList.toggle('has-value', sessionScope !== 'all');
+            sessionDd.classList.remove('open');
+            sessionTrigger.classList.remove('open');
+            fetchAndRender();
+        });
+    });
 
     document.addEventListener('click', () => {
         diePick?.classList.remove('open');
+        sessionDd?.classList.remove('open');
+        sessionTrigger?.classList.remove('open');
         [msWorld, msPlayer].forEach(ms => ms.close());
     });
 
@@ -484,18 +510,16 @@ class MultiSelect {
             opt.classList.toggle('selected', sel);
             opt.querySelector('.stats-ms-check').innerHTML = sel ? '<i class="fas fa-check"></i>' : '';
         });
+        this.trigger.classList.toggle('has-value', !isAll);
         const textEl = this.trigger.querySelector('.stats-ms-trigger-text');
         if (!textEl) return;
         if (isAll) {
             textEl.textContent = this.allLabel;
-            this.trigger.classList.remove('has-value');
         } else if (this.selected.size === 1) {
             const v = [...this.selected][0];
             textEl.textContent = this.dropdown.querySelector(`[data-value="${v}"]`).textContent.trim();
-            this.trigger.classList.add('has-value');
         } else {
             textEl.textContent = `${this.selected.size} selected`;
-            this.trigger.classList.add('has-value');
         }
     }
 }

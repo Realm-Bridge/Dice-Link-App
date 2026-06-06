@@ -2154,9 +2154,9 @@ body {
     padding: 20px 56px;
 }
 
-/* Stats panel labeled outer — fixed to match player-modes panel width */
+/* Stats panel labeled outer — fixed width to match player-modes panel, height still flex */
 .stats-labeled-outer {
-    flex:           none;
+    flex:           1;
     width:          930px;
     display:        flex;
     flex-direction: column;
@@ -2460,25 +2460,17 @@ body {
     max-width: 240px;
 }
 
-/* Filters inline in the controls bar */
+/* Filters inline in the controls bar — icon + caret only, no text */
 .stats-controls-bar .stats-ms-wrap {
-    flex-direction: row;
-    align-items:    center;
-    gap:            4px;
-    flex-shrink:    0;
+    flex-shrink: 0;
 }
 .stats-controls-bar .stats-ms-trigger {
-    width:    110px;
-    height:   36px;
-    flex:     none;
-}
-.stats-controls-bar .stats-select-wrap {
-    width:  120px;
-    height: 36px;
-    flex:   none;
-}
-.stats-controls-bar .stats-plain-select {
-    height: 100%;
+    width:           auto;
+    height:          36px;
+    padding:         0 8px;
+    gap:             5px;
+    justify-content: center;
+    flex:            none;
 }
 
 .stats-chart-col {
