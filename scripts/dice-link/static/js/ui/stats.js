@@ -211,9 +211,6 @@ function init() {
         chart.options.plugins.legend = smallDonutLegend;
         chart.update();
 
-        document.getElementById('stat-total').textContent = currentData.total;
-        document.getElementById('stat-avg').textContent   = currentData.average;
-
         refreshDonutLegend();
         positionExpandBtn();
     }

@@ -2154,9 +2154,10 @@ body {
     padding: 20px 56px;
 }
 
-/* Stats panel labeled outer — flex: 1 in .bottom-right */
+/* Stats panel labeled outer — fixed to match player-modes panel width */
 .stats-labeled-outer {
-    flex:           1;
+    flex:           none;
+    width:          930px;
     display:        flex;
     flex-direction: column;
     gap:            6px;
@@ -2457,6 +2458,27 @@ body {
 /* Dropdowns in filter column open rightward into chart area */
 .stats-filter-col .stats-ms-dropdown {
     max-width: 240px;
+}
+
+/* Filters inline in the controls bar */
+.stats-controls-bar .stats-ms-wrap {
+    flex-direction: row;
+    align-items:    center;
+    gap:            4px;
+    flex-shrink:    0;
+}
+.stats-controls-bar .stats-ms-trigger {
+    width:    110px;
+    height:   36px;
+    flex:     none;
+}
+.stats-controls-bar .stats-select-wrap {
+    width:  120px;
+    height: 36px;
+    flex:   none;
+}
+.stats-controls-bar .stats-plain-select {
+    height: 100%;
 }
 
 .stats-chart-col {
