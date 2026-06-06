@@ -523,17 +523,25 @@ function ctCondBadge(cond) {
 function ctBuildCarousel() {
     const track = document.getElementById('cc-track');
     if (!track) return;
+
+    const n          = combatants.length;
+    const angleStep  = 360 / n;
+    // radius grows with combatant count so items spread across the panel width
+    const radius     = Math.max(250, 75 * n);
+    // perspective 5× radius keeps the front-item scale consistently at 1.25×
+    const perspective = radius * 5;
+
+    // Apply perspective to the container so it scales with the wheel geometry
+    const container = track.parentElement;
+    if (container) container.style.perspective = `${perspective}px`;
+
     track.innerHTML = '';
     track.style.transition = 'none';
-    track.style.transform   = `rotateY(${ctAngle}deg)`;
-
-    const n         = combatants.length;
-    const angleStep = 360 / n;
-    const radius    = Math.max(220, Math.round((160 * n) / (2 * Math.PI)));
+    track.style.transform  = `rotateY(${ctAngle}deg)`;
 
     combatants.forEach((c, i) => {
         const el = document.createElement('div');
-        el.className    = 'cc-item' + (c.hp === 0 ? ' dead' : '') + (i === ctTurn ? ' cc-active' : '');
+        el.className     = 'cc-item' + (c.hp === 0 ? ' dead' : '') + (i === ctTurn ? ' cc-active' : '');
         el.dataset.index = i;
         el.style.transform = `rotateY(${i * angleStep}deg) translateZ(${radius}px) translate(-50%, -50%)`;
         el.innerHTML = `

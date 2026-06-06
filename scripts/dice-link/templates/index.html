@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=86">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=87">
     <script src="https://kit.fontawesome.com/39d7cc98ef.js" crossorigin="anonymous"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
@@ -386,6 +386,11 @@
                                 <div class="stats-controls-bar">
                                     <span class="ct-round-badge" id="ct-round">Round 3</span>
                                     <div class="stats-ctrl-spacer"></div>
+                                    <!-- TEMP TEST BUTTONS — remove once live Foundry data drives turns -->
+                                    <button class="stats-data-btn" onclick="ctPrevTurn()" title="Previous turn (test)">&#9664; Prev</button>
+                                    <button class="stats-data-btn" onclick="ctNextTurn()" title="Next turn (test)">Next &#9654;</button>
+                                    <div class="stats-ctrl-divider"></div>
+                                    <!-- END TEMP -->
                                     <button class="stats-data-btn btn-end-turn" id="ct-end-turn-btn" disabled title="End your turn — active only when it is your turn">
                                         <i class="fas fa-check"></i> End Turn
                                     </button>
@@ -556,7 +561,7 @@
     <script src="/static/js/chart.min.js"></script>
 
     <!-- Dice Roll Stats Panel -->
-    <script src="/static/js/ui/stats.js?v=13"></script>
+    <script src="/static/js/ui/stats.js?v=14"></script>
 
     <!-- Main App (depends on all other modules) -->
     <script src="/static/js/client.js?v=1"></script>
