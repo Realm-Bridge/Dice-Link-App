@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Main Stylesheet (reuse existing styles) -->
-    <link rel="stylesheet" href="/static/css/style-simple.css?v=57">
+    <link rel="stylesheet" href="/static/css/style-simple.css?v=92">
     
     <style>
         /* Startup-specific overrides only */
@@ -197,11 +197,8 @@
                 <span class="title-bar-title">Login</span>
             </div>
             
-            <!-- Right side: settings, minimize, close -->
+            <!-- Right side: minimize, close -->
             <div class="title-bar-right">
-                <button id="settings-btn" class="title-bar-icon-btn" title="Settings">
-                    <i class="fas fa-cog"></i>
-                </button>
                 <button class="title-bar-btn minimize-btn" id="minimize-btn" title="Minimize">
                     <i class="fas fa-minus"></i>
                 </button>
@@ -271,61 +268,14 @@
         
     </div>
 
-    <!-- Settings Panel Overlay (reuse same structure as index.html) -->
-    <div id="settings-overlay" class="settings-overlay hidden">
-        <div id="settings-panel" class="settings-panel">
-            <div class="settings-header">
-                <h2>Settings</h2>
-                <button id="settings-close" class="icon-btn" title="Close">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="settings-content">
-                <div class="settings-section">
-                    <h3 class="settings-section-title">Connection</h3>
-                    <div class="settings-field">
-                        <label for="settings-host">WebSocket Host</label>
-                        <input type="text" id="settings-host" value="localhost" placeholder="localhost">
-                    </div>
-                    <div class="settings-field">
-                        <label for="settings-port">WebSocket Port</label>
-                        <input type="number" id="settings-port" value="8765" min="1" max="65535">
-                    </div>
-                </div>
-                <div class="settings-section">
-                    <h3 class="settings-section-title">Appearance</h3>
-                    <div class="settings-field">
-                        <label for="settings-theme">Theme</label>
-                        <select id="settings-theme">
-                            <option value="dark" selected>Dark</option>
-                            <option value="light" disabled>Light (Coming Soon)</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="settings-footer">
-                <button id="settings-save" class="btn btn-primary">Save Settings</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Reuse existing JS modules -->
     <script src="/static/js/debug.js?v=1"></script>
     <script src="/static/js/utils.js?v=1"></script>
-    <script src="/static/js/ui/settings.js?v=1"></script>
     <script src="/static/js/ui/window-control.js?v=1"></script>
     
     <script>
-        // Initialize settings and form when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize settings button
-            if (typeof initSettingsUI === 'function') {
-                initSettingsUI();
-            }
-            
             // Handle form submission
             const form = document.getElementById('login-form');
             if (form) {

@@ -481,89 +481,207 @@ body {
 
 /* Settings Panel (keep for functionality) - simplified */
 .settings-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 1000;
+    display:         none;
+    position:        fixed;
+    inset:           0;
+    background:      rgba(0, 0, 0, 0.75);
+    z-index:         2000;
+    align-items:     center;
+    justify-content: center;
 }
-
-.settings-overlay.hidden {
-    display: none;
-}
+.settings-overlay.open { display: flex; }
 
 .settings-panel {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: var(--bg-card);
-    border-radius: var(--border-radius-lg);
-    width: 400px;
-    max-height: 600px;
-    overflow-y: auto;
-    box-shadow: var(--shadow-lg);
+    background:     var(--dlc-bg-section);
+    border:         3px solid var(--dlc-border);
+    border-radius:  10px;
+    width:          720px;
+    max-height:     580px;
+    display:        flex;
+    flex-direction: column;
+    box-shadow:     0 20px 40px rgba(0,0,0,0.5);
 }
 
 .settings-header {
-    display: flex;
+    display:         flex;
     justify-content: space-between;
+    align-items:     center;
+    padding:         16px 20px;
+    border-bottom:   1px solid var(--dlc-border);
+    flex-shrink:     0;
+}
+.settings-header h2 {
+    font-size:   16px;
+    font-weight: 700;
+    color:       var(--text-primary);
+    display:     flex;
     align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color);
+    gap:         8px;
+}
+.settings-header h2 i { color: var(--dlc-accent); }
+
+.settings-close-btn {
+    background:    none;
+    border:        none;
+    color:         var(--text-secondary);
+    font-size:     16px;
+    cursor:        pointer;
+    padding:       4px 8px;
+    border-radius: 4px;
+    transition:    color 0.15s;
+}
+.settings-close-btn:hover { color: var(--text-primary); }
+
+.settings-body {
+    display:    flex;
+    flex:       1;
+    min-height: 0;
 }
 
-.settings-header h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
+.settings-nav {
+    display:        flex;
+    flex-direction: column;
+    width:          160px;
+    border-right:   1px solid var(--dlc-border);
+    padding:        12px 0;
+    flex-shrink:    0;
 }
+
+.settings-nav-btn {
+    display:     flex;
+    align-items: center;
+    gap:         10px;
+    padding:     12px 16px;
+    background:  none;
+    border:      none;
+    color:       var(--text-secondary);
+    font-size:   13px;
+    cursor:      pointer;
+    text-align:  left;
+    transition:  background 0.15s, color 0.15s;
+    border-left: 3px solid transparent;
+}
+.settings-nav-btn:hover  { background: var(--dlc-bg-panel); color: var(--text-primary); }
+.settings-nav-btn.active { color: var(--dlc-accent); border-left-color: var(--dlc-accent); background: var(--dlc-bg-panel); }
+.settings-nav-btn i      { width: 16px; text-align: center; }
 
 .settings-content {
-    padding: 20px;
+    flex:       1;
+    padding:    20px 24px;
+    overflow-y: auto;
+    min-height: 0;
 }
 
-.settings-section {
-    margin-bottom: 24px;
-}
+.settings-section        { display: none; }
+.settings-section.active { display: block; }
 
 .settings-section-title {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size:      11px;
+    font-weight:    700;
     text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 12px;
+    letter-spacing: 0.08em;
+    color:          var(--text-secondary);
+    margin-bottom:  16px;
 }
 
 .settings-field {
-    display: flex;
+    display:        flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
+    gap:            6px;
+    margin-bottom:  18px;
+}
+.settings-field > label {
+    font-size:   13px;
+    font-weight: 600;
+    color:       var(--text-primary);
 }
 
-.settings-field label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-secondary);
+.settings-select {
+    padding:            8px 12px;
+    background:         var(--dlc-bg-panel);
+    border:             1px solid var(--dlc-border);
+    border-radius:      6px;
+    color:              var(--text-primary);
+    font-size:          13px;
+    appearance:         none;
+    -webkit-appearance: none;
+}
+.settings-select:focus { outline: none; border-color: var(--dlc-accent); }
+.settings-select option { background: var(--dlc-bg-panel); color: var(--text-primary); }
+
+.settings-toggle-field {
+    flex-direction:  row !important;
+    align-items:     center;
+    justify-content: space-between;
+    gap:             16px;
+}
+.settings-toggle-label { flex: 1; }
+.settings-toggle-label label {
+    font-size:     13px;
+    font-weight:   600;
+    color:         var(--text-primary);
+    display:       block;
+    margin-bottom: 2px;
 }
 
-.settings-field input,
-.settings-field select {
-    padding: 10px 14px;
-    background-color: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    color: var(--text-primary);
-    font-size: 0.875rem;
+.settings-help-text {
+    font-size:   12px;
+    color:       var(--text-secondary);
+    line-height: 1.4;
+    margin:      0;
 }
 
-.settings-field input:focus,
-.settings-field select:focus {
-    outline: none;
-    border-color: var(--dlc-accent);
+.settings-link {
+    display:         inline-flex;
+    align-items:     center;
+    gap:             6px;
+    font-size:       13px;
+    color:           var(--dlc-accent);
+    text-decoration: none;
+    margin-top:      4px;
 }
+.settings-link:hover { text-decoration: underline; }
+
+.settings-coming-soon {
+    display:     flex;
+    align-items: center;
+    gap:         10px;
+    color:       var(--text-secondary);
+    font-size:   13px;
+    padding:     24px 0;
+}
+.settings-coming-soon i { font-size: 20px; color: var(--dlc-border); }
+
+.settings-toggle {
+    position:    relative;
+    display:     inline-block;
+    width:       44px;
+    height:      24px;
+    flex-shrink: 0;
+}
+.settings-toggle input { opacity: 0; width: 0; height: 0; }
+.settings-toggle-slider {
+    position:      absolute;
+    cursor:        pointer;
+    inset:         0;
+    background:    var(--dlc-bg-panel);
+    border:        1px solid var(--dlc-border);
+    border-radius: 24px;
+    transition:    0.2s;
+}
+.settings-toggle-slider::before {
+    content:       '';
+    position:      absolute;
+    width:         18px;
+    height:        18px;
+    left:          2px;
+    top:           2px;
+    background:    var(--text-secondary);
+    border-radius: 50%;
+    transition:    0.2s;
+}
+.settings-toggle input:checked + .settings-toggle-slider         { background: var(--dlc-accent); border-color: var(--dlc-accent); }
+.settings-toggle input:checked + .settings-toggle-slider::before { transform: translateX(20px); background: #fff; }
 
 
 /* Roll Window - Expandable Overlay (matches dice tray position) */
