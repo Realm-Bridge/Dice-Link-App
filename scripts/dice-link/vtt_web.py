@@ -1,9 +1,11 @@
 import json
+import os
 from urllib.parse import urlparse
 
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 from PyQt6.QtWebChannel import QWebChannel
+from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtCore import QTimer, QUrl, Qt
 
 from debug import log_vtt
@@ -320,6 +322,17 @@ class DraggableWebEngineView(QWebEngineView):
         self._designed_width = None
         self._designed_height = None
         self._enforcing_ratio = False
+        self.page().profile().downloadRequested.connect(self._handle_download)
+
+    def _handle_download(self, download):
+        suggested = download.suggestedFileName()
+        path, _ = QFileDialog.getSaveFileName(self, 'Save File', suggested)
+        if path:
+            download.setDownloadDirectory(os.path.dirname(path))
+            download.setDownloadFileName(os.path.basename(path))
+            download.accept()
+        else:
+            download.cancel()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
