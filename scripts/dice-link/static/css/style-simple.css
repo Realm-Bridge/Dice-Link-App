@@ -1553,9 +1553,8 @@ body {
 .camera-btn-row {
     position: absolute;
     bottom: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 70%;
+    left: 12px;
+    width: 63%;
     z-index: 2;
     display: flex;
     gap: 8px;
@@ -1563,7 +1562,7 @@ body {
 
 .camera-btn {
     flex: 1;
-    padding: 20px 10px;
+    padding: 14px 10px;
     background: rgba(24, 31, 43, 0.85);
     border: 1px solid var(--dlc-border);
     border-radius: 4px;
