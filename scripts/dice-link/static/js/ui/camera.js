@@ -67,12 +67,12 @@ function updateCameraButtons(state) {
 
     const startBtn = document.getElementById('camera-start-btn');
     if (startBtn) {
-        startBtn.textContent = (state === 'running') ? 'Stop Camera' : 'Start Camera';
+        startBtn.textContent = (state === 'running') ? 'Stop' : 'Start';
         startBtn.onclick = toggleCamera;
     }
     const defineTrayBtn = document.getElementById('camera-define-tray-btn');
     if (defineTrayBtn) {
-        defineTrayBtn.textContent = 'Define Tray';
+        defineTrayBtn.textContent = 'Define';
         defineTrayBtn.onclick = startTrayDefinition;
     }
     const boundaryBtn = document.getElementById('camera-boundary-btn');
@@ -95,6 +95,7 @@ function toggleShowBoundary() {
         boundaryBtn.textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
     }
 }
+
 
 // ── Polygon Overlay Helper ──────────────────────────────────────────────────
 

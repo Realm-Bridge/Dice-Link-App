@@ -1562,7 +1562,8 @@ body {
 
 .camera-btn {
     flex: 1;
-    padding: 14px 10px;
+    height: 47px;
+    padding: 0 10px;
     background: rgba(24, 31, 43, 0.85);
     border: 1px solid var(--dlc-border);
     border-radius: 4px;
@@ -1571,6 +1572,8 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .camera-btn:hover {
