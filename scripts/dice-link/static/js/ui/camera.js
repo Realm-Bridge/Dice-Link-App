@@ -40,31 +40,6 @@ function initCameraUI() {
 }
 
 function updateCameraButtons(state) {
-    const btns = document.querySelectorAll('.user-control-btn');
-    if (btns.length < 4) return;
-
-    btns.forEach(btn => {
-        btn.textContent = '';
-        btn.onclick = null;
-    });
-
-    if (state === 'phone') {
-        btns[1].textContent = 'Refresh';
-        btns[1].onclick = loadCameraList;
-    } else if (state === 'off') {
-        btns[0].textContent = 'Start';
-        btns[0].onclick = toggleCamera;
-        btns[1].textContent = 'Refresh';
-        btns[1].onclick = loadCameraList;
-    } else if (state === 'running') {
-        btns[0].textContent = 'Stop';
-        btns[0].onclick = toggleCamera;
-        btns[1].textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
-        btns[1].onclick = toggleShowBoundary;
-        btns[3].textContent = 'Define Tray';
-        btns[3].onclick = startTrayDefinition;
-    }
-
     const startBtn = document.getElementById('camera-start-btn');
     if (startBtn) {
         startBtn.textContent = (state === 'running') ? 'Stop' : 'Start';
@@ -86,10 +61,6 @@ function updateCameraButtons(state) {
 
 function toggleShowBoundary() {
     showBoundaryMode = !showBoundaryMode;
-    const btns = document.querySelectorAll('.user-control-btn');
-    if (btns.length >= 2) {
-        btns[1].textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
-    }
     const boundaryBtn = document.getElementById('camera-boundary-btn');
     if (boundaryBtn) {
         boundaryBtn.textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';

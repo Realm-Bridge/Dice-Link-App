@@ -1421,10 +1421,8 @@ body {
     min-height: 0;
 }
 
-/* Camera labeled outer — holds the fixed width that camera panel used to own */
 .camera-labeled-outer {
-    width:          614px;
-    flex-shrink:    0;
+    flex:           1;
     display:        flex;
     flex-direction: column;
     gap:            6px;
@@ -1436,11 +1434,6 @@ body {
     min-height: 0;
 }
 
-.user-controls-panel {
-    flex: 1;
-    min-width: 380px;
-    position: relative;
-}
 
 .stats-panel-flipper {
     flex:        1;
@@ -1486,30 +1479,6 @@ body {
     min-height: 0;
 }
 
-/* User Control Buttons — absolutely positioned in corners */
-.user-control-btn {
-    position: absolute;
-    width: 172px;
-    height: 172px;
-    background: var(--dlc-bg-dark);
-    border: 3px solid var(--dlc-border);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: all var(--transition);
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--dlc-text-primary);
-}
-
-.user-control-btn:nth-child(1) { top: 24px;    left: 0;   }
-.user-control-btn:nth-child(2) { top: 24px;    right: 0;  }
-.user-control-btn:nth-child(3) { bottom: 24px; left: 0;   }
-.user-control-btn:nth-child(4) { bottom: 24px; right: 0;  }
-
-.user-control-btn:hover {
-    background: rgba(111, 46, 154, 0.15);
-    border-color: var(--dlc-accent);
-}
 
 /* Camera Panel — live feed */
 .camera-window-panel {
