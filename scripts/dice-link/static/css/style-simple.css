@@ -1524,6 +1524,17 @@ body {
     display: none;
 }
 
+.camera-window-panel.streaming .camera-btn-row,
+.camera-window-panel.streaming .camera-controls {
+    opacity: 0.15;
+    transition: opacity 0.3s;
+}
+
+.camera-window-panel.streaming .camera-btn-row:hover,
+.camera-window-panel.streaming .camera-controls:hover {
+    opacity: 0.85;
+}
+
 .camera-controls {
     position: absolute;
     top: 12px;
