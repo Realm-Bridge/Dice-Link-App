@@ -64,6 +64,22 @@ function updateCameraButtons(state) {
         btns[3].textContent = 'Define Tray';
         btns[3].onclick = startTrayDefinition;
     }
+
+    const startBtn = document.getElementById('camera-start-btn');
+    if (startBtn) {
+        startBtn.textContent = (state === 'running') ? 'Stop Camera' : 'Start Camera';
+        startBtn.onclick = toggleCamera;
+    }
+    const defineTrayBtn = document.getElementById('camera-define-tray-btn');
+    if (defineTrayBtn) {
+        defineTrayBtn.textContent = 'Define Tray';
+        defineTrayBtn.onclick = startTrayDefinition;
+    }
+    const boundaryBtn = document.getElementById('camera-boundary-btn');
+    if (boundaryBtn) {
+        boundaryBtn.textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
+        boundaryBtn.onclick = toggleShowBoundary;
+    }
 }
 
 // ── Show Boundary Toggle ────────────────────────────────────────────────────
@@ -73,6 +89,10 @@ function toggleShowBoundary() {
     const btns = document.querySelectorAll('.user-control-btn');
     if (btns.length >= 2) {
         btns[1].textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
+    }
+    const boundaryBtn = document.getElementById('camera-boundary-btn');
+    if (boundaryBtn) {
+        boundaryBtn.textContent = showBoundaryMode ? 'Hide Boundary' : 'Show Boundary';
     }
 }
 
