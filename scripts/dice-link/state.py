@@ -23,7 +23,7 @@ class AppState:
         self.connection = ConnectionState()
         self.ui_websockets: set = set()
         self.camera_stream_armed: bool = False
-        self.current_session_id: int | None = None
+        self.current_session_started_at: str | None = None
         self.current_roll_label: str | None = None
         self.next_roll_label: str | None = None
         self.current_roll_mode: str | None = None

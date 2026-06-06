@@ -149,44 +149,31 @@ def get_rolls_db_path():
 
 
 def init_roll_db():
-    """Create rolls.db with campaigns, sessions, and rolls tables if they don't exist.
-    Also migrates existing databases to add any new columns."""
+    """Create rolls.db with flat rolls table. Migrates old campaign/session schema automatically."""
     db_path = get_rolls_db_path()
     conn = sqlite3.connect(str(db_path))
     try:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS campaigns (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                world_id TEXT NOT NULL UNIQUE,
-                world_title TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS sessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
-                started_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS rolls (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id INTEGER NOT NULL REFERENCES sessions(id),
-                campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
-                die_type TEXT NOT NULL,
-                value INTEGER NOT NULL,
-                rolled_at TEXT NOT NULL,
-                roll_label TEXT NOT NULL DEFAULT '',
-                player_name TEXT NOT NULL DEFAULT ''
-            );
-        """)
-        conn.commit()
+        cur = conn.cursor()
+        has_campaigns = cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='campaigns'"
+        ).fetchone() is not None
 
-        # Migrate existing databases — add columns introduced after initial release
-        for col_def in ["roll_label TEXT NOT NULL DEFAULT ''", "player_name TEXT NOT NULL DEFAULT ''"]:
-            col_name = col_def.split()[0]
-            try:
-                conn.execute(f"ALTER TABLE rolls ADD COLUMN {col_def}")
-                conn.commit()
-                log_storage(f"Migrated rolls table: added column {col_name}")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
+        if has_campaigns:
+            _migrate_to_flat_schema(conn, cur)
+        else:
+            conn.executescript("""
+                CREATE TABLE IF NOT EXISTS rolls (
+                    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                    die_type           TEXT NOT NULL,
+                    value              INTEGER NOT NULL,
+                    rolled_at          TEXT NOT NULL,
+                    roll_label         TEXT NOT NULL DEFAULT '',
+                    player_name        TEXT NOT NULL DEFAULT '',
+                    world_title        TEXT NOT NULL DEFAULT '',
+                    session_started_at TEXT NOT NULL DEFAULT ''
+                );
+            """)
+            conn.commit()
 
         log_storage(f"Roll database ready at {db_path}")
     except Exception as e:
@@ -195,69 +182,67 @@ def init_roll_db():
         conn.close()
 
 
-def start_session(world_id, world_title):
-    """
-    Get or create the campaign for this world, then open a new session.
-    Returns the new session id (int).
-    """
-    db_path = get_rolls_db_path()
-    conn = sqlite3.connect(str(db_path))
+def _migrate_to_flat_schema(conn, cur):
+    """Migrate from old campaigns/sessions/rolls schema to flat rolls table."""
+    log_storage("Migrating database to flat schema...")
+    for col_def in [
+        "world_title TEXT NOT NULL DEFAULT ''",
+        "session_started_at TEXT NOT NULL DEFAULT ''",
+    ]:
+        col_name = col_def.split()[0]
+        try:
+            conn.execute(f"ALTER TABLE rolls ADD COLUMN {col_def}")
+            conn.commit()
+            log_storage(f"Added column {col_name} to rolls")
+        except sqlite3.OperationalError:
+            pass
+
+    conn.execute("""
+        UPDATE rolls SET
+            world_title = COALESCE(
+                (SELECT c.world_title FROM campaigns c WHERE c.id = rolls.campaign_id), ''
+            ),
+            session_started_at = COALESCE(
+                (SELECT s.started_at FROM sessions s WHERE s.id = rolls.session_id), ''
+            )
+        WHERE world_title = '' OR session_started_at = ''
+    """)
+    conn.commit()
+    log_storage("Backfilled world_title and session_started_at on all rolls")
+
     try:
-        conn.execute(
-            "INSERT INTO campaigns (world_id, world_title) VALUES (?, ?) "
-            "ON CONFLICT(world_id) DO UPDATE SET world_title = excluded.world_title",
-            (world_id, world_title)
-        )
-        row = conn.execute(
-            "SELECT id FROM campaigns WHERE world_id = ?", (world_id,)
-        ).fetchone()
-        campaign_id = row[0]
-
-        now = datetime.now().isoformat()
-        cursor = conn.execute(
-            "INSERT INTO sessions (campaign_id, started_at) VALUES (?, ?)",
-            (campaign_id, now)
-        )
-        session_id = cursor.lastrowid
+        conn.execute("DROP TABLE IF EXISTS sessions")
+        conn.execute("DROP TABLE IF EXISTS campaigns")
         conn.commit()
-        log_storage(f"Started session {session_id} for campaign '{world_title}' (world_id={world_id})")
-        return session_id
+        log_storage("Dropped campaigns and sessions tables")
     except Exception as e:
-        log_storage(f"Failed to start session: {e}")
-        return None
-    finally:
-        conn.close()
+        log_storage(f"Could not drop old tables (non-critical): {e}")
 
 
-def save_roll_to_history(session_id, die_type, value, roll_label='', player_name=''):
+def start_session(world_title):
+    """Record session start. Returns session_started_at timestamp string."""
+    now = datetime.now().isoformat()
+    log_storage(f"Started session for '{world_title}' at {now}")
+    return now
+
+
+def save_roll_to_history(world_title, session_started_at, die_type, value, roll_label='', player_name=''):
     """Save one die result to the rolls table."""
     db_path = get_rolls_db_path()
     conn = sqlite3.connect(str(db_path))
     try:
-        row = conn.execute(
-            "SELECT campaign_id FROM sessions WHERE id = ?", (session_id,)
-        ).fetchone()
-        if not row:
-            log_storage(f"save_roll_to_history: session {session_id} not found")
-            return
-        campaign_id = row[0]
         now = datetime.now().isoformat()
         conn.execute(
-            "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at, roll_label, player_name) "
+            "INSERT INTO rolls (die_type, value, rolled_at, roll_label, player_name, world_title, session_started_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (session_id, campaign_id, die_type, int(value), now, roll_label, player_name)
+            (die_type, int(value), now, roll_label, player_name, world_title, session_started_at)
         )
         conn.commit()
-        log_storage(f"Saved roll: {die_type}={value} label='{roll_label}' player='{player_name}' (session={session_id}, campaign={campaign_id})")
+        log_storage(f"Saved roll: {die_type}={value} label='{roll_label}' player='{player_name}' world='{world_title}'")
     except Exception as e:
         log_storage(f"Failed to save roll to history: {e}")
     finally:
         conn.close()
-
-
-def get_session_history(limit=100):
-    """Retrieve recent roll history (v1.1+)."""
-    pass
 
 
 # ── Roll Stats ────────────────────────────────────────────────────────────────
@@ -270,40 +255,47 @@ def _empty_roll_stats():
 
 
 def _resolve_session_scope(cur, scope):
-    """Return list of session IDs for a scope string, or None meaning 'all'."""
+    """Return list of session_started_at values for a scope string, or None meaning 'all'."""
     if not scope or scope == 'all':
         return None
     if scope == 'current':
         from state import app_state
-        session_id = app_state.current_session_id
-        return [session_id] if session_id is not None else []
+        sat = app_state.current_session_started_at
+        return [sat] if sat is not None else []
     n = {'last1': 1, 'last5': 5, 'last10': 10}.get(scope)
     if n:
         from state import app_state
-        current_id = app_state.current_session_id
-        if n == 1 and current_id is not None:
-            rows = cur.execute('SELECT id FROM sessions WHERE id != ? ORDER BY started_at DESC LIMIT 1', (current_id,)).fetchall()
+        current_sat = app_state.current_session_started_at
+        if n == 1 and current_sat is not None:
+            rows = cur.execute(
+                'SELECT DISTINCT session_started_at FROM rolls '
+                'WHERE session_started_at != ? ORDER BY session_started_at DESC LIMIT 1',
+                (current_sat,)
+            ).fetchall()
         else:
-            rows = cur.execute('SELECT id FROM sessions ORDER BY started_at DESC LIMIT ?', (n,)).fetchall()
+            rows = cur.execute(
+                'SELECT DISTINCT session_started_at FROM rolls ORDER BY session_started_at DESC LIMIT ?',
+                (n,)
+            ).fetchall()
         return [r[0] for r in rows]
     return None
 
 
-def _build_roll_where(die_types, world_ids, session_ids, player_names, label_filter,
+def _build_roll_where(die_types, world_names, session_sats, player_names, label_filter,
                       inc_players=True, inc_labels=True):
     """Return (where_clause, params) for the rolls table aliased as r."""
     conds, params = [], []
     if die_types and die_types != ['all']:
         conds.append(f'r.die_type IN ({",".join("?" * len(die_types))})')
         params.extend(die_types)
-    if world_ids and world_ids != ['all']:
-        conds.append(f'r.campaign_id IN ({",".join("?" * len(world_ids))})')
-        params.extend(world_ids)
-    if session_ids is not None:
-        if not session_ids:
+    if world_names and world_names != ['all']:
+        conds.append(f'r.world_title IN ({",".join("?" * len(world_names))})')
+        params.extend(world_names)
+    if session_sats is not None:
+        if not session_sats:
             return 'WHERE 1=0', []
-        conds.append(f'r.session_id IN ({",".join("?" * len(session_ids))})')
-        params.extend(session_ids)
+        conds.append(f'r.session_started_at IN ({",".join("?" * len(session_sats))})')
+        params.extend(session_sats)
     if inc_players and player_names and player_names != ['all']:
         conds.append(f'r.player_name IN ({",".join("?" * len(player_names))})')
         params.extend(player_names)
@@ -315,7 +307,7 @@ def _build_roll_where(die_types, world_ids, session_ids, player_names, label_fil
     return where, params
 
 
-def query_roll_stats(die_types=None, world_ids=None, session_scope='all',
+def query_roll_stats(die_types=None, world_names=None, session_scope='all',
                      player_names=None, label_filter=None):
     """Return stats dict for rolls matching the given filters."""
     db_path = get_rolls_db_path()
@@ -325,9 +317,8 @@ def query_roll_stats(die_types=None, world_ids=None, session_scope='all',
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.cursor()
-        session_ids = _resolve_session_scope(cur, session_scope)
-
-        where, params = _build_roll_where(die_types, world_ids, session_ids, player_names, label_filter)
+        session_sats = _resolve_session_scope(cur, session_scope)
+        where, params = _build_roll_where(die_types, world_names, session_sats, player_names, label_filter)
 
         cur.execute(f'SELECT r.value, COUNT(*) c FROM rolls r {where} GROUP BY r.value ORDER BY r.value', params)
         distribution = {str(r['value']): r['c'] for r in cur.fetchall()}
@@ -339,18 +330,16 @@ def query_roll_stats(die_types=None, world_ids=None, session_scope='all',
         highest = agg['hi']  or 0
         lowest  = agg['lo']  or 0
 
-        # Labels: all filters except label_filter itself
-        wl, pl = _build_roll_where(die_types, world_ids, session_ids, player_names, label_filter, inc_labels=False)
+        wl, pl = _build_roll_where(die_types, world_names, session_sats, player_names, label_filter, inc_labels=False)
         cur.execute(f'SELECT DISTINCT r.roll_label l FROM rolls r {wl} ORDER BY r.roll_label', pl)
         labels = [r['l'] for r in cur.fetchall() if r['l']]
 
-        # Players: die + world + session filters only
-        wp, pp = _build_roll_where(die_types, world_ids, session_ids, player_names, label_filter, inc_players=False, inc_labels=False)
+        wp, pp = _build_roll_where(die_types, world_names, session_sats, player_names, label_filter, inc_players=False, inc_labels=False)
         cur.execute(f'SELECT DISTINCT r.player_name p FROM rolls r {wp} ORDER BY r.player_name', pp)
         players = [r['p'] for r in cur.fetchall() if r['p']]
 
-        cur.execute('SELECT id, world_title FROM campaigns ORDER BY world_title')
-        worlds = [{'id': r['id'], 'title': r['world_title']} for r in cur.fetchall()]
+        cur.execute("SELECT DISTINCT world_title FROM rolls WHERE world_title != '' ORDER BY world_title")
+        worlds = [r['world_title'] for r in cur.fetchall()]
 
         return {
             'distribution': distribution, 'total': total, 'average': average,
@@ -364,7 +353,7 @@ def query_roll_stats(die_types=None, world_ids=None, session_scope='all',
         conn.close()
 
 
-def delete_rolls(die_types=None, world_ids=None, session_scope='all',
+def delete_rolls(die_types=None, world_names=None, session_scope='all',
                  player_names=None, label_filter=None):
     """Delete rolls matching the given filters. Returns count of deleted rows."""
     db_path = get_rolls_db_path()
@@ -374,20 +363,19 @@ def delete_rolls(die_types=None, world_ids=None, session_scope='all',
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.cursor()
-        session_ids = _resolve_session_scope(cur, session_scope)
-        # delete query doesn't alias as 'r', so rebuild without alias
+        session_sats = _resolve_session_scope(cur, session_scope)
         conds, params = [], []
         if die_types and die_types != ['all']:
             conds.append(f'die_type IN ({",".join("?" * len(die_types))})')
             params.extend(die_types)
-        if world_ids and world_ids != ['all']:
-            conds.append(f'campaign_id IN ({",".join("?" * len(world_ids))})')
-            params.extend(world_ids)
-        if session_ids is not None:
-            if not session_ids:
+        if world_names and world_names != ['all']:
+            conds.append(f'world_title IN ({",".join("?" * len(world_names))})')
+            params.extend(world_names)
+        if session_sats is not None:
+            if not session_sats:
                 return 0
-            conds.append(f'session_id IN ({",".join("?" * len(session_ids))})')
-            params.extend(session_ids)
+            conds.append(f'session_started_at IN ({",".join("?" * len(session_sats))})')
+            params.extend(session_sats)
         if player_names and player_names != ['all']:
             conds.append(f'player_name IN ({",".join("?" * len(player_names))})')
             params.extend(player_names)
@@ -408,9 +396,8 @@ def delete_rolls(die_types=None, world_ids=None, session_scope='all',
         conn.close()
 
 
-def get_rolls_for_export(die_types=None, world_ids=None, session_scope='all',
-                         player_names=None, label_filter=None):
-    """Return filtered rolls as list of dicts for CSV export."""
+def get_rolls_for_export():
+    """Return all rolls as list of dicts for CSV export."""
     db_path = get_rolls_db_path()
     if not os.path.exists(str(db_path)):
         return []
@@ -418,13 +405,10 @@ def get_rolls_for_export(die_types=None, world_ids=None, session_scope='all',
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.cursor()
-        session_ids = _resolve_session_scope(cur, session_scope)
-        where, params = _build_roll_where(die_types, world_ids, session_ids, player_names, label_filter)
-        cur.execute(f'''
-            SELECT r.rolled_at, r.player_name, r.die_type, r.value, r.roll_label, c.world_title
-            FROM rolls r JOIN campaigns c ON r.campaign_id = c.id
-            {where} ORDER BY r.rolled_at
-        ''', params)
+        cur.execute(
+            'SELECT rolled_at, player_name, die_type, value, roll_label, world_title, session_started_at '
+            'FROM rolls ORDER BY rolled_at'
+        )
         return [dict(r) for r in cur.fetchall()]
     except Exception as e:
         log_storage(f"Failed to get rolls for export: {e}")
@@ -435,7 +419,8 @@ def get_rolls_for_export(die_types=None, world_ids=None, session_scope='all',
 
 def import_rolls_from_csv(rows):
     """Import roll rows (list of dicts) from CSV. Skips duplicates.
-    De-dup key: rolled_at + player_name + die_type + value."""
+    De-dup key: rolled_at + player_name + die_type + value.
+    session_started_at is optional — falls back to rolled_at for old-format exports."""
     db_path = get_rolls_db_path()
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
@@ -447,41 +432,25 @@ def import_rolls_from_csv(rows):
             if not world_title:
                 skipped += 1
                 continue
-            world_id_key = f'import_{world_title}'
-            cur.execute(
-                "INSERT INTO campaigns (world_id, world_title) VALUES (?, ?) "
-                "ON CONFLICT(world_id) DO UPDATE SET world_title = excluded.world_title",
-                (world_id_key, world_title)
-            )
-            campaign_row = cur.execute(
-                "SELECT id FROM campaigns WHERE world_id = ?", (world_id_key,)
-            ).fetchone()
-            campaign_id = campaign_row['id']
 
-            # Check for duplicate
+            rolled_at   = row.get('rolled_at', '')
+            player_name = row.get('player_name', '')
+            die_type    = row.get('die_type', '')
+            value       = int(row.get('value', 0))
+            roll_label  = row.get('roll_label', '')
+            session_started_at = row.get('session_started_at', '').strip() or rolled_at
+
             if cur.execute(
                 "SELECT id FROM rolls WHERE rolled_at=? AND player_name=? AND die_type=? AND value=?",
-                (row.get('rolled_at', ''), row.get('player_name', ''), row.get('die_type', ''), int(row.get('value', 0)))
+                (rolled_at, player_name, die_type, value)
             ).fetchone():
                 skipped += 1
                 continue
 
-            # Find or create an import session for this campaign
-            session_row = cur.execute(
-                "SELECT id FROM sessions WHERE campaign_id=? ORDER BY started_at LIMIT 1", (campaign_id,)
-            ).fetchone()
-            if session_row:
-                session_id = session_row['id']
-            else:
-                cur.execute("INSERT INTO sessions (campaign_id, started_at) VALUES (?, ?)",
-                            (campaign_id, datetime.now().isoformat()))
-                session_id = cur.lastrowid
-
             cur.execute(
-                "INSERT INTO rolls (session_id, campaign_id, die_type, value, rolled_at, roll_label, player_name) "
+                "INSERT INTO rolls (die_type, value, rolled_at, roll_label, player_name, world_title, session_started_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (session_id, campaign_id, row.get('die_type', ''), int(row.get('value', 0)),
-                 row.get('rolled_at', ''), row.get('roll_label', ''), row.get('player_name', ''))
+                (die_type, value, rolled_at, roll_label, player_name, world_title, session_started_at)
             )
             imported += 1
         conn.commit()

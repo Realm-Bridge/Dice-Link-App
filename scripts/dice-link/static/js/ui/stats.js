@@ -219,7 +219,7 @@ function init() {
     function buildFilterParams() {
         const params = new URLSearchParams({ die_types: 'd' + activeDie });
         if (sessionScope !== 'all') params.set('session_scope', sessionScope);
-        if (msWorld.selected.size  > 0) params.set('world_ids',    [...msWorld.selected].join(','));
+        if (msWorld.selected.size  > 0) params.set('world_names',  [...msWorld.selected].join(','));
         if (msPlayer.selected.size > 0) params.set('player_names', [...msPlayer.selected].join(','));
         return params;
     }
@@ -241,7 +241,7 @@ function init() {
             };
 
             refreshChart(currentChartType);
-            populateDropdown(msWorld,  data.worlds  || [], w => String(w.id), w => w.title);
+            populateDropdown(msWorld,  data.worlds  || [], w => w, w => w);
             populateDropdown(msPlayer, data.players || [], p => p,            p => p);
         } catch (err) {
             console.error('[Stats] fetchAndRender failed:', err);

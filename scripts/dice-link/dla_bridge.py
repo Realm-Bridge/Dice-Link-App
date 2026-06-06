@@ -164,13 +164,12 @@ class DLABridge(QObject):
             world_title = data.get('worldTitle') or world_id
             if world_id:
                 from state import app_state
-                if app_state.current_session_id is None:
+                if app_state.current_session_started_at is None:
                     from core.storage import start_session
-                    session_id = start_session(world_id, world_title)
-                    app_state.current_session_id = session_id
+                    app_state.current_session_started_at = start_session(world_title)
                     app_state.connection.world_id = world_id
                     app_state.connection.world_title = world_title
-                    self.log_vtt(f"[BRIDGE] Session {session_id} started for world: {world_title}")
+                    self.log_vtt(f"[BRIDGE] Session started for world: {world_title} at {app_state.current_session_started_at}")
 
         except json.JSONDecodeError:
             self.log_vtt("[BRIDGE] ERROR: Invalid JSON in receivePlayerModesUpdate")
@@ -227,7 +226,7 @@ class DLABridge(QObject):
     def _save_chat_roll_data(self, msg_id, roll_data):
         """Record active dice results from a Foundry chat roll message to history."""
         from state import app_state
-        if app_state.current_session_id is None:
+        if app_state.current_session_started_at is None:
             log_chat_log(f"Chat roll skipped: no active session (msg={msg_id})")
             return
         from core.storage import save_roll_to_history
@@ -259,7 +258,8 @@ class DLABridge(QObject):
                     value  = result.get('result')
                     if active and value is not None:
                         save_roll_to_history(
-                            app_state.current_session_id,
+                            app_state.connection.world_title,
+                            app_state.current_session_started_at,
                             f"d{faces}",
                             int(value),
                             label,

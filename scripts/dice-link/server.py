@@ -84,7 +84,7 @@ def _parse_list_param(value: str, cast=str):
 @app.get("/api/roll-stats")
 async def get_roll_stats(
     die_types:     str = 'all',
-    world_ids:     str = 'all',
+    world_names:   str = 'all',
     session_scope: str = 'all',
     player_names:  str = 'all',
     label_filter:  str = 'all',
@@ -92,7 +92,7 @@ async def get_roll_stats(
     from core.storage import query_roll_stats
     return JSONResponse(query_roll_stats(
         die_types     = _parse_list_param(die_types),
-        world_ids     = _parse_list_param(world_ids, int),
+        world_names   = _parse_list_param(world_names),
         session_scope = session_scope,
         player_names  = _parse_list_param(player_names),
         label_filter  = _parse_list_param(label_filter),
@@ -102,7 +102,7 @@ async def get_roll_stats(
 @app.delete("/api/roll-stats")
 async def clear_roll_stats(
     die_types:     str = 'all',
-    world_ids:     str = 'all',
+    world_names:   str = 'all',
     session_scope: str = 'all',
     player_names:  str = 'all',
     label_filter:  str = 'all',
@@ -110,7 +110,7 @@ async def clear_roll_stats(
     from core.storage import delete_rolls
     deleted = delete_rolls(
         die_types     = _parse_list_param(die_types),
-        world_ids     = _parse_list_param(world_ids, int),
+        world_names   = _parse_list_param(world_names),
         session_scope = session_scope,
         player_names  = _parse_list_param(player_names),
         label_filter  = _parse_list_param(label_filter),
@@ -119,35 +119,19 @@ async def clear_roll_stats(
 
 
 @app.get("/api/roll-stats/export")
-async def export_roll_stats(
-    die_types:     str = 'all',
-    world_ids:     str = 'all',
-    session_scope: str = 'all',
-    player_names:  str = 'all',
-    label_filter:  str = 'all',
-):
+async def export_roll_stats():
     import csv, io
     from core.storage import get_rolls_for_export
-    rows = get_rolls_for_export(
-        die_types     = _parse_list_param(die_types),
-        world_ids     = _parse_list_param(world_ids, int),
-        session_scope = session_scope,
-        player_names  = _parse_list_param(player_names),
-        label_filter  = _parse_list_param(label_filter),
-    )
+    rows = get_rolls_for_export()
     buf = io.StringIO()
-    fields = ['rolled_at', 'player_name', 'die_type', 'value', 'roll_label', 'world_title']
+    fields = ['rolled_at', 'player_name', 'die_type', 'value', 'roll_label', 'world_title', 'session_started_at']
     writer = csv.DictWriter(buf, fieldnames=fields)
     writer.writeheader()
     writer.writerows(rows)
-    filename = 'dice-stats'
-    if die_types  != 'all': filename += f'-{die_types.replace(",", "-")}'
-    if world_ids  != 'all': filename += f'-worlds-{world_ids}'
-    filename += '.csv'
     return Response(
         content     = buf.getvalue(),
         media_type  = 'text/csv',
-        headers     = {'Content-Disposition': f'attachment; filename={filename}'},
+        headers     = {'Content-Disposition': 'attachment; filename=dice-stats.csv'},
     )
 
 
