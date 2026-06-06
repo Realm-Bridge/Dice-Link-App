@@ -24,11 +24,10 @@ const combatants = [
     { name:'Zephyr',        init:5,  hp:52, maxHp:58,  ac:15, color:'#7c3aed', isPlayer:true,  hpPublic:true,  acPublic:true,  conditions:[] },
 ];
 
-let ctTurn        = 0;
-let ctRound       = 3;
-let ctIsGM        = true;
-let ctDirection   = 1;
-let ctFirstRender = true;
+let ctTurn  = 0;
+let ctRound = 3;
+let ctIsGM  = true;
+let ctAngle = 0;
 
 const ctPos = {
     '-3': { x: -315, scale: 0.37, opacity: 0.18 },
@@ -60,17 +59,19 @@ window.statsFlipPanel = function () {
 };
 
 window.ctNextTurn = function () {
-    ctDirection = 1;
+    const step = 360 / combatants.length;
     ctTurn = (ctTurn + 1) % combatants.length;
     if (ctTurn === 0) ctRound++;
+    ctAngle -= step;
     ctRenderAll();
 };
 
 window.ctPrevTurn = function () {
-    ctDirection = -1;
+    const step = 360 / combatants.length;
     const prev = ctTurn;
     ctTurn = (ctTurn - 1 + combatants.length) % combatants.length;
     if (prev === 0) ctRound = Math.max(1, ctRound - 1);
+    ctAngle += step;
     ctRenderAll();
 };
 
@@ -523,10 +524,18 @@ function ctBuildCarousel() {
     const track = document.getElementById('cc-track');
     if (!track) return;
     track.innerHTML = '';
+    track.style.transition = 'none';
+    track.style.transform   = `rotateY(${ctAngle}deg)`;
+
+    const n         = combatants.length;
+    const angleStep = 360 / n;
+    const radius    = Math.max(220, Math.round((160 * n) / (2 * Math.PI)));
+
     combatants.forEach((c, i) => {
         const el = document.createElement('div');
-        el.className = 'cc-item' + (c.hp === 0 ? ' dead' : '');
+        el.className    = 'cc-item' + (c.hp === 0 ? ' dead' : '') + (i === ctTurn ? ' cc-active' : '');
         el.dataset.index = i;
+        el.style.transform = `rotateY(${i * angleStep}deg) translateZ(${radius}px) translate(-50%, -50%)`;
         el.innerHTML = `
             <div class="cc-avatar" style="background:${c.color}">${c.name[0]}</div>
             <div class="cc-name-text">${c.name}</div>
@@ -536,50 +545,21 @@ function ctBuildCarousel() {
 }
 
 function ctRenderCarousel() {
-    const n     = combatants.length;
-    const items = Array.from(document.querySelectorAll('.cc-item'));
-
-    // Pre-position the incoming item silently off the correct edge so it
-    // enters from that side only — never crossing the visible area.
-    if (!ctFirstRender) {
-        const enterIdx = ((ctTurn + ctDirection * 3) % n + n) % n;
-        const enterEl  = items[enterIdx];
-        if (enterEl) {
-            const offX = ctDirection > 0 ? 420 : -420;
-            enterEl.style.transition = 'none';
-            enterEl.style.opacity    = '0';
-            enterEl.style.transform  = `translateX(calc(-50% + ${offX}px)) translateY(-50%) scale(0.2)`;
-            enterEl.offsetHeight;
-            enterEl.style.transition = '';
-        }
+    const track = document.getElementById('cc-track');
+    if (track) {
+        track.style.transition = '';
+        track.style.transform  = `rotateY(${ctAngle}deg)`;
     }
-    ctFirstRender = false;
 
-    items.forEach((el, i) => {
-        const c      = combatants[i];
-        let rel      = ((i - ctTurn) % n + n) % n;
-        if (rel > Math.floor(n / 2)) rel -= n;
-        el.setAttribute('data-rel', rel);
-        const absRel = Math.abs(rel);
-
-        if (absRel > 3) {
-            el.style.transition = 'none';
-            el.style.opacity    = '0';
-            el.style.zIndex     = '0';
-            el.style.transform  = `translateX(calc(-50% + ${rel > 0 ? 420 : -420}px)) translateY(-50%) scale(0.2)`;
-        } else {
-            const pos          = ctPos[rel.toString()];
-            el.style.transition = '';
-            el.style.opacity   = String(pos.opacity);
-            el.style.zIndex    = String(4 - absRel);
-            el.style.transform = `translateX(calc(-50% + ${pos.x}px)) translateY(-50%) scale(${pos.scale})`;
-        }
+    document.querySelectorAll('.cc-item').forEach((el, i) => {
+        const c = combatants[i];
+        el.classList.toggle('cc-active', i === ctTurn);
 
         const showHp = ctIsGM || c.hpPublic;
         const hpBar  = el.querySelector('.cc-hp-bar');
         const fill   = el.querySelector('.cc-hp-fill');
-        hpBar.style.visibility = showHp ? 'visible' : 'hidden';
-        if (showHp) {
+        if (hpBar) hpBar.style.visibility = showHp ? 'visible' : 'hidden';
+        if (fill && showHp) {
             const pct = c.maxHp > 0 ? c.hp / c.maxHp * 100 : 0;
             fill.style.width      = pct + '%';
             fill.style.background = ctHpColor(c.hp, c.maxHp);

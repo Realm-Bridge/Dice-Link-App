@@ -2764,29 +2764,36 @@ body {
 }
 .ct-hidden-field i { font-size: 8px; }
 
-.combat-center { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.carousel-track { flex: 1; position: relative; }
+.combat-center {
+    flex: 1; overflow: hidden; position: relative;
+    perspective: 900px; perspective-origin: 50% 50%;
+}
+.carousel-track {
+    width: 100%; height: 100%; position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
 .cc-item {
-    position: absolute; left: 50%; top: 44%;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    transition: transform 0.52s cubic-bezier(0.4,0,0.2,1), opacity 0.52s;
+    position: absolute; left: 50%; top: 50%;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    backface-visibility: hidden;
     user-select: none;
 }
 .cc-avatar {
-    width: 110px; height: 110px; border-radius: 50%;
+    width: 150px; height: 150px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 36px; font-weight: 800; color: white;
+    font-size: 52px; font-weight: 800; color: white;
     border: 2px solid rgba(255,255,255,0.15);
     box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     text-shadow: 0 1px 4px rgba(0,0,0,0.6); flex-shrink: 0;
 }
-.cc-item[data-rel="0"] .cc-avatar {
+.cc-item.cc-active .cc-avatar {
     border-color: rgba(167,139,250,0.65);
     box-shadow: 0 0 0 4px rgba(111,46,154,0.35), 0 6px 28px rgba(0,0,0,0.65);
 }
-.cc-name-text { font-size: 10px; font-weight: 600; color: var(--text-muted); white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
-.cc-item[data-rel="0"] .cc-name-text { font-size: 11px; color: var(--text-secondary); }
-.cc-hp-bar { width: 68px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.cc-name-text { font-size: 10px; font-weight: 600; color: var(--text-muted); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.cc-item.cc-active .cc-name-text { font-size: 12px; color: var(--text-secondary); }
+.cc-hp-bar { width: 90px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
 .cc-hp-fill { height: 100%; border-radius: 2px; }
 .cc-item.dead .cc-avatar { filter: grayscale(0.85); opacity: 0.45; }
 
