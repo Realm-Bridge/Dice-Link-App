@@ -255,7 +255,7 @@ def main():
     if saved_size:
         w = saved_size[0]
     else:
-        w = int(screen_rect.width() * 0.4)
+        w = int(screen_rect.width() * 0.36)
     h = int(w * browser._designed_height / browser._designed_width)
     browser.resize(w, h)
     browser.move(
