@@ -58,16 +58,21 @@
         document.body.appendChild(overlay);
     }
 
+    // Tracks the latest zoom injected by Python. Updated on every window resize.
+    let _currentZoom = window.DLA_ZOOM_FACTOR || 1;
+
+    function _applyScale(panel, zoom) {
+        // Scale DOWN on large windows so the panel doesn't overflow; never scale UP.
+        const scale = Math.min(1 / zoom, 1);
+        panel.style.transform = scale < 1 ? `scale(${scale})` : '';
+        panel.style.transformOrigin = 'center center';
+    }
+
     function open() {
         document.getElementById('settings-overlay')?.classList.add('open');
         const panel = document.getElementById('settings-panel');
         if (panel) {
-            const zoom = window.DLA_ZOOM_FACTOR || 1;
-            const naturalScale = 1 / zoom;
-            const maxScale = (1788 * 0.92) / 720;
-            const scale = Math.min(naturalScale, maxScale);
-            panel.style.transform = zoom !== 1 ? `scale(${scale})` : '';
-            panel.style.transformOrigin = 'center center';
+            _applyScale(panel, _currentZoom);
         }
         loadFromApi();
     }
@@ -97,6 +102,16 @@
 
     function init() {
         buildPanel();
+
+        // Keep _currentZoom in sync and re-apply scale if the panel is open during a resize.
+        window.addEventListener('dla-zoom-changed', function(e) {
+            _currentZoom = e.detail.zoom;
+            const overlay = document.getElementById('settings-overlay');
+            const panel   = document.getElementById('settings-panel');
+            if (panel && overlay && overlay.classList.contains('open')) {
+                _applyScale(panel, _currentZoom);
+            }
+        });
 
         document.querySelectorAll('#settings-btn').forEach(btn =>
             btn.addEventListener('click', open)

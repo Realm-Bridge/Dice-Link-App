@@ -330,7 +330,10 @@ class DraggableWebEngineView(QWebEngineView):
         if not ok or not self._designed_width or self.width() <= 0:
             return
         zoom = self.width() / self._designed_width
-        self.page().runJavaScript(f"window.DLA_ZOOM_FACTOR = {zoom:.4f};")
+        self.page().runJavaScript(
+            f"window.DLA_ZOOM_FACTOR = {zoom:.4f}; "
+            f"window.dispatchEvent(new CustomEvent('dla-zoom-changed', {{detail: {{zoom: {zoom:.4f}}}}}));"
+        )
 
     def _handle_download(self, download):
         suggested = download.suggestedFileName()
@@ -350,7 +353,10 @@ class DraggableWebEngineView(QWebEngineView):
         zoom = new_width / self._designed_width
         log_resize_zoom_diag(new_width, self._designed_width, zoom)
         self.setZoomFactor(zoom)
-        self.page().runJavaScript(f"window.DLA_ZOOM_FACTOR = {zoom:.4f};")
+        self.page().runJavaScript(
+            f"window.DLA_ZOOM_FACTOR = {zoom:.4f}; "
+            f"window.dispatchEvent(new CustomEvent('dla-zoom-changed', {{detail: {{zoom: {zoom:.4f}}}}}));"
+        )
         if self._designed_height and not self._enforcing_ratio:
             target_height = int(new_width * self._designed_height / self._designed_width)
             if event.size().height() != target_height:
