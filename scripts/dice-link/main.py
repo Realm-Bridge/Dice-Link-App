@@ -253,10 +253,10 @@ def main():
     screen_rect = cursor_screen.availableGeometry()
     saved_size = load_window_size()
     if saved_size:
-        w, h = saved_size[0], saved_size[1]
+        w = saved_size[0]
     else:
         w = int(screen_rect.width() * 0.4)
-        h = int(w * 1500 / 1588)
+    h = int(w * browser._designed_height / browser._designed_width)
     browser.resize(w, h)
     browser.move(
         screen_rect.center().x() - w // 2,

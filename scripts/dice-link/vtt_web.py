@@ -323,6 +323,13 @@ class DraggableWebEngineView(QWebEngineView):
         self._designed_height = None
         self._enforcing_ratio = False
         self.page().profile().downloadRequested.connect(self._handle_download)
+        self.page().loadFinished.connect(self._inject_zoom)
+
+    def _inject_zoom(self, ok):
+        if not ok or not self._designed_width or self.width() <= 0:
+            return
+        zoom = self.width() / self._designed_width
+        self.page().runJavaScript(f"window.DLA_ZOOM_FACTOR = {zoom:.4f};")
 
     def _handle_download(self, download):
         suggested = download.suggestedFileName()
