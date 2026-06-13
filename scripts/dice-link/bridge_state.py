@@ -234,6 +234,20 @@ def send_camera_stream_end_to_dlc():
     return False
 
 
+def send_cancel_to_dlc(roll_id, reason="User cancelled"):
+    """Forward a roll cancellation from the DLA panel to DLC via the bridge."""
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.sendRollCancelled(roll_id, reason)
+            log_bridge_state(f"Sent rollCancelled to DLC: rollId={roll_id}")
+            return True
+        except Exception as e:
+            log_bridge_state(f"Error sending rollCancelled to DLC: {e}")
+            return False
+    return False
+
+
 def send_button_select_to_dlc(button_data):
     """
     Send button selection from UI to DLC via the bridge.

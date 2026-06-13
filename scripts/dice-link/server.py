@@ -672,6 +672,8 @@ async def handle_ui_message(message: dict):
     
     elif msg_type == "cancelRoll":
         roll_id = message.get("rollId")
+        from bridge_state import send_cancel_to_dlc
+        send_cancel_to_dlc(roll_id)
         await broadcast_to_ui({
             "type": "cancelRollAck",
             "success": True,

@@ -248,14 +248,9 @@ def main():
     browser._designed_height = 1500
     browser.setMinimumSize(400, 377)
 
-    from core.storage import load_window_size, save_window_size
     cursor_screen = app.screenAt(QCursor.pos()) or app.primaryScreen()
     screen_rect = cursor_screen.availableGeometry()
-    saved_size = load_window_size()
-    if saved_size:
-        w = saved_size[0]
-    else:
-        w = int(screen_rect.width() * 0.36)
+    w = int(screen_rect.width() * 0.36)
     h = int(w * browser._designed_height / browser._designed_width)
     browser.resize(w, h)
     browser.move(
@@ -274,11 +269,6 @@ def main():
     if screen:
         screen.logicalDotsPerInchChanged.connect(update_dpi_scaling)
         screen.geometryChanged.connect(update_dpi_scaling)
-
-    def save_size_on_quit():
-        save_window_size(browser.width(), browser.height())
-
-    app.aboutToQuit.connect(save_size_on_quit)
 
     # Load the local server URL (always use localhost for browser, even if server binds to 0.0.0.0)
     browser_host = "localhost" if WEBSOCKET_HOST == "0.0.0.0" else WEBSOCKET_HOST
