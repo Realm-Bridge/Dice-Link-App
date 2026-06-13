@@ -119,14 +119,14 @@ class WindowController(QObject):
         dialog = QDialog(self.main_window)
         dialog.setWindowTitle("Settings")
         dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dialog.setFixedSize(480, 295)
+        dialog.setFixedSize(400, 350)
 
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         view = QWebEngineView()
-        view.setZoomFactor(480 / 720)
+        view.setZoomFactor(400 / 720)
         page = _SettingsPage(view.page().profile(), view)
         view.setPage(page)
         page.windowCloseRequested.connect(dialog.close)
