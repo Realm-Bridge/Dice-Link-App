@@ -119,7 +119,7 @@ class WindowController(QObject):
         dialog = QDialog(self.main_window)
         dialog.setWindowTitle("Settings")
         dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dialog.setFixedSize(400, 350)
+        dialog.setFixedSize(480, 290)
 
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(0, 0, 0, 0)
