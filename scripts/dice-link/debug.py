@@ -92,14 +92,6 @@ def log_startup(host: str, port: int):
             _write_log(line)
 
 
-def log_drag(message: str):
-    """Log drag-related debug messages."""
-    if DEBUG_ENABLED and DEBUG_DRAG:
-        line = f"[Drag DEBUG] {message}"
-        print(line)
-        _write_log(line)
-
-
 def log_drag_start(global_pos_float, drag_position, window_pos):
     """Log drag start details."""
     if not (DEBUG_ENABLED and DEBUG_DRAG):
@@ -171,13 +163,6 @@ def log_dpi(message: str):
         print(line)
         _write_log(line)
 
-
-def log_snap(message: str):
-    """Log Windows snap/docking native event messages."""
-    if DEBUG_ENABLED and DEBUG_SNAP:
-        line = f"[Snap] {message}"
-        print(line)
-        _write_log(line)
 
 
 def log_chat_log(message: str):
