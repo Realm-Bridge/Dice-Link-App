@@ -1,10 +1,23 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import QDialog, QVBoxLayout
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEnginePage
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtCore import QObject, QPoint, pyqtSlot, QUrl
+from PyQt6.QtCore import QObject, QPoint, pyqtSlot, QUrl, Qt
 
 from dialogs import ConnectionDialog
 from vtt_web import VTTWebView
 from vtt_windows import VTTViewingWindow
+from config import WEBSOCKET_PORT
+
+
+class _SettingsPage(QWebEnginePage):
+    """Lets settings page links open in the system browser instead of navigating the dialog."""
+    def acceptNavigationRequest(self, url, nav_type, is_main_frame):
+        url_str = url.toString()
+        if url_str.startswith('http://localhost') or url_str == 'about:blank':
+            return True
+        QDesktopServices.openUrl(url)
+        return False
 
 
 class WindowController(QObject):
@@ -96,6 +109,32 @@ class WindowController(QObject):
         # Keep reference
         self.vtt_windows.append(vtt_window)
     
+    @pyqtSlot()
+    def openSettings(self):
+        """Open settings as a separate modal window"""
+        if hasattr(self, '_settings_dialog') and self._settings_dialog.isVisible():
+            self._settings_dialog.raise_()
+            return
+
+        dialog = QDialog(self.main_window)
+        dialog.setWindowTitle("Settings")
+        dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dialog.setFixedSize(720, 580)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        view = QWebEngineView()
+        page = _SettingsPage(view.page().profile(), view)
+        view.setPage(page)
+        page.windowCloseRequested.connect(dialog.close)
+        view.load(QUrl(f"http://localhost:{WEBSOCKET_PORT}/settings"))
+        layout.addWidget(view)
+
+        self._settings_dialog = dialog
+        dialog.exec()
+
     @pyqtSlot(str)
     def openUrl(self, url):
         """Open URL in system default browser"""

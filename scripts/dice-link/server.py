@@ -54,6 +54,12 @@ async def index(request: Request):
     )
 
 
+@app.get("/settings")
+async def settings(request: Request):
+    """Serve the settings page"""
+    return templates.TemplateResponse(request=request, name="settings.html", context={})
+
+
 @app.get("/startup")
 async def startup(request: Request):
     """Serve the startup/login dialog"""
