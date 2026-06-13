@@ -84,7 +84,7 @@ body {
 
 /* App Container */
 .app-container {
-    width: 1788px;
+    width: 1588px;
     height: 1500px;
     overflow: hidden;
 }
@@ -211,7 +211,7 @@ body {
 
 /* Main Content */
 .main-content {
-    width: 1788px;
+    width: 1588px;
     height: calc(1500px - 60px - 40px);
     position: relative;
 }

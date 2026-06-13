@@ -244,9 +244,9 @@ def main():
     browser.page().setWebChannel(channel)
     
     # Resizable window — zoom tracks window width relative to designed width
-    browser._designed_width = 1788
+    browser._designed_width = 1588
     browser._designed_height = 1500
-    browser.setMinimumSize(400, 336)
+    browser.setMinimumSize(400, 377)
 
     from core.storage import load_window_size, save_window_size
     cursor_screen = app.screenAt(QCursor.pos()) or app.primaryScreen()
@@ -256,7 +256,7 @@ def main():
         w, h = saved_size[0], saved_size[1]
     else:
         w = int(screen_rect.width() * 0.4)
-        h = int(w * 1500 / 1788)
+        h = int(w * 1500 / 1588)
     browser.resize(w, h)
     browser.move(
         screen_rect.center().x() - w // 2,
