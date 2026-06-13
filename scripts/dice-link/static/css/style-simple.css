@@ -1526,6 +1526,7 @@ body {
     display: flex;
     gap: 36px;
     min-height: 0;
+    justify-content: flex-end;
 }
 
 .camera-labeled-outer {
