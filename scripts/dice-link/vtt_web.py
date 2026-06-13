@@ -8,7 +8,7 @@ from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtCore import QTimer, QUrl, Qt
 
-from debug import log_vtt
+from debug import log_vtt, log_zoom_diag
 from bridge_state import set_bridge
 from dla_bridge import DLABridge
 from vtt_windows import VTTPopupWindow, VTTViewingWindow
@@ -326,6 +326,7 @@ class DraggableWebEngineView(QWebEngineView):
         self.page().loadFinished.connect(self._inject_zoom)
 
     def _inject_zoom(self, ok):
+        log_zoom_diag(ok, self.width(), self._designed_width or 0, (self.width() / self._designed_width) if self._designed_width and self.width() > 0 else 0)
         if not ok or not self._designed_width or self.width() <= 0:
             return
         zoom = self.width() / self._designed_width

@@ -23,6 +23,7 @@ DEBUG_DPI = False
 DEBUG_SNAP = False
 DEBUG_CHAT_LOG = True
 DEBUG_STORAGE = True
+DEBUG_ZOOM_DIAG = True
 
 # --- Log file ---
 # Live log: logs/dla.log — archived to dla_archive.log on every startup; contains only the current session.
@@ -194,3 +195,15 @@ def log_storage(message: str):
         line = f"[Storage] {message}"
         print(line)
         _write_log(line)
+
+
+def log_zoom_diag(ok: bool, width: int, designed_width: int, zoom: float):
+    """Diagnostic: log what _inject_zoom calculated and whether it ran."""
+    if not (DEBUG_ENABLED and DEBUG_ZOOM_DIAG):
+        return
+    line = (
+        f"[Zoom Diag] _inject_zoom fired — ok={ok}, width={width}, "
+        f"designed_width={designed_width}, zoom={zoom:.4f}"
+    )
+    print(line)
+    _write_log(line)
