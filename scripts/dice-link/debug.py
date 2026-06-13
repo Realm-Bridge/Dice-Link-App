@@ -207,3 +207,15 @@ def log_zoom_diag(ok: bool, width: int, designed_width: int, zoom: float):
     )
     print(line)
     _write_log(line)
+
+
+def log_resize_zoom_diag(width: int, designed_width: int, zoom: float):
+    """Diagnostic: log what resizeEvent is injecting on each window resize."""
+    if not (DEBUG_ENABLED and DEBUG_ZOOM_DIAG):
+        return
+    line = (
+        f"[Zoom Diag] resizeEvent — width={width}, "
+        f"designed_width={designed_width}, zoom={zoom:.4f}"
+    )
+    print(line)
+    _write_log(line)

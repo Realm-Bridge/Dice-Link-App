@@ -8,7 +8,7 @@ from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtCore import QTimer, QUrl, Qt
 
-from debug import log_vtt, log_zoom_diag
+from debug import log_vtt, log_zoom_diag, log_resize_zoom_diag
 from bridge_state import set_bridge
 from dla_bridge import DLABridge
 from vtt_windows import VTTPopupWindow, VTTViewingWindow
@@ -348,6 +348,7 @@ class DraggableWebEngineView(QWebEngineView):
             return
         new_width = event.size().width()
         zoom = new_width / self._designed_width
+        log_resize_zoom_diag(new_width, self._designed_width, zoom)
         self.setZoomFactor(zoom)
         self.page().runJavaScript(f"window.DLA_ZOOM_FACTOR = {zoom:.4f};")
         if self._designed_height and not self._enforcing_ratio:
