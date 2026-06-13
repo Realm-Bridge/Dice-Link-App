@@ -119,13 +119,14 @@ class WindowController(QObject):
         dialog = QDialog(self.main_window)
         dialog.setWindowTitle("Settings")
         dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dialog.setFixedSize(720, 580)
+        dialog.setFixedSize(400, 350)
 
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         view = QWebEngineView()
+        view.setZoomFactor(400 / 720)
         page = _SettingsPage(view.page().profile(), view)
         view.setPage(page)
         page.windowCloseRequested.connect(dialog.close)
@@ -133,7 +134,7 @@ class WindowController(QObject):
         layout.addWidget(view)
 
         self._settings_dialog = dialog
-        dialog.exec()
+        dialog.show()
 
     @pyqtSlot(str)
     def openUrl(self, url):
