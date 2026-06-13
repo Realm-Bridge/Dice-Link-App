@@ -79,6 +79,25 @@ function isDebugEnabled() {
 }
 
 /**
+ * Diagnostic: log window.DLA_ZOOM_FACTOR each time the settings button is clicked.
+ */
+(function attachSettingsZoomDiagnostic() {
+    function attach() {
+        document.querySelectorAll('#settings-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const v = window.DLA_ZOOM_FACTOR;
+                debugLog(`[SETTINGS ZOOM DIAG] DLA_ZOOM_FACTOR = ${v} (type: ${typeof v})`);
+            });
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attach);
+    } else {
+        attach();
+    }
+})();
+
+/**
  * Log a chat log pipeline event — stylesheet injection, shadow DOM setup, message rendering.
  * Prefixes output with [DLA CHAT LOG] so it is easy to filter in CMD.
  * @param {string} message - What happened
