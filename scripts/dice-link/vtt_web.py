@@ -339,7 +339,9 @@ class DraggableWebEngineView(QWebEngineView):
         if not self._designed_width:
             return
         new_width = event.size().width()
-        self.setZoomFactor(new_width / self._designed_width)
+        zoom = new_width / self._designed_width
+        self.setZoomFactor(zoom)
+        self.page().runJavaScript(f"window.DLA_ZOOM_FACTOR = {zoom:.4f};")
         if self._designed_height and not self._enforcing_ratio:
             target_height = int(new_width * self._designed_height / self._designed_width)
             if event.size().height() != target_height:

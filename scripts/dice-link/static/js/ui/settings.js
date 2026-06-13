@@ -60,6 +60,15 @@
 
     function open() {
         document.getElementById('settings-overlay')?.classList.add('open');
+        const panel = document.getElementById('settings-panel');
+        if (panel) {
+            const zoom = window.DLA_ZOOM_FACTOR || 1;
+            const naturalScale = 1 / zoom;
+            const maxScale = (1788 * 0.92) / 720;
+            const scale = Math.min(naturalScale, maxScale);
+            panel.style.transform = zoom !== 1 ? `scale(${scale})` : '';
+            panel.style.transformOrigin = 'center center';
+        }
         loadFromApi();
     }
 
