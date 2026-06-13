@@ -359,9 +359,8 @@ class CameraManager:
             return result
 
         except Exception as e:
-            log("Camera", f"EXCEPTION in capture_single_frame: {type(e).__name__}: {str(e)}")
             import traceback
-            traceback.print_exc()
+            log("Camera", f"EXCEPTION in capture_single_frame: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}")
             return None
 
 

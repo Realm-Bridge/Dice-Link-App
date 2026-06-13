@@ -1,4 +1,4 @@
-"""Global state for DLABridge - allows Flask to communicate back through the QWebChannel bridge"""
+"""Global state for DLABridge - allows FastAPI to communicate back through the QWebChannel bridge"""
 
 import asyncio
 import json

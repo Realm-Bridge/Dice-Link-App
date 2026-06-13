@@ -5,11 +5,6 @@ This module handles loading and running ONNX models for dice detection.
 Phase 2: Will integrate ONNX Runtime for CPU inference.
 """
 
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 class DiceInferenceEngine:
     """
     Loads ONNX model and performs dice detection inference.
@@ -31,12 +26,10 @@ class DiceInferenceEngine:
         """
         self.model_path = model_path
         self.session = None
-        logger.info("DiceInferenceEngine initialized (stub)")
     
     def load_model(self, model_path):
         """Load ONNX model from disk."""
         # TODO: Implement ONNX Runtime session creation
-        logger.info(f"Load model: {model_path}")
         pass
     
     def detect_dice(self, frame):
@@ -51,13 +44,11 @@ class DiceInferenceEngine:
                 [{'type': 'd20', 'value': 15, 'confidence': 0.95}, ...]
         """
         # TODO: Implement inference pipeline
-        logger.debug("Detect dice called (stub)")
         return []
     
     def unload_model(self):
         """Release model resources."""
         # TODO: Clean up ONNX session
-        logger.info("Unload model")
         pass
 
 
