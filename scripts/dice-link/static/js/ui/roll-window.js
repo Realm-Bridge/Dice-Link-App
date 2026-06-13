@@ -242,33 +242,32 @@ function cancelRoll() {
   
   const currentRoll = getCurrentRoll();
   debugLog('currentRoll object', currentRoll);
-  
-  // Check multiple possible locations for the roll ID
-  // DLC sends { type: "rollRequest", data: { roll: { id: ... }, ... } }
-  const rollId = currentRoll?.id || 
-                 currentRoll?.data?.roll?.id || 
-                 currentRoll?.data?.id ||
-                 currentRoll?.rollId ||
-                 getPendingDiceRequest()?.originalRollId;
-  
-  debugLog('Resolved rollId', rollId);
-  
-  if (!rollId) {
+
+  if (!currentRoll) {
     debugLog('No active roll to cancel');
     return;
   }
-  
+
+  // DLC rollRequest messages do not include an id — rollId may be null, which is fine
+  const rollId = currentRoll?.id ||
+                 currentRoll?.data?.roll?.id ||
+                 currentRoll?.data?.id ||
+                 currentRoll?.rollId ||
+                 getPendingDiceRequest()?.originalRollId;
+
+  debugLog('Resolved rollId', rollId);
+
   // Clear state immediately
   resetRollState();
   updateRollWindow('idle');
-  
+
   // Hide cancel button
   if (rwElements.cancelBtn) {
     rwElements.cancelBtn.classList.add('hidden');
   }
-  
-  // Check if this is a test roll
-  const isTestRoll = rollId.startsWith('test-');
+
+  // Check if this is a test roll (rollId may be null if DLC did not include one)
+  const isTestRoll = rollId?.startsWith('test-');
   
   if (!isTestRoll) {
     // Send cancel message to server (matches Python backend expectation)

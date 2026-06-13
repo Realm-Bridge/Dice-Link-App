@@ -250,7 +250,7 @@ def main():
 
     cursor_screen = app.screenAt(QCursor.pos()) or app.primaryScreen()
     screen_rect = cursor_screen.availableGeometry()
-    w = int(screen_rect.width() * 0.36)
+    w = int(screen_rect.width() * 0.40)
     h = int(w * browser._designed_height / browser._designed_width)
     browser.resize(w, h)
     browser.move(
