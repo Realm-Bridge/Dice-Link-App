@@ -16,7 +16,7 @@ from state import app_state
 from core.websocket_handler import broadcast_to_ui
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
-from debug import log_server
+from debug import log_server, log_camera_stream
 from bridge_state import send_dice_result_to_foundry, send_dice_tray_roll_to_foundry, send_chat_interaction_to_dlc, send_chat_command_to_dlc, send_chat_visibility_to_dlc
 
 # Get the base directory (now app.py is at the root of dice-link/)
@@ -436,17 +436,35 @@ async def dlc_camera_stream_loop():
 
         # Only start streaming when a diceRequest has armed the camera
         if is_motion and app_state.camera_stream_armed:
+            if frame_count == 0:
+                log_camera_stream("motion+armed triggered — starting stream")
+
+            t0 = time.time()
             frame = camera_manager.get_processed_frame()
+            t1 = time.time()
+
             if frame:
                 if frame_count == 0:
                     stream_start_time = time.time()
                     fw, fh = _struct.unpack('>HH', frame[:4])
                     log_server(f"Camera stream started — crop {fw}x{fh}")
+                    log_camera_stream(f"first frame: crop={fw}x{fh} get_processed_ms={int((t1-t0)*1000)}")
+
                 frame_b64 = base64_module.b64encode(frame).decode('utf-8')
+                t2 = time.time()
                 send_camera_frame_to_dlc(frame_b64)
+                t3 = time.time()
+
+                if frame_count < 5:
+                    log_camera_stream(
+                        f"frame={frame_count} get_processed_ms={int((t1-t0)*1000)} "
+                        f"b64_ms={int((t2-t1)*1000)} bridge_ms={int((t3-t2)*1000)} "
+                        f"total_ms={int((t3-t0)*1000)} payload_bytes={len(frame_b64)}"
+                    )
                 frame_count += 1
             else:
                 log_server("get_processed_frame returned None during armed roll")
+                log_camera_stream(f"get_processed_frame returned None get_processed_ms={int((t1-t0)*1000)}")
             was_motion = True
         elif was_motion and not is_motion:
             if stream_start_time and frame_count > 0:
