@@ -63,7 +63,7 @@ class CameraManager:
         changed_pixels = cv2.countNonZero(thresh)
 
         h, w = frame.shape[:2]
-        motion_threshold = max(500, int(h * w * 0.0015))
+        motion_threshold = max(500, int(h * w * 0.005))
 
         self._motion_log_counter += 1
         if self._motion_log_counter % 10 == 0:
