@@ -175,11 +175,41 @@ def init_roll_db():
             """)
             conn.commit()
 
+        # Remove stale session_id / campaign_id columns if the previous migration left them
+        cur.execute("PRAGMA table_info(rolls)")
+        col_names = [row[1] for row in cur.fetchall()]
+        if 'session_id' in col_names or 'campaign_id' in col_names:
+            _remove_legacy_columns(conn, cur)
+
         log_storage(f"Roll database ready at {db_path}")
     except Exception as e:
         log_storage(f"Failed to initialise roll database: {e}")
     finally:
         conn.close()
+
+
+def _remove_legacy_columns(conn, cur):
+    """Rebuild rolls table to remove legacy session_id and campaign_id columns."""
+    log_storage("Rebuilding rolls table to remove legacy columns (session_id, campaign_id)...")
+    conn.executescript("""
+        CREATE TABLE rolls_clean (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            die_type           TEXT NOT NULL,
+            value              INTEGER NOT NULL,
+            rolled_at          TEXT NOT NULL,
+            roll_label         TEXT NOT NULL DEFAULT '',
+            player_name        TEXT NOT NULL DEFAULT '',
+            world_title        TEXT NOT NULL DEFAULT '',
+            session_started_at TEXT NOT NULL DEFAULT ''
+        );
+        INSERT INTO rolls_clean (die_type, value, rolled_at, roll_label, player_name, world_title, session_started_at)
+        SELECT die_type, value, rolled_at, roll_label, player_name, world_title, session_started_at
+        FROM rolls;
+        DROP TABLE rolls;
+        ALTER TABLE rolls_clean RENAME TO rolls;
+    """)
+    conn.commit()
+    log_storage("Rolls table rebuilt — legacy columns removed")
 
 
 def _migrate_to_flat_schema(conn, cur):
