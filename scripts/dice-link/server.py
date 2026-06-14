@@ -16,7 +16,7 @@ from state import app_state
 from core.websocket_handler import broadcast_to_ui
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
-from debug import log_server, log_camera_stream, log_camera_motion
+from debug import log_server, log_camera_stream, log_camera_motion, log_motion_data_event
 from bridge_state import send_dice_result_to_foundry, send_dice_tray_roll_to_foundry, send_chat_interaction_to_dlc, send_chat_command_to_dlc, send_chat_visibility_to_dlc
 
 # Get the base directory (now app.py is at the root of dice-link/)
@@ -526,14 +526,24 @@ async def camera_motion():
 @app.post("/api/camera/false-trigger")
 async def camera_false_trigger():
     """Log a user-reported false trigger for motion detection diagnostics"""
-    log_camera_motion("USER REPORT: false trigger")
+    log_camera_motion(
+        f"USER REPORT: false trigger  roll_id={camera_manager.current_roll_id} die={camera_manager.current_die}"
+    )
+    log_motion_data_event(
+        "USER_REPORT_FALSE", camera_manager.current_roll_id, camera_manager.current_die
+    )
     return JSONResponse({"success": True})
 
 
 @app.post("/api/camera/missed-roll")
 async def camera_missed_roll():
     """Log a user-reported missed roll for motion detection diagnostics"""
-    log_camera_motion("USER REPORT: missed roll")
+    log_camera_motion(
+        f"USER REPORT: missed roll  roll_id={camera_manager.current_roll_id} die={camera_manager.current_die}"
+    )
+    log_motion_data_event(
+        "USER_REPORT_MISSED", camera_manager.current_roll_id, camera_manager.current_die
+    )
     return JSONResponse({"success": True})
 
 

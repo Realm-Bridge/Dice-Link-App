@@ -128,8 +128,9 @@ class DLABridge(QObject):
             from state import app_state
             from core.camera import camera_manager
             app_state.camera_stream_armed = True
-            camera_manager.reset_motion_state()
-            self.log_vtt("[BRIDGE] Camera stream armed - waiting for roll")
+            die_formula = data.get("formula", "unknown")
+            camera_manager.reset_motion_state(die_type=die_formula)
+            self.log_vtt(f"[BRIDGE] Camera stream armed - waiting for roll (die={die_formula})")
             if app_state.current_roll_label is None and app_state.next_roll_label is None:
                 app_state.next_roll_label = "Manual Roll"
                 self.log_vtt("[BRIDGE] No roll label set — defaulting to 'Manual Roll'")

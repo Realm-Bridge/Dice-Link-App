@@ -8,7 +8,7 @@ import time
 import numpy as np
 from typing import Optional
 from pathlib import Path
-from debug import log, log_camera_motion, log_camera_motion_detail, log_camera_capture
+from debug import log, log_camera_motion, log_camera_motion_detail, log_camera_capture, log_motion_data_event
 from core.storage import get_appdata_path
 
 PHONE_CAMERA_INDEX = -1
@@ -33,11 +33,22 @@ class CameraManager:
         self._still_counter: int = 0
         self._motion_log_counter: int = 0
         self._prev_flow_mean: float = 0.0
+        self._current_die: str = "unknown"
+        self._roll_id: int = 0
+        self._last_stats: dict = {}
         self._load_tray_region()
 
     @property
     def is_motion(self) -> bool:
         return self._motion_detected
+
+    @property
+    def current_die(self) -> str:
+        return self._current_die
+
+    @property
+    def current_roll_id(self) -> int:
+        return self._roll_id
 
     def _check_motion(self, frame: np.ndarray):
         """Detect dice rolling using optical flow within the tray region."""
@@ -118,12 +129,25 @@ class CameraManager:
 
         self._prev_flow_mean = flow_mean
 
-        FLOW_THRESHOLD = 0.4
-        if flow_mean > FLOW_THRESHOLD:
+        self._last_stats = {
+            "mean": flow_mean, "std": flow_std, "max": flow_max, "median": flow_median,
+            "p75": flow_p75, "p90": flow_p90, "p95": flow_p95,
+            "af02": active_frac_02, "af05": active_frac_05,
+            "net_x": net_x, "net_y": net_y, "coh": coherence,
+            "x_std": flow_x_std, "y_std": flow_y_std, "agl_std": angle_std,
+            "delta": flow_mean_delta,
+        }
+
+        MAX_TRIGGER_THRESHOLD = 5.0
+        if flow_max > MAX_TRIGGER_THRESHOLD:
             self._still_counter = 0
             if not self._motion_detected:
                 log_camera_motion(
-                    f"STATE CHANGE Still→Rolling  flow_mean={flow_mean:.3f} flow_std={flow_std:.3f}"
+                    f"STATE CHANGE Still→Rolling  flow_max={flow_max:.3f} flow_mean={flow_mean:.3f} "
+                    f"flow_std={flow_std:.3f} roll_id={self._roll_id} die={self._current_die}"
+                )
+                log_motion_data_event(
+                    "STILL_TO_ROLLING", self._roll_id, self._current_die, self._last_stats
                 )
             self._motion_detected = True
         else:
@@ -131,8 +155,11 @@ class CameraManager:
             if self._still_counter > 15:
                 if self._motion_detected:
                     log_camera_motion(
-                        f"STATE CHANGE Rolling→Still  flow_mean={flow_mean:.3f} flow_std={flow_std:.3f} "
-                        f"still_ctr={self._still_counter}"
+                        f"STATE CHANGE Rolling→Still  flow_max={flow_max:.3f} flow_mean={flow_mean:.3f} "
+                        f"still_ctr={self._still_counter} roll_id={self._roll_id} die={self._current_die}"
+                    )
+                    log_motion_data_event(
+                        "ROLLING_TO_STILL", self._roll_id, self._current_die, self._last_stats
                     )
                 self._motion_detected = False
 
@@ -307,12 +334,14 @@ class CameraManager:
         with self.frame_lock:
             self.current_frame = None
 
-    def reset_motion_state(self):
+    def reset_motion_state(self, die_type: str = "unknown"):
         """Reset all motion detection state. Called when a new dice request is armed."""
         self._motion_detected = False
         self._still_counter = 0
         self._prev_motion_frame = None
         self._prev_flow_mean = 0.0
+        self._current_die = die_type
+        self._roll_id += 1
 
     def get_processed_frame(self, max_height: int = None) -> Optional[bytes]:
         """Crop the tray region and return raw RGBA bytes prefixed with a 4-byte (width, height) header.

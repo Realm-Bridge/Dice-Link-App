@@ -5,6 +5,7 @@ Set DEBUG_ENABLED = True to enable debug output.
 Set DEBUG_ENABLED = False to disable all debug output.
 """
 
+import csv
 import datetime
 from pathlib import Path
 from config import DEBUG
@@ -45,6 +46,22 @@ _log_file = open(_LOG_PATH, "a", encoding="utf-8", buffering=1)
 _log_file.write(f"\n{'='*60}\n")
 _log_file.write(f"Session started: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 _log_file.write(f"{'='*60}\n")
+
+# --- Persistent motion data CSV ---
+# Never wiped. One row per state-change event or user report. Header written once on first run.
+_MOTION_CSV_PATH = _LOG_DIR / "motion_data.csv"
+_CSV_COLUMNS = [
+    "timestamp", "event", "roll_id", "die",
+    "mean", "std", "max", "median", "p75", "p90", "p95",
+    "af02", "af05", "net_x", "net_y", "coh",
+    "x_std", "y_std", "agl_std", "delta"
+]
+_motion_csv_is_new = not _MOTION_CSV_PATH.exists() or _MOTION_CSV_PATH.stat().st_size == 0
+_motion_csv_file = open(_MOTION_CSV_PATH, "a", newline="", encoding="utf-8")
+_motion_csv_writer = csv.writer(_motion_csv_file)
+if _motion_csv_is_new:
+    _motion_csv_writer.writerow(_CSV_COLUMNS)
+    _motion_csv_file.flush()
 
 
 def _write_log(text: str):
@@ -213,3 +230,31 @@ def log_camera_stream(message: str):
         line = f"[Camera Stream] {message}"
         print(line)
         _write_log(line)
+
+
+def log_motion_data_event(event: str, roll_id: int, die: str, stats: dict = None):
+    """Write one row to the persistent motion_data.csv log.
+
+    event    — STILL_TO_ROLLING, ROLLING_TO_STILL, USER_REPORT_FALSE, USER_REPORT_MISSED, SESSION_START
+    roll_id  — incrementing int, shared by all events belonging to one dice request
+    die      — formula string from DLC, e.g. "1d20" or "2d6"
+    stats    — dict with all 15 optical-flow keys; omit for USER_REPORT / SESSION_START rows
+    """
+    try:
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        if stats:
+            row = [
+                ts, event, roll_id, die,
+                f"{stats['mean']:.4f}",  f"{stats['std']:.4f}",  f"{stats['max']:.4f}",
+                f"{stats['median']:.4f}", f"{stats['p75']:.4f}",  f"{stats['p90']:.4f}",
+                f"{stats['p95']:.4f}",   f"{stats['af02']:.4f}", f"{stats['af05']:.4f}",
+                f"{stats['net_x']:+.4f}", f"{stats['net_y']:+.4f}", f"{stats['coh']:.4f}",
+                f"{stats['x_std']:.4f}", f"{stats['y_std']:.4f}", f"{stats['agl_std']:.4f}",
+                f"{stats['delta']:+.4f}",
+            ]
+        else:
+            row = [ts, event, roll_id, die] + [""] * 16
+        _motion_csv_writer.writerow(row)
+        _motion_csv_file.flush()
+    except Exception:
+        pass
