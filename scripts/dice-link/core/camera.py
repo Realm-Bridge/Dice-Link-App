@@ -41,47 +41,46 @@ class CameraManager:
         return self._motion_detected
 
     def _check_motion(self, frame: np.ndarray):
-        """Compare current frame to previous to detect movement in the tray."""
+        """Detect dice rolling using optical flow within the tray region."""
         if self._prev_motion_frame is None or self._prev_motion_frame.shape != frame.shape:
             self._prev_motion_frame = frame.copy()
             return
 
-        diff = cv2.absdiff(frame, self._prev_motion_frame)
-        diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(diff_gray, 25, 255, cv2.THRESH_BINARY)
+        scale = 0.25
+        prev_small = cv2.resize(self._prev_motion_frame, (0, 0), fx=scale, fy=scale)
+        curr_small = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
+        prev_gray = cv2.cvtColor(prev_small, cv2.COLOR_BGR2GRAY)
+        curr_gray = cv2.cvtColor(curr_small, cv2.COLOR_BGR2GRAY)
 
-        h, w = frame.shape[:2]
-        tray_mask = None
+        flow = cv2.calcOpticalFlowFarneback(
+            prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0
+        )
+        mag = np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
+
+        sh, sw = prev_gray.shape
         if self.tray_polygon and len(self.tray_polygon) >= 3:
             pts = np.array(
-                [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
+                [[int(p[0] * sw), int(p[1] * sh)] for p in self.tray_polygon],
                 dtype=np.int32
             )
-            tray_mask = np.zeros((h, w), dtype=np.uint8)
+            tray_mask = np.zeros((sh, sw), dtype=np.uint8)
             cv2.fillPoly(tray_mask, [pts], 255)
-            thresh = cv2.bitwise_and(thresh, tray_mask)
+            tray_mag = mag[tray_mask > 0]
+        else:
+            tray_mag = mag.flatten()
 
-        changed_pixels = cv2.countNonZero(thresh)
-        motion_threshold = max(500, int(h * w * 0.01))
-
-        above_threshold = changed_pixels > motion_threshold
-        if above_threshold:
-            changed_vals = diff_gray[thresh > 0]
-            mean_diff = float(np.mean(changed_vals)) if len(changed_vals) > 0 else 0
-            if mean_diff < 58:
-                log_camera_motion(
-                    f"pixel threshold crossed but mean_diff={mean_diff:.1f} < 58 — rejected"
-                )
-                above_threshold = False
+        flow_mean = float(np.mean(tray_mag)) if len(tray_mag) > 0 else 0.0
+        flow_std = float(np.std(tray_mag)) if len(tray_mag) > 0 else 0.0
 
         self._motion_log_counter += 1
         if self._motion_log_counter % 10 == 0:
             log_camera_motion(
-                f"frame={self._motion_log_counter} changed_px={changed_pixels} threshold={motion_threshold} "
+                f"frame={self._motion_log_counter} flow_mean={flow_mean:.3f} flow_std={flow_std:.3f} "
                 f"state={'Rolling' if self._motion_detected else 'Still'} still_ctr={self._still_counter}"
             )
 
-        if above_threshold:
+        FLOW_THRESHOLD = 0.5
+        if flow_mean > FLOW_THRESHOLD:
             self._still_counter = 0
             self._onset_grace_counter = 0
             if self._motion_onset_time is None:
@@ -89,20 +88,8 @@ class CameraManager:
             elif time.time() - self._motion_onset_time >= 0.25:
                 if not self._motion_detected:
                     log_camera_motion(
-                        f"STATE CHANGE Still→Rolling  changed_px={changed_pixels} threshold={motion_threshold}"
+                        f"STATE CHANGE Still→Rolling  flow_mean={flow_mean:.3f} flow_std={flow_std:.3f}"
                     )
-                    nonzero_pts = cv2.findNonZero(thresh)
-                    if nonzero_pts is not None:
-                        bx, by, bw, bh = cv2.boundingRect(nonzero_pts)
-                        bbox_area = bw * bh
-                        tray_area = int(cv2.countNonZero(tray_mask)) if tray_mask is not None else (h * w)
-                        bbox_pct = (bbox_area / tray_area * 100) if tray_area > 0 else 0
-                        changed_vals = diff_gray[thresh > 0]
-                        mean_diff = float(np.mean(changed_vals)) if len(changed_vals) > 0 else 0
-                        log_camera_motion_detail(
-                            f"bbox=({bx},{by})+{bw}x{bh} bbox_pct={bbox_pct:.1f}% "
-                            f"mean_diff={mean_diff:.1f} changed_px={changed_pixels}"
-                        )
                 self._motion_detected = True
         else:
             self._still_counter += 1
@@ -112,7 +99,7 @@ class CameraManager:
             if self._still_counter > 15:
                 if self._motion_detected:
                     log_camera_motion(
-                        f"STATE CHANGE Rolling→Still  changed_px={changed_pixels} threshold={motion_threshold} "
+                        f"STATE CHANGE Rolling→Still  flow_mean={flow_mean:.3f} flow_std={flow_std:.3f} "
                         f"still_ctr={self._still_counter}"
                     )
                 self._motion_detected = False
