@@ -23,6 +23,7 @@ DEBUG_DPI = False
 DEBUG_CHAT_LOG = True
 DEBUG_STORAGE = True
 DEBUG_CAMERA_MOTION = True
+DEBUG_CAMERA_CAPTURE = True
 
 # --- Log file ---
 # Live log: logs/dla.log — archived to dla_archive.log on every startup; contains only the current session.
@@ -185,5 +186,13 @@ def log_camera_motion(message: str):
     """Log motion detection events — pixel counts, thresholds, and state changes."""
     if DEBUG_ENABLED and DEBUG_CAMERA_MOTION:
         line = f"[Camera Motion] {message}"
+        print(line)
+        _write_log(line)
+
+
+def log_camera_capture(message: str):
+    """Log capture loop events — read latency, ret value, frame content."""
+    if DEBUG_ENABLED and DEBUG_CAMERA_CAPTURE:
+        line = f"[Camera Capture] {message}"
         print(line)
         _write_log(line)

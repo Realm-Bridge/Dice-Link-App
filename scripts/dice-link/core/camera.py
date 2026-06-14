@@ -8,7 +8,7 @@ import time
 import numpy as np
 from typing import Optional
 from pathlib import Path
-from debug import log, log_camera_motion
+from debug import log, log_camera_motion, log_camera_capture
 from core.storage import get_appdata_path
 
 PHONE_CAMERA_INDEX = -1
@@ -212,12 +212,19 @@ class CameraManager:
             start_time = time.time()
 
             ret, frame = self.camera.read()
-            if ret:
+            elapsed = time.time() - start_time
+
+            if ret and frame is not None:
+                nonzero = cv2.countNonZero(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+                log_camera_capture(
+                    f"ret=True read_ms={elapsed*1000:.0f} shape={frame.shape} nonzero_px={nonzero}"
+                )
                 self._check_motion(frame)
                 with self.frame_lock:
                     self.current_frame = frame
+            else:
+                log_camera_capture(f"ret={ret} read_ms={elapsed*1000:.0f} frame={'None' if frame is None else 'empty'}")
 
-            elapsed = time.time() - start_time
             sleep_time = frame_interval - elapsed
             if sleep_time > 0:
                 time.sleep(sleep_time)
