@@ -16,7 +16,7 @@ from state import app_state
 from core.websocket_handler import broadcast_to_ui
 from core.camera import camera_manager
 from config import APP_NAME, APP_VERSION, DICE_RANGES, DEFAULT_CAMERA_INDEX, CAMERA_FPS
-from debug import log_server, log_camera_stream
+from debug import log_server, log_camera_stream, log_camera_motion
 from bridge_state import send_dice_result_to_foundry, send_dice_tray_roll_to_foundry, send_chat_interaction_to_dlc, send_chat_command_to_dlc, send_chat_visibility_to_dlc
 
 # Get the base directory (now app.py is at the root of dice-link/)
@@ -521,6 +521,13 @@ async def set_tray_region(request: Request):
 async def camera_motion():
     """Get current motion detection state"""
     return JSONResponse({"motion": camera_manager.is_motion})
+
+
+@app.post("/api/camera/false-trigger")
+async def camera_false_trigger():
+    """Log a user-reported false trigger for motion detection diagnostics"""
+    log_camera_motion("USER REPORT: false trigger")
+    return JSONResponse({"success": True})
 
 
 @app.websocket("/ws/ui")

@@ -27,6 +27,13 @@ function initCameraUI() {
     loadCameraList();
     loadTrayRegion();
 
+    const falseTriggerBtn = document.getElementById('camera-false-trigger-btn');
+    if (falseTriggerBtn) {
+        falseTriggerBtn.addEventListener('click', () => {
+            fetch('/api/camera/false-trigger', { method: 'POST' });
+        });
+    }
+
     const cameraSelect = document.getElementById('camera-select');
     if (cameraSelect) {
         cameraSelect.addEventListener('change', async () => {
