@@ -32,6 +32,7 @@ class CameraManager:
         self._motion_detected: bool = False
         self._still_counter: int = 0
         self._motion_onset_time: Optional[float] = None
+        self._onset_grace_counter: int = 0
         self._motion_log_counter: int = 0
         self._load_tray_region()
 
@@ -73,6 +74,7 @@ class CameraManager:
 
         if changed_pixels > motion_threshold:
             self._still_counter = 0
+            self._onset_grace_counter = 0
             if self._motion_onset_time is None:
                 self._motion_onset_time = time.time()
             elif time.time() - self._motion_onset_time >= 0.25:
@@ -83,7 +85,9 @@ class CameraManager:
                 self._motion_detected = True
         else:
             self._still_counter += 1
-            self._motion_onset_time = None
+            self._onset_grace_counter += 1
+            if self._onset_grace_counter >= 3:
+                self._motion_onset_time = None
             if self._still_counter > 15:
                 if self._motion_detected:
                     log_camera_motion(
@@ -229,6 +233,7 @@ class CameraManager:
         self._motion_detected = False
         self._still_counter = 0
         self._motion_onset_time = None
+        self._onset_grace_counter = 0
         self._prev_motion_frame = None
         self.phone_camera_mode = False
         self._stop_event.set()
