@@ -440,7 +440,7 @@ async def dlc_camera_stream_loop():
                 log_camera_stream("motion+armed triggered — starting stream")
 
             t0 = time.time()
-            frame = camera_manager.get_processed_frame()
+            frame = camera_manager.get_processed_frame(max_height=720)
             t1 = time.time()
 
             if frame:

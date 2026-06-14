@@ -257,9 +257,18 @@ class CameraManager:
         with self.frame_lock:
             self.current_frame = None
 
-    def get_processed_frame(self) -> Optional[bytes]:
+    def reset_motion_state(self):
+        """Reset all motion detection state. Called when a new dice request is armed."""
+        self._motion_detected = False
+        self._still_counter = 0
+        self._motion_onset_time = None
+        self._onset_grace_counter = 0
+        self._prev_motion_frame = None
+
+    def get_processed_frame(self, max_height: int = None) -> Optional[bytes]:
         """Crop the tray region and return raw RGBA bytes prefixed with a 4-byte (width, height) header.
-        Everything outside the tray polygon is transparent (alpha=0)."""
+        Everything outside the tray polygon is transparent (alpha=0).
+        If max_height is given and the crop exceeds it, the crop is scaled down proportionally."""
         if not self.is_capturing:
             return None
 
@@ -291,8 +300,14 @@ class CameraManager:
         bgra[:, :, 3] = mask
         crop = bgra[y:y + bh, x:x + bw]
 
+        if max_height and crop.shape[0] > max_height:
+            scale = max_height / crop.shape[0]
+            new_w = int(crop.shape[1] * scale)
+            crop = cv2.resize(crop, (new_w, max_height))
+
         rgba_crop = cv2.cvtColor(crop, cv2.COLOR_BGRA2RGBA)
-        return struct.pack('>HH', bw, bh) + rgba_crop.tobytes()
+        out_h, out_w = rgba_crop.shape[:2]
+        return struct.pack('>HH', out_w, out_h) + rgba_crop.tobytes()
 
     def get_boundary_frame(self) -> Optional[bytes]:
         """Return the current frame with the tray boundary polygon drawn on it, as PNG bytes."""

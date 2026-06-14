@@ -126,7 +126,9 @@ class DLABridge(QObject):
             request_id = data.get('id', 'unknown')
             self.log_vtt(f"[BRIDGE] Received dice request #{request_id}")
             from state import app_state
+            from core.camera import camera_manager
             app_state.camera_stream_armed = True
+            camera_manager.reset_motion_state()
             self.log_vtt("[BRIDGE] Camera stream armed - waiting for roll")
             if app_state.current_roll_label is None and app_state.next_roll_label is None:
                 app_state.next_roll_label = "Manual Roll"
