@@ -62,7 +62,7 @@ class CameraManager:
             thresh = cv2.bitwise_and(thresh, tray_mask)
 
         changed_pixels = cv2.countNonZero(thresh)
-        motion_threshold = max(500, int(h * w * 0.005))
+        motion_threshold = max(500, int(h * w * 0.02))
 
         self._motion_log_counter += 1
         if self._motion_log_counter % 10 == 0:
