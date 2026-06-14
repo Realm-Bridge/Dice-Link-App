@@ -64,6 +64,16 @@ class CameraManager:
         changed_pixels = cv2.countNonZero(thresh)
         motion_threshold = max(500, int(h * w * 0.01))
 
+        above_threshold = changed_pixels > motion_threshold
+        if above_threshold:
+            changed_vals = diff_gray[thresh > 0]
+            mean_diff = float(np.mean(changed_vals)) if len(changed_vals) > 0 else 0
+            if mean_diff < 58:
+                log_camera_motion(
+                    f"pixel threshold crossed but mean_diff={mean_diff:.1f} < 58 — rejected"
+                )
+                above_threshold = False
+
         self._motion_log_counter += 1
         if self._motion_log_counter % 10 == 0:
             log_camera_motion(
@@ -71,7 +81,7 @@ class CameraManager:
                 f"state={'Rolling' if self._motion_detected else 'Still'} still_ctr={self._still_counter}"
             )
 
-        if changed_pixels > motion_threshold:
+        if above_threshold:
             self._still_counter = 0
             self._onset_grace_counter = 0
             if self._motion_onset_time is None:
