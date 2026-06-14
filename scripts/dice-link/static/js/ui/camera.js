@@ -249,11 +249,18 @@ function startCameraWebSocket() {
     const wsUrl = `ws://${window.location.host}/ws/camera`;
     cameraWS = new WebSocket(wsUrl);
     cameraWS.binaryType = 'arraybuffer';
+    // DIAG
+    debugCameraUI('WebSocket created', { url: wsUrl });
 
     cameraWS.onmessage = (event) => {
         const view = new DataView(event.data);
         const w = view.getUint16(0, false);
         const h = view.getUint16(2, false);
+
+        // DIAG — log first frame only
+        if (!usbFrameCanvas) {
+            debugCameraUI('first WebSocket frame received', { w, h, bytes: event.data.byteLength });
+        }
 
         if (!usbFrameCanvas || usbFrameCanvas.width !== w || usbFrameCanvas.height !== h) {
             usbFrameCanvas = document.createElement('canvas');
@@ -291,8 +298,12 @@ function startCameraDisplayLoop() {
     canvas.width = parent ? parent.offsetWidth : 640;
     canvas.height = parent ? parent.offsetHeight : 480;
     canvas.style.display = 'block';
+    // DIAG
+    debugCameraUI('display loop started', { canvasW: canvas.width, canvasH: canvas.height, parentW: parent?.offsetWidth, parentH: parent?.offsetHeight });
 
     const ctx = canvas.getContext('2d');
+    // DIAG
+    let _diagDrawCount = 0;
 
     function draw() {
         let source = null;
@@ -305,6 +316,12 @@ function startCameraDisplayLoop() {
                 sourceW = usbFrameCanvas.width;
                 sourceH = usbFrameCanvas.height;
             }
+        }
+
+        // DIAG — log first 5 draw calls
+        _diagDrawCount++;
+        if (_diagDrawCount <= 5) {
+            debugCameraUI(`draw #${_diagDrawCount}`, { hasSource: !!source, sourceW, sourceH, canvasW: canvas.width, canvasH: canvas.height, cameraSource });
         }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);

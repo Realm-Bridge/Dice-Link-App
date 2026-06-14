@@ -101,3 +101,22 @@ function debugChatLog(message, data = null) {
     }
   }
 }
+
+// DIAG — remove once camera black-screen issue is diagnosed
+function debugCameraUI(message, data = null) {
+  if (!DEBUG_ENABLED) return;
+  const timestamp = new Date().toLocaleTimeString();
+  const dataStr = data !== null ? ' ' + JSON.stringify(data) : '';
+  const fullMessage = `[DLA CAMERA UI ${timestamp}] ${message}${dataStr}`;
+  console.log(fullMessage);
+  if (typeof getWebSocket === 'function') {
+    const ws = getWebSocket();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({ type: 'debug', message: fullMessage }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+}
