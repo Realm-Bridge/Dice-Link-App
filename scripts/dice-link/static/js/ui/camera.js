@@ -34,6 +34,13 @@ function initCameraUI() {
         });
     }
 
+    const missedRollBtn = document.getElementById('camera-missed-roll-btn');
+    if (missedRollBtn) {
+        missedRollBtn.addEventListener('click', () => {
+            fetch('/api/camera/missed-roll', { method: 'POST' });
+        });
+    }
+
     const cameraSelect = document.getElementById('camera-select');
     if (cameraSelect) {
         cameraSelect.addEventListener('change', async () => {

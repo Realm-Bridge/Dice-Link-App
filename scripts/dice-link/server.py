@@ -530,6 +530,13 @@ async def camera_false_trigger():
     return JSONResponse({"success": True})
 
 
+@app.post("/api/camera/missed-roll")
+async def camera_missed_roll():
+    """Log a user-reported missed roll for motion detection diagnostics"""
+    log_camera_motion("USER REPORT: missed roll")
+    return JSONResponse({"success": True})
+
+
 @app.websocket("/ws/ui")
 async def websocket_ui(websocket: WebSocket):
     """WebSocket endpoint for browser UI connections"""
