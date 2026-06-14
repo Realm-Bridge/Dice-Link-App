@@ -31,8 +31,6 @@ class CameraManager:
         self._prev_motion_frame: Optional[np.ndarray] = None
         self._motion_detected: bool = False
         self._still_counter: int = 0
-        self._motion_onset_time: Optional[float] = None
-        self._onset_grace_counter: int = 0
         self._motion_log_counter: int = 0
         self._load_tray_region()
 
@@ -82,20 +80,13 @@ class CameraManager:
         FLOW_THRESHOLD = 0.5
         if flow_mean > FLOW_THRESHOLD:
             self._still_counter = 0
-            self._onset_grace_counter = 0
-            if self._motion_onset_time is None:
-                self._motion_onset_time = time.time()
-            elif time.time() - self._motion_onset_time >= 0.25:
-                if not self._motion_detected:
-                    log_camera_motion(
-                        f"STATE CHANGE Still→Rolling  flow_mean={flow_mean:.3f} flow_std={flow_std:.3f}"
-                    )
-                self._motion_detected = True
+            if not self._motion_detected:
+                log_camera_motion(
+                    f"STATE CHANGE Still→Rolling  flow_mean={flow_mean:.3f} flow_std={flow_std:.3f}"
+                )
+            self._motion_detected = True
         else:
             self._still_counter += 1
-            self._onset_grace_counter += 1
-            if self._onset_grace_counter >= 3:
-                self._motion_onset_time = None
             if self._still_counter > 15:
                 if self._motion_detected:
                     log_camera_motion(
@@ -258,8 +249,6 @@ class CameraManager:
         """Stop capturing and release camera"""
         self._motion_detected = False
         self._still_counter = 0
-        self._motion_onset_time = None
-        self._onset_grace_counter = 0
         self._prev_motion_frame = None
         self.phone_camera_mode = False
         self._stop_event.set()
@@ -280,8 +269,6 @@ class CameraManager:
         """Reset all motion detection state. Called when a new dice request is armed."""
         self._motion_detected = False
         self._still_counter = 0
-        self._motion_onset_time = None
-        self._onset_grace_counter = 0
         self._prev_motion_frame = None
 
     def get_processed_frame(self, max_height: int = None) -> Optional[bytes]:
