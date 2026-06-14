@@ -8,7 +8,7 @@ import time
 import numpy as np
 from typing import Optional
 from pathlib import Path
-from debug import log, log_camera_motion, log_camera_capture
+from debug import log, log_camera_motion, log_camera_motion_detail, log_camera_capture
 from core.storage import get_appdata_path
 
 PHONE_CAMERA_INDEX = -1
@@ -50,8 +50,9 @@ class CameraManager:
         diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(diff_gray, 25, 255, cv2.THRESH_BINARY)
 
+        h, w = frame.shape[:2]
+        tray_mask = None
         if self.tray_polygon and len(self.tray_polygon) >= 3:
-            h, w = frame.shape[:2]
             pts = np.array(
                 [[int(p[0] * w), int(p[1] * h)] for p in self.tray_polygon],
                 dtype=np.int32
@@ -61,8 +62,6 @@ class CameraManager:
             thresh = cv2.bitwise_and(thresh, tray_mask)
 
         changed_pixels = cv2.countNonZero(thresh)
-
-        h, w = frame.shape[:2]
         motion_threshold = max(500, int(h * w * 0.005))
 
         self._motion_log_counter += 1
@@ -82,6 +81,18 @@ class CameraManager:
                     log_camera_motion(
                         f"STATE CHANGE Still→Rolling  changed_px={changed_pixels} threshold={motion_threshold}"
                     )
+                    nonzero_pts = cv2.findNonZero(thresh)
+                    if nonzero_pts is not None:
+                        bx, by, bw, bh = cv2.boundingRect(nonzero_pts)
+                        bbox_area = bw * bh
+                        tray_area = int(cv2.countNonZero(tray_mask)) if tray_mask is not None else (h * w)
+                        bbox_pct = (bbox_area / tray_area * 100) if tray_area > 0 else 0
+                        changed_vals = diff_gray[thresh > 0]
+                        mean_diff = float(np.mean(changed_vals)) if len(changed_vals) > 0 else 0
+                        log_camera_motion_detail(
+                            f"bbox=({bx},{by})+{bw}x{bh} bbox_pct={bbox_pct:.1f}% "
+                            f"mean_diff={mean_diff:.1f} changed_px={changed_pixels}"
+                        )
                 self._motion_detected = True
         else:
             self._still_counter += 1

@@ -191,6 +191,14 @@ def log_camera_motion(message: str):
         _write_log(line)
 
 
+def log_camera_motion_detail(message: str):
+    """Log spatial and magnitude detail at Still→Rolling transitions."""
+    if DEBUG_ENABLED and DEBUG_CAMERA_MOTION:
+        line = f"[Camera Motion Detail] {message}"
+        print(line)
+        _write_log(line)
+
+
 def log_camera_capture(message: str):
     """Log capture loop events — read latency, ret value, frame content."""
     if DEBUG_ENABLED and DEBUG_CAMERA_CAPTURE:
