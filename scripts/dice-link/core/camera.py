@@ -77,7 +77,7 @@ class CameraManager:
                 f"state={'Rolling' if self._motion_detected else 'Still'} still_ctr={self._still_counter}"
             )
 
-        FLOW_THRESHOLD = 0.5
+        FLOW_THRESHOLD = 0.4
         if flow_mean > FLOW_THRESHOLD:
             self._still_counter = 0
             if not self._motion_detected:
