@@ -8,7 +8,7 @@ import time
 import numpy as np
 from typing import Optional
 from pathlib import Path
-from debug import log
+from debug import log, log_camera_motion
 from core.storage import get_appdata_path
 
 PHONE_CAMERA_INDEX = -1
@@ -32,6 +32,7 @@ class CameraManager:
         self._motion_detected: bool = False
         self._still_counter: int = 0
         self._motion_onset_time: Optional[float] = None
+        self._motion_log_counter: int = 0
         self._load_tray_region()
 
     @property
@@ -63,16 +64,32 @@ class CameraManager:
         h, w = frame.shape[:2]
         motion_threshold = max(500, int(h * w * 0.0015))
 
+        self._motion_log_counter += 1
+        if self._motion_log_counter % 10 == 0:
+            log_camera_motion(
+                f"frame={self._motion_log_counter} changed_px={changed_pixels} threshold={motion_threshold} "
+                f"state={'Rolling' if self._motion_detected else 'Still'} still_ctr={self._still_counter}"
+            )
+
         if changed_pixels > motion_threshold:
             self._still_counter = 0
             if self._motion_onset_time is None:
                 self._motion_onset_time = time.time()
             elif time.time() - self._motion_onset_time >= 0.25:
+                if not self._motion_detected:
+                    log_camera_motion(
+                        f"STATE CHANGE Still→Rolling  changed_px={changed_pixels} threshold={motion_threshold}"
+                    )
                 self._motion_detected = True
         else:
             self._still_counter += 1
             self._motion_onset_time = None
             if self._still_counter > 15:
+                if self._motion_detected:
+                    log_camera_motion(
+                        f"STATE CHANGE Rolling→Still  changed_px={changed_pixels} threshold={motion_threshold} "
+                        f"still_ctr={self._still_counter}"
+                    )
                 self._motion_detected = False
 
         self._prev_motion_frame = frame.copy()

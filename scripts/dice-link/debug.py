@@ -22,6 +22,7 @@ DEBUG_STARTUP_DIALOG = False
 DEBUG_DPI = False
 DEBUG_CHAT_LOG = True
 DEBUG_STORAGE = True
+DEBUG_CAMERA_MOTION = True
 
 # --- Log file ---
 # Live log: logs/dla.log — archived to dla_archive.log on every startup; contains only the current session.
@@ -176,5 +177,13 @@ def log_storage(message: str):
     """Log dice roll storage events — database init, session start, roll saves."""
     if DEBUG_ENABLED and DEBUG_STORAGE:
         line = f"[Storage] {message}"
+        print(line)
+        _write_log(line)
+
+
+def log_camera_motion(message: str):
+    """Log motion detection events — pixel counts, thresholds, and state changes."""
+    if DEBUG_ENABLED and DEBUG_CAMERA_MOTION:
+        line = f"[Camera Motion] {message}"
         print(line)
         _write_log(line)
