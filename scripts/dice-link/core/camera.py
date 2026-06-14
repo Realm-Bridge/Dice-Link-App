@@ -32,6 +32,7 @@ class CameraManager:
         self._motion_detected: bool = False
         self._still_counter: int = 0
         self._motion_log_counter: int = 0
+        self._prev_flow_mean: float = 0.0
         self._load_tray_region()
 
     @property
@@ -63,19 +64,59 @@ class CameraManager:
             )
             tray_mask = np.zeros((sh, sw), dtype=np.uint8)
             cv2.fillPoly(tray_mask, [pts], 255)
-            tray_mag = mag[tray_mask > 0]
+            mask_bool = tray_mask > 0
+            tray_mag = mag[mask_bool]
+            tray_fx = flow[..., 0][mask_bool]
+            tray_fy = flow[..., 1][mask_bool]
         else:
             tray_mag = mag.flatten()
+            tray_fx = flow[..., 0].flatten()
+            tray_fy = flow[..., 1].flatten()
 
-        flow_mean = float(np.mean(tray_mag)) if len(tray_mag) > 0 else 0.0
-        flow_std = float(np.std(tray_mag)) if len(tray_mag) > 0 else 0.0
+        n = len(tray_mag)
+        if n == 0:
+            self._prev_motion_frame = frame.copy()
+            return
+
+        # Magnitude statistics
+        flow_mean   = float(np.mean(tray_mag))
+        flow_std    = float(np.std(tray_mag))
+        flow_max    = float(np.max(tray_mag))
+        flow_median = float(np.median(tray_mag))
+        flow_p75    = float(np.percentile(tray_mag, 75))
+        flow_p90    = float(np.percentile(tray_mag, 90))
+        flow_p95    = float(np.percentile(tray_mag, 95))
+
+        # Spatial spread — fraction of tray pixels with notable / strong motion
+        active_frac_02 = float(np.sum(tray_mag > 0.2) / n)
+        active_frac_05 = float(np.sum(tray_mag > 0.5) / n)
+
+        # Direction / coherence
+        net_x      = float(np.mean(tray_fx))
+        net_y      = float(np.mean(tray_fy))
+        net_mag    = float(np.sqrt(net_x ** 2 + net_y ** 2))
+        coherence  = net_mag / flow_mean if flow_mean > 0 else 0.0
+        flow_x_std = float(np.std(tray_fx))
+        flow_y_std = float(np.std(tray_fy))
+        angles     = np.arctan2(tray_fy, tray_fx)
+        angle_std  = float(np.std(angles))
+
+        # Temporal — change in mean magnitude from previous frame
+        flow_mean_delta = flow_mean - self._prev_flow_mean
 
         self._motion_log_counter += 1
-        if self._motion_log_counter % 10 == 0:
-            log_camera_motion(
-                f"frame={self._motion_log_counter} flow_mean={flow_mean:.3f} flow_std={flow_std:.3f} "
-                f"state={'Rolling' if self._motion_detected else 'Still'} still_ctr={self._still_counter}"
-            )
+        log_camera_motion_detail(
+            f"frame={self._motion_log_counter} "
+            f"mean={flow_mean:.3f} std={flow_std:.3f} max={flow_max:.3f} median={flow_median:.3f} "
+            f"p75={flow_p75:.3f} p90={flow_p90:.3f} p95={flow_p95:.3f} "
+            f"af02={active_frac_02:.3f} af05={active_frac_05:.3f} "
+            f"net_x={net_x:.3f} net_y={net_y:.3f} coh={coherence:.3f} "
+            f"x_std={flow_x_std:.3f} y_std={flow_y_std:.3f} agl_std={angle_std:.3f} "
+            f"delta={flow_mean_delta:+.3f} "
+            f"state={'R' if self._motion_detected else 'S'} still={self._still_counter}"
+        )
+
+        self._prev_flow_mean = flow_mean
 
         FLOW_THRESHOLD = 0.4
         if flow_mean > FLOW_THRESHOLD:
@@ -250,6 +291,7 @@ class CameraManager:
         self._motion_detected = False
         self._still_counter = 0
         self._prev_motion_frame = None
+        self._prev_flow_mean = 0.0
         self.phone_camera_mode = False
         self._stop_event.set()
 
@@ -270,6 +312,7 @@ class CameraManager:
         self._motion_detected = False
         self._still_counter = 0
         self._prev_motion_frame = None
+        self._prev_flow_mean = 0.0
 
     def get_processed_frame(self, max_height: int = None) -> Optional[bytes]:
         """Crop the tray region and return raw RGBA bytes prefixed with a 4-byte (width, height) header.
