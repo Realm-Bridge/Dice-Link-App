@@ -62,7 +62,7 @@ class CameraManager:
             thresh = cv2.bitwise_and(thresh, tray_mask)
 
         changed_pixels = cv2.countNonZero(thresh)
-        motion_threshold = max(500, int(h * w * 0.02))
+        motion_threshold = max(500, int(h * w * 0.01))
 
         self._motion_log_counter += 1
         if self._motion_log_counter % 10 == 0:
@@ -218,6 +218,7 @@ class CameraManager:
     def _capture_loop(self):
         """Background thread that continuously captures frames from USB camera"""
         frame_interval = 1.0 / self.target_fps
+        _broken_count = 0
 
         while not self._stop_event.is_set() and self.camera and self.camera.isOpened():
             start_time = time.time()
@@ -230,6 +231,16 @@ class CameraManager:
                 log_camera_capture(
                     f"ret=True read_ms={elapsed*1000:.0f} shape={frame.shape} nonzero_px={nonzero}"
                 )
+                if elapsed >= 0.9 and nonzero == 0:
+                    _broken_count += 1
+                    if _broken_count >= 3:
+                        log_camera_capture("3 consecutive black frames — releasing and reopening camera")
+                        self.camera.release()
+                        time.sleep(0.5)
+                        self.camera = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
+                        _broken_count = 0
+                    continue
+                _broken_count = 0
                 self._check_motion(frame)
                 with self.frame_lock:
                     self.current_frame = frame
