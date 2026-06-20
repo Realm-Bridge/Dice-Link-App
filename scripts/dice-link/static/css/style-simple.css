@@ -3061,7 +3061,8 @@ body {
     display:         flex;
     flex-direction:  column;
     align-items:     center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top:     19px;
     min-height:      0;
     min-width:       0;
 }
@@ -3157,7 +3158,7 @@ body {
 }
 
 .gm-timer-countdown {
-    font-size:            64px;
+    font-size:            77px;
     font-weight:          700;
     color:                var(--dlc-text-primary);
     font-variant-numeric: tabular-nums;
@@ -3166,7 +3167,26 @@ body {
 }
 
 .gm-timer-countdown.gm-timer-expired {
-    font-size: 44px;
+    font-size: 52px;
     color:     var(--dlc-danger);
+}
+
+.gm-timer-stop-btn {
+    margin-top:     8px;
+    padding:        14px 0;
+    width:          100%;
+    font-size:      18px;
+    font-weight:    600;
+    background:     transparent;
+    color:          var(--text-muted);
+    border:         2px solid var(--dlc-border);
+    border-radius:  8px;
+    cursor:         pointer;
+    letter-spacing: 0.03em;
+}
+
+.gm-timer-stop-btn:hover {
+    border-color: var(--dlc-danger);
+    color:        var(--dlc-danger);
 }
 

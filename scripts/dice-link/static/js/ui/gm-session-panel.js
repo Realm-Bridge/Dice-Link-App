@@ -52,8 +52,15 @@ function _startGMCountdown(container, totalSeconds) {
         <div class="gm-timer-running">
             <span class="gm-timer-label">Session</span>
             <span class="gm-timer-countdown" id="gm-countdown">${_formatGMTime(remaining)}</span>
+            <button id="gm-stop-btn" class="gm-timer-stop-btn">Stop / Reset</button>
         </div>
     `;
+
+    document.getElementById('gm-stop-btn').addEventListener('click', () => {
+        clearInterval(_sessionTimer);
+        _sessionTimer = null;
+        _renderGMSetup(container);
+    });
 
     _sessionTimer = setInterval(() => {
         remaining -= 1;
