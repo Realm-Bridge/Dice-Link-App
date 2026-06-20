@@ -3234,23 +3234,20 @@ body {
 /* ── Player Portrait ── */
 
 .player-portrait-panel {
-    display:        flex;
-    flex-direction: column;
-    align-items:    center;
-    gap:            14px;
-    width:          100%;
-    padding:        0 20px 19px;
-    box-sizing:     border-box;
-    flex:           1;
-    min-height:     0;
+    display:         flex;
+    flex-direction:  column;
+    align-items:     center;
+    justify-content: center;
+    gap:             14px;
+    width:           100%;
+    padding:         19px 0;
+    box-sizing:      border-box;
+    flex:            1;
+    min-height:      0;
 }
 
 .player-portrait-frame {
-    width:               100%;
-    flex:                1;
-    min-height:          0;
-    display:             flex;
-    align-items:         stretch;
+    width:               calc(100% - 40px);
     border:              18px solid transparent;
     border-image-source: url('/static/images/portrait-frame.svg');
     border-image-slice:  19;
@@ -3260,11 +3257,9 @@ body {
 }
 
 .player-portrait-img {
-    flex:             1;
-    min-height:       0;
-    min-width:        0;
-    object-fit:       cover;
-    object-position:  center;
+    display: block;
+    width:   100%;
+    height:  auto;
 }
 
 .player-portrait-placeholder {
