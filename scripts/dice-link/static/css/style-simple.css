@@ -3246,8 +3246,19 @@ body {
     min-height:      0;
 }
 
+.player-portrait-frame-wrapper {
+    flex:            1;
+    min-height:      0;
+    width:           100%;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+}
+
 .player-portrait-frame {
-    width:               calc(100% - 40px);
+    /* aspect-ratio applied by JS after image load */
+    max-width:           calc(100% - 40px);
+    max-height:          100%;
     border:              18px solid transparent;
     border-image-source: url('/static/images/portrait-frame.svg');
     border-image-slice:  19;
@@ -3259,7 +3270,7 @@ body {
 .player-portrait-img {
     display: block;
     width:   100%;
-    height:  auto;
+    height:  100%;
 }
 
 .player-portrait-placeholder {
@@ -3277,6 +3288,7 @@ body {
     text-align:     center;
     letter-spacing: 0.02em;
     width:          100%;
+    /* font-size reduced by JS if name exceeds 2 lines */
 }
 
 /* ── Break Modal ── */

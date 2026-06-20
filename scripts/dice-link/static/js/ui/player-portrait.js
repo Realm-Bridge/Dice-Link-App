@@ -29,11 +29,45 @@ function initPlayerPortrait(selfPlayer) {
     const panel = document.createElement('div');
     panel.className = 'player-portrait-panel';
     panel.innerHTML = `
-        <div class="player-portrait-frame">
-            ${frameContent}
+        <div class="player-portrait-frame-wrapper">
+            <div class="player-portrait-frame">
+                ${frameContent}
+            </div>
         </div>
         ${characterName ? `<span class="player-portrait-name">${escapeHtml(characterName)}</span>` : ''}
     `;
 
     container.appendChild(panel);
+
+    const img = panel.querySelector('.player-portrait-img');
+    const frame = panel.querySelector('.player-portrait-frame');
+    const nameEl = panel.querySelector('.player-portrait-name');
+
+    if (img && frame) {
+        const applyAspectRatio = () => {
+            if (img.naturalWidth && img.naturalHeight) {
+                frame.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+            }
+        };
+        if (img.complete && img.naturalWidth) {
+            applyAspectRatio();
+        } else {
+            img.addEventListener('load', applyAspectRatio);
+        }
+    }
+
+    if (nameEl) {
+        _fitPortraitName(nameEl);
+    }
+}
+
+function _fitPortraitName(el) {
+    const lineHeightPx = 34 * 1.25;
+    const maxHeight = lineHeightPx * 2;
+    let size = 34;
+    el.style.fontSize = size + 'px';
+    while (el.scrollHeight > maxHeight && size > 14) {
+        size--;
+        el.style.fontSize = size + 'px';
+    }
 }
