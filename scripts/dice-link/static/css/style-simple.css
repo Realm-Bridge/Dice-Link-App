@@ -3239,12 +3239,16 @@ body {
     align-items:    center;
     gap:            14px;
     width:          100%;
-    padding:        0 20px;
+    padding:        0 20px 19px;
     box-sizing:     border-box;
+    flex:           1;
+    min-height:     0;
 }
 
 .player-portrait-frame {
     width:               100%;
+    flex:                1;
+    min-height:          0;
     border:              24px solid transparent;
     border-image-source: url('/static/images/portrait-frame.svg');
     border-image-slice:  19;
@@ -3256,15 +3260,17 @@ body {
 }
 
 .player-portrait-img {
-    display: block;
-    width:   100%;
-    height:  auto;
+    display:         block;
+    width:           100%;
+    height:          100%;
+    object-fit:      contain;
+    object-position: center center;
 }
 
 .player-portrait-placeholder {
-    width:        100%;
-    aspect-ratio: 2 / 3;
-    background:   #1a1008;
+    width:      100%;
+    height:     100%;
+    background: #0a0610;
 }
 
 .player-portrait-name {
@@ -3274,6 +3280,7 @@ body {
     color:          var(--dlc-accent-pink);
     text-align:     center;
     letter-spacing: 0.02em;
+    width:          100%;
 }
 
 /* ── Break Modal ── */
