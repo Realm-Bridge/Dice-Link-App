@@ -57,7 +57,7 @@ function initPlayerPortrait(selfPlayer) {
     }
 
     if (nameEl) {
-        _fitPortraitName(nameEl);
+        document.fonts.ready.then(() => _fitPortraitName(nameEl));
     }
 }
 

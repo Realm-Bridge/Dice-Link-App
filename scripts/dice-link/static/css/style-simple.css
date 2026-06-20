@@ -3283,12 +3283,14 @@ body {
     display:        block;
     font-family:    'Dancing Script', cursive;
     font-size:      34px;
+    line-height:    1.25;
     font-weight:    700;
     color:          var(--dlc-accent-pink);
     text-align:     center;
     letter-spacing: 0.02em;
     width:          100%;
-    /* font-size reduced by JS if name exceeds 2 lines */
+    height:         85px;
+    overflow:       hidden;
 }
 
 /* ── Break Modal ── */
