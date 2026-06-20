@@ -3231,6 +3231,50 @@ body {
     background: rgba(245, 158, 11, 0.22);
 }
 
+/* ── Player Portrait ── */
+
+.player-portrait-panel {
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    gap:            14px;
+    width:          100%;
+    padding:        0 20px;
+    box-sizing:     border-box;
+}
+
+.player-portrait-frame {
+    width:      100%;
+    padding:    8px;
+    background: #0e0905;
+    border:     4px solid #c9a227;
+    box-shadow:
+        0 0 0 1px #6b4b00,
+        inset 0 0 0 1px #6b4b00,
+        0 8px 28px rgba(0, 0, 0, 0.55);
+    box-sizing: border-box;
+}
+
+.player-portrait-img {
+    display: block;
+    width:   100%;
+    height:  auto;
+}
+
+.player-portrait-placeholder {
+    width:        100%;
+    aspect-ratio: 2 / 3;
+    background:   #1a1008;
+}
+
+.player-portrait-name {
+    font-size:      17px;
+    font-weight:    700;
+    color:          var(--dlc-text-primary);
+    text-align:     center;
+    letter-spacing: 0.02em;
+}
+
 /* ── Break Modal ── */
 
 .gm-break-modal-overlay {

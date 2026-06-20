@@ -127,6 +127,8 @@ function renderPlayerModes() {
     const selfPlayer = players.find(p => p.isSelf);
     if (selfPlayer && selfPlayer.isGM) {
         initGMSessionPanel();
+    } else if (selfPlayer && !selfPlayer.isGM) {
+        initPlayerPortrait(selfPlayer);
     }
 }
 
