@@ -3154,7 +3154,25 @@ body {
     display:        flex;
     flex-direction: column;
     align-items:    center;
-    gap:            20px;
+    align-self:     stretch;
+    flex:           1;
+    min-height:     0;
+    gap:            16px;
+    padding:        0 20px;
+    box-sizing:     border-box;
+}
+
+.gm-timer-identity {
+    flex:            1;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    font-size:       140px;
+    font-weight:     900;
+    line-height:     1;
+    letter-spacing:  -0.04em;
+    color:           var(--dlc-border);
+    user-select:     none;
 }
 
 .gm-timer-countdown {
@@ -3172,7 +3190,6 @@ body {
 }
 
 .gm-timer-stop-btn {
-    margin-top:     8px;
     padding:        14px 0;
     width:          100%;
     font-size:      18px;
