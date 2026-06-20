@@ -6,6 +6,11 @@
 
 let _playerPortraitInitialized = false;
 
+function setPortraitVisible(visible) {
+    const panel = document.querySelector('.player-portrait-panel');
+    if (panel) panel.style.display = visible ? '' : 'none';
+}
+
 function initPlayerPortrait(selfPlayer) {
     if (_playerPortraitInitialized) return;
     _playerPortraitInitialized = true;

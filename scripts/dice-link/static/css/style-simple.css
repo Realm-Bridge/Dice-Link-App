@@ -3244,15 +3244,15 @@ body {
 }
 
 .player-portrait-frame {
-    width:      100%;
-    padding:    8px;
-    background: #0e0905;
-    border:     4px solid #c9a227;
-    box-shadow:
-        0 0 0 1px #6b4b00,
-        inset 0 0 0 1px #6b4b00,
-        0 8px 28px rgba(0, 0, 0, 0.55);
-    box-sizing: border-box;
+    width:               100%;
+    border:              24px solid transparent;
+    border-image-source: url('/static/images/portrait-frame.svg');
+    border-image-slice:  19;
+    padding:             4px;
+    background:          #0a0610;
+    box-sizing:          border-box;
+    filter:              drop-shadow(0 0 10px rgba(111, 46, 154, 0.4))
+                         drop-shadow(0 10px 28px rgba(0, 0, 0, 0.75));
 }
 
 .player-portrait-img {
@@ -3268,9 +3268,10 @@ body {
 }
 
 .player-portrait-name {
-    font-size:      17px;
+    font-family:    'Dancing Script', cursive;
+    font-size:      34px;
     font-weight:    700;
-    color:          var(--dlc-text-primary);
+    color:          var(--dlc-accent-pink);
     text-align:     center;
     letter-spacing: 0.02em;
 }

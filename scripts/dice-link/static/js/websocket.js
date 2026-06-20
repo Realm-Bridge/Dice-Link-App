@@ -270,6 +270,9 @@ function handleConnectionStatus(connected, playerName) {
             }
         }
     }
+
+    if (typeof setPortraitVisible === 'function') setPortraitVisible(connected);
+    if (typeof setGMPanelVisible === 'function') setGMPanelVisible(connected);
 }
 
 /**

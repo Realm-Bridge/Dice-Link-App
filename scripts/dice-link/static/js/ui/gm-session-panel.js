@@ -8,6 +8,12 @@ let _gmPanelInitialized = false;
 let _sessionTimer = null;
 let _stateContainer = null;
 
+function setGMPanelVisible(visible) {
+    if (_stateContainer) _stateContainer.style.display = visible ? '' : 'none';
+    const gmLabel = document.querySelector('.gm-timer-identity');
+    if (gmLabel) gmLabel.style.display = visible ? '' : 'none';
+}
+
 function initGMSessionPanel() {
     if (_gmPanelInitialized) return;
     _gmPanelInitialized = true;
