@@ -3158,12 +3158,11 @@ body {
     flex:           1;
     min-height:     0;
     gap:            16px;
-    padding:        0 20px 72px;
+    padding:        0 20px;
     box-sizing:     border-box;
 }
 
 .gm-timer-identity {
-    flex:            1;
     display:         flex;
     align-items:     center;
     justify-content: center;
