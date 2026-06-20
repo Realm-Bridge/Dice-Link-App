@@ -48,9 +48,11 @@ function initPlayerPortrait(selfPlayer) {
         const sizeFrame = () => {
             if (!img.naturalWidth || !img.naturalHeight) return;
 
-            const ratio  = img.naturalWidth / img.naturalHeight;
-            const maxW   = wrapper.clientWidth - 40;   // 20px margin each side
-            const maxH   = wrapper.clientHeight;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            const maxW  = container.clientWidth;
+            const maxH  = container.clientHeight - (nameEl ? nameEl.offsetHeight : 0);
+
+            if (maxW <= 0 || maxH <= 0) return;
 
             let w = maxW;
             let h = w / ratio;
@@ -60,12 +62,12 @@ function initPlayerPortrait(selfPlayer) {
                 w = h * ratio;
             }
 
-            frame.style.width  = w + 'px';
-            frame.style.height = h + 'px';
+            frame.style.width  = Math.floor(w) + 'px';
+            frame.style.height = Math.floor(h) + 'px';
         };
 
         if (img.complete && img.naturalWidth) {
-            sizeFrame();
+            requestAnimationFrame(sizeFrame);
         } else {
             img.addEventListener('load', sizeFrame);
         }
