@@ -3052,3 +3052,121 @@ body {
 .chart-modal-canvas-wrap { flex: 1; min-height: 0; position: relative; }
 #statsChartModal { width: 100% !important; height: 100% !important; }
 
+/* ============================================================================
+   IDENTITY PANEL — GM session timer / player portrait
+   ============================================================================ */
+
+.identity-panel {
+    flex:            1;
+    display:         flex;
+    flex-direction:  column;
+    align-items:     center;
+    justify-content: center;
+    min-height:      0;
+    min-width:       0;
+}
+
+/* ── GM Timer — Setup state ── */
+
+.gm-timer-setup {
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    gap:            28px;
+    width:          100%;
+    padding:        0 20px;
+    box-sizing:     border-box;
+}
+
+.gm-timer-label {
+    font-size:      15px;
+    font-weight:    700;
+    color:          var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.gm-timer-inputs {
+    display:     flex;
+    align-items: flex-start;
+    gap:         12px;
+}
+
+.gm-timer-field {
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    gap:            8px;
+}
+
+.gm-timer-input {
+    width:         95px;
+    text-align:    center;
+    font-size:     52px;
+    font-weight:   700;
+    color:         var(--dlc-text-primary);
+    background:    var(--dlc-bg-section);
+    border:        2px solid var(--dlc-border);
+    border-radius: 8px;
+    padding:       10px 0;
+    line-height:   1;
+}
+
+.gm-timer-input::-webkit-inner-spin-button,
+.gm-timer-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.gm-timer-input:focus { outline: none; border-color: var(--dlc-accent); }
+
+.gm-timer-unit {
+    font-size:      13px;
+    font-weight:    700;
+    color:          var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.gm-timer-colon {
+    font-size:   52px;
+    font-weight: 700;
+    color:       var(--text-muted);
+    line-height: 1;
+    padding-top: 14px;
+}
+
+.gm-timer-start-btn {
+    width:          100%;
+    padding:        22px 0;
+    font-size:      22px;
+    font-weight:    700;
+    background:     var(--dlc-accent);
+    color:          #fff;
+    border:         none;
+    border-radius:  8px;
+    cursor:         pointer;
+    letter-spacing: 0.04em;
+}
+
+.gm-timer-start-btn:hover { filter: brightness(1.12); }
+
+/* ── GM Timer — Running / expired state ── */
+
+.gm-timer-running {
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    gap:            20px;
+}
+
+.gm-timer-countdown {
+    font-size:            64px;
+    font-weight:          700;
+    color:                var(--dlc-text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing:       -0.02em;
+    line-height:          1;
+}
+
+.gm-timer-countdown.gm-timer-expired {
+    font-size: 44px;
+    color:     var(--dlc-danger);
+}
+

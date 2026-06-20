@@ -122,6 +122,12 @@ function renderPlayerModes() {
     
     // Attach event listeners
     attachPlayerModeListeners();
+
+    // Identity panel — show GM timer or player portrait depending on local user role
+    const selfPlayer = players.find(p => p.isSelf);
+    if (selfPlayer && selfPlayer.isGM) {
+        initGMSessionPanel();
+    }
 }
 
 // Attach event listeners for action buttons
