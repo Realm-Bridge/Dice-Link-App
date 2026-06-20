@@ -3158,7 +3158,7 @@ body {
     flex:           1;
     min-height:     0;
     gap:            16px;
-    padding:        0 20px;
+    padding:        0 20px 28px;
     box-sizing:     border-box;
 }
 
