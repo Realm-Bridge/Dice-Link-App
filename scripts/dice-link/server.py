@@ -523,30 +523,6 @@ async def camera_motion():
     return JSONResponse({"motion": camera_manager.is_motion})
 
 
-@app.post("/api/camera/false-trigger")
-async def camera_false_trigger():
-    """Log a user-reported false trigger for motion detection diagnostics"""
-    log_camera_motion(
-        f"USER REPORT: false trigger  roll_id={camera_manager.current_roll_id} die={camera_manager.current_die}"
-    )
-    log_motion_data_event(
-        "USER_REPORT_FALSE", camera_manager.current_roll_id, camera_manager.current_die
-    )
-    return JSONResponse({"success": True})
-
-
-@app.post("/api/camera/missed-roll")
-async def camera_missed_roll():
-    """Log a user-reported missed roll for motion detection diagnostics"""
-    log_camera_motion(
-        f"USER REPORT: missed roll  roll_id={camera_manager.current_roll_id} die={camera_manager.current_die}"
-    )
-    log_motion_data_event(
-        "USER_REPORT_MISSED", camera_manager.current_roll_id, camera_manager.current_die
-    )
-    return JSONResponse({"success": True})
-
-
 @app.websocket("/ws/ui")
 async def websocket_ui(websocket: WebSocket):
     """WebSocket endpoint for browser UI connections"""
