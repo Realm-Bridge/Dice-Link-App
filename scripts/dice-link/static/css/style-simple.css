@@ -3062,7 +3062,6 @@ body {
     flex-direction:  column;
     align-items:     center;
     justify-content: flex-start;
-    padding-top:     19px;
     min-height:      0;
     min-width:       0;
     position:        relative;
@@ -3238,10 +3237,9 @@ body {
     flex-direction:  column;
     align-items:     center;
     justify-content: center;
-    gap:             14px;
+    gap:             8px;
     width:           100%;
-    padding:         19px 0;
-    box-sizing:      border-box;
+    padding:         0;
     flex:            1;
     min-height:      0;
 }
