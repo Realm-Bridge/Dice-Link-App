@@ -77,10 +77,10 @@ function initPlayerPortrait(selfPlayer) {
 }
 
 function _fitPortraitName(el) {
-    const maxHeight = 85; // 2 lines at 34px × 1.25 line-height
+    const twoLines = 34 * 1.25 * 2; // max height before shrinking font
     let size = 34;
     el.style.fontSize = size + 'px';
-    while (el.scrollHeight > maxHeight && size > 14) {
+    while (el.scrollHeight > twoLines && size > 14) {
         size--;
         el.style.fontSize = size + 'px';
     }
