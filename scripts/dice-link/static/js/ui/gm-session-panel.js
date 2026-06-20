@@ -6,6 +6,7 @@
 
 let _gmPanelInitialized = false;
 let _sessionTimer = null;
+let _stateContainer = null;
 
 function initGMSessionPanel() {
     if (_gmPanelInitialized) return;
@@ -14,11 +15,21 @@ function initGMSessionPanel() {
     const container = document.getElementById('identity-panel');
     if (!container) return;
 
-    _renderGMSetup(container);
+    _stateContainer = document.createElement('div');
+    _stateContainer.id = 'gm-state-content';
+
+    const gmLabel = document.createElement('span');
+    gmLabel.className = 'gm-timer-identity';
+    gmLabel.textContent = 'GM';
+
+    container.appendChild(_stateContainer);
+    container.appendChild(gmLabel);
+
+    _renderGMSetup();
 }
 
-function _renderGMSetup(container) {
-    container.innerHTML = `
+function _renderGMSetup() {
+    _stateContainer.innerHTML = `
         <div class="gm-timer-setup">
             <span class="gm-timer-label">Session Length</span>
             <div class="gm-timer-inputs">
@@ -33,8 +44,6 @@ function _renderGMSetup(container) {
                 </div>
             </div>
             <button id="gm-start-btn" class="gm-timer-start-btn">Start Session</button>
-            <span class="gm-timer-identity">GM</span>
-            <div class="gm-timer-spacer"></div>
         </div>
     `;
 
@@ -43,25 +52,22 @@ function _renderGMSetup(container) {
         const m = parseInt(document.getElementById('gm-minutes').value) || 0;
         const total = h * 3600 + m * 60;
         if (total <= 0) return;
-        _startGMCountdown(container, total);
+        _startGMCountdown(total);
     });
 }
 
-function _startGMCountdown(container, totalSeconds) {
+function _startGMCountdown(totalSeconds) {
     let remaining = totalSeconds;
 
-    container.innerHTML = `
+    _stateContainer.innerHTML = `
         <div class="gm-timer-running">
             <span class="gm-timer-label">Session</span>
             <span class="gm-timer-countdown" id="gm-countdown">${_formatGMTime(remaining)}</span>
             <button id="gm-stop-btn" class="gm-timer-stop-btn">Stop / Reset</button>
             <button id="gm-break-btn" class="gm-timer-break-btn">Break</button>
-            <span class="gm-timer-identity">GM</span>
-            <div class="gm-timer-spacer"></div>
         </div>
     `;
 
-    // Build break modal and attach to body
     const modal = document.createElement('div');
     modal.id = 'gm-break-modal';
     modal.className = 'gm-break-modal-overlay hidden';
@@ -101,7 +107,7 @@ function _startGMCountdown(container, totalSeconds) {
         clearInterval(_sessionTimer);
         _sessionTimer = null;
         modal.remove();
-        _renderGMSetup(container);
+        _renderGMSetup();
     });
 
     _sessionTimer = setInterval(() => {
