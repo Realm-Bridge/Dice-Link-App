@@ -8,10 +8,14 @@ let _gmPanelInitialized = false;
 let _sessionTimer = null;
 let _stateContainer = null;
 
-function setGMPanelVisible(visible) {
-    if (_stateContainer) _stateContainer.style.display = visible ? '' : 'none';
+function clearGMPanel() {
+    if (_sessionTimer) { clearInterval(_sessionTimer); _sessionTimer = null; }
+    if (_stateContainer) { _stateContainer.remove(); _stateContainer = null; }
     const gmLabel = document.querySelector('.gm-timer-identity');
-    if (gmLabel) gmLabel.style.display = visible ? '' : 'none';
+    if (gmLabel) gmLabel.remove();
+    const modal = document.getElementById('gm-break-modal');
+    if (modal) modal.remove();
+    _gmPanelInitialized = false;
 }
 
 function initGMSessionPanel() {
