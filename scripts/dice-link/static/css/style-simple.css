@@ -3190,3 +3190,141 @@ body {
     color:        var(--dlc-danger);
 }
 
+/* ── GM Timer — Break button ── */
+
+.gm-timer-break-btn {
+    padding:        18px 0;
+    width:          100%;
+    font-size:      20px;
+    font-weight:    700;
+    background:     rgba(245, 158, 11, 0.10);
+    color:          #f59e0b;
+    border:         2px solid #f59e0b;
+    border-radius:  8px;
+    cursor:         pointer;
+    letter-spacing: 0.04em;
+}
+
+.gm-timer-break-btn:hover {
+    background: rgba(245, 158, 11, 0.22);
+}
+
+/* ── Break Modal ── */
+
+.gm-break-modal-overlay {
+    position:        fixed;
+    inset:           0;
+    background:      rgba(0, 0, 0, 0.78);
+    z-index:         9999;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+}
+
+.gm-break-modal-overlay.hidden { display: none; }
+
+.gm-break-modal-panel {
+    background:     var(--dlc-bg-section);
+    border:         3px solid var(--dlc-border);
+    border-radius:  10px;
+    padding:        36px 40px;
+    min-width:      340px;
+    display:        flex;
+    flex-direction: column;
+    gap:            24px;
+}
+
+.gm-break-modal-title {
+    font-size:   22px;
+    font-weight: 700;
+    color:       var(--text-primary);
+    margin:      0;
+}
+
+.gm-break-modal-field {
+    display:        flex;
+    flex-direction: column;
+    gap:            10px;
+}
+
+.gm-break-modal-label {
+    font-size:      13px;
+    font-weight:    700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color:          var(--text-muted);
+}
+
+.gm-break-modal-input-row {
+    display:     flex;
+    align-items: center;
+    gap:         14px;
+}
+
+.gm-break-modal-input {
+    width:         110px;
+    text-align:    center;
+    font-size:     48px;
+    font-weight:   700;
+    color:         var(--dlc-text-primary);
+    background:    var(--dlc-bg-section);
+    border:        2px solid var(--dlc-border);
+    border-radius: 8px;
+    padding:       8px 0;
+    line-height:   1;
+}
+
+.gm-break-modal-input::-webkit-inner-spin-button,
+.gm-break-modal-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+.gm-break-modal-input:focus {
+    outline:      none;
+    border-color: var(--dlc-accent);
+}
+
+.gm-break-modal-unit {
+    font-size:      14px;
+    font-weight:    700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color:          var(--text-muted);
+}
+
+.gm-break-modal-actions {
+    display: flex;
+    gap:     12px;
+}
+
+.gm-break-modal-cancel-btn {
+    flex:           1;
+    padding:        16px 0;
+    font-size:      17px;
+    font-weight:    600;
+    background:     transparent;
+    color:          var(--text-muted);
+    border:         2px solid var(--dlc-border);
+    border-radius:  8px;
+    cursor:         pointer;
+}
+
+.gm-break-modal-cancel-btn:hover {
+    border-color: var(--dlc-danger);
+    color:        var(--dlc-danger);
+}
+
+.gm-break-modal-confirm-btn {
+    flex:           2;
+    padding:        16px 0;
+    font-size:      17px;
+    font-weight:    700;
+    background:     rgba(245, 158, 11, 0.10);
+    color:          #f59e0b;
+    border:         2px solid #f59e0b;
+    border-radius:  8px;
+    cursor:         pointer;
+}
+
+.gm-break-modal-confirm-btn:hover {
+    background: rgba(245, 158, 11, 0.22);
+}
+

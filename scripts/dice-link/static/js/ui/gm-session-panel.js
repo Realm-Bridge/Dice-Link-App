@@ -52,13 +52,51 @@ function _startGMCountdown(container, totalSeconds) {
         <div class="gm-timer-running">
             <span class="gm-timer-label">Session</span>
             <span class="gm-timer-countdown" id="gm-countdown">${_formatGMTime(remaining)}</span>
+            <button id="gm-break-btn" class="gm-timer-break-btn">Break</button>
             <button id="gm-stop-btn" class="gm-timer-stop-btn">Stop / Reset</button>
         </div>
     `;
 
+    // Build break modal and attach to body
+    const modal = document.createElement('div');
+    modal.id = 'gm-break-modal';
+    modal.className = 'gm-break-modal-overlay hidden';
+    modal.innerHTML = `
+        <div class="gm-break-modal-panel">
+            <h3 class="gm-break-modal-title">Start a Break</h3>
+            <div class="gm-break-modal-field">
+                <span class="gm-break-modal-label">Break Duration</span>
+                <div class="gm-break-modal-input-row">
+                    <input type="number" id="gm-break-minutes" class="gm-break-modal-input" value="10" min="1" max="120">
+                    <span class="gm-break-modal-unit">MIN</span>
+                </div>
+            </div>
+            <div class="gm-break-modal-actions">
+                <button id="gm-break-cancel-btn" class="gm-break-modal-cancel-btn">Cancel</button>
+                <button id="gm-break-confirm-btn" class="gm-break-modal-confirm-btn">Start Break</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('gm-break-btn').addEventListener('click', () => {
+        modal.classList.remove('hidden');
+    });
+
+    document.getElementById('gm-break-cancel-btn').addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
+    document.getElementById('gm-break-confirm-btn').addEventListener('click', () => {
+        const mins = parseInt(document.getElementById('gm-break-minutes').value) || 10;
+        sendMessage({ type: 'startBreak', durationMinutes: mins });
+        modal.classList.add('hidden');
+    });
+
     document.getElementById('gm-stop-btn').addEventListener('click', () => {
         clearInterval(_sessionTimer);
         _sessionTimer = null;
+        modal.remove();
         _renderGMSetup(container);
     });
 

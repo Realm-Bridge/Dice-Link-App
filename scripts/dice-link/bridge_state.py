@@ -208,6 +208,20 @@ def send_chat_command_to_dlc(data):
     return False
 
 
+def send_start_break_to_dlc(data):
+    """Forward a startBreak command from DLA's GM timer to DLC via the bridge."""
+    bridge = get_bridge()
+    if bridge:
+        try:
+            bridge.sendStartBreak(json.dumps(data))
+            log_bridge_state(f"Sent startBreak to DLC: durationMinutes={data.get('durationMinutes')}")
+            return True
+        except Exception as e:
+            log_bridge_state(f"Error sending startBreak to DLC: {e}")
+            return False
+    return False
+
+
 def send_camera_frame_to_dlc(frame_b64: str):
     """Send a single camera frame to DLC via the bridge."""
     bridge = get_bridge()
