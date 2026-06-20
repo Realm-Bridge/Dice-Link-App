@@ -33,6 +33,8 @@ function _renderGMSetup(container) {
                 </div>
             </div>
             <button id="gm-start-btn" class="gm-timer-start-btn">Start Session</button>
+            <span class="gm-timer-identity">GM</span>
+            <div class="gm-timer-spacer"></div>
         </div>
     `;
 
@@ -55,6 +57,7 @@ function _startGMCountdown(container, totalSeconds) {
             <button id="gm-stop-btn" class="gm-timer-stop-btn">Stop / Reset</button>
             <button id="gm-break-btn" class="gm-timer-break-btn">Break</button>
             <span class="gm-timer-identity">GM</span>
+            <div class="gm-timer-spacer"></div>
         </div>
     `;
 

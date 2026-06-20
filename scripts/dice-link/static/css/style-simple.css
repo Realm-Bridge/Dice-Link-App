@@ -3073,10 +3073,17 @@ body {
     display:        flex;
     flex-direction: column;
     align-items:    center;
+    align-self:     stretch;
+    flex:           1;
+    min-height:     0;
     gap:            28px;
     width:          100%;
     padding:        0 20px;
     box-sizing:     border-box;
+}
+
+.gm-timer-spacer {
+    flex: 1;
 }
 
 .gm-timer-label {
