@@ -39,20 +39,35 @@ function initPlayerPortrait(selfPlayer) {
 
     container.appendChild(panel);
 
-    const img = panel.querySelector('.player-portrait-img');
-    const frame = panel.querySelector('.player-portrait-frame');
-    const nameEl = panel.querySelector('.player-portrait-name');
+    const wrapper = panel.querySelector('.player-portrait-frame-wrapper');
+    const img     = panel.querySelector('.player-portrait-img');
+    const frame   = panel.querySelector('.player-portrait-frame');
+    const nameEl  = panel.querySelector('.player-portrait-name');
 
-    if (img && frame) {
-        const applyAspectRatio = () => {
-            if (img.naturalWidth && img.naturalHeight) {
-                frame.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+    if (img && frame && wrapper) {
+        const sizeFrame = () => {
+            if (!img.naturalWidth || !img.naturalHeight) return;
+
+            const ratio  = img.naturalWidth / img.naturalHeight;
+            const maxW   = wrapper.clientWidth - 40;   // 20px margin each side
+            const maxH   = wrapper.clientHeight;
+
+            let w = maxW;
+            let h = w / ratio;
+
+            if (h > maxH) {
+                h = maxH;
+                w = h * ratio;
             }
+
+            frame.style.width  = w + 'px';
+            frame.style.height = h + 'px';
         };
+
         if (img.complete && img.naturalWidth) {
-            applyAspectRatio();
+            sizeFrame();
         } else {
-            img.addEventListener('load', applyAspectRatio);
+            img.addEventListener('load', sizeFrame);
         }
     }
 
@@ -62,8 +77,7 @@ function initPlayerPortrait(selfPlayer) {
 }
 
 function _fitPortraitName(el) {
-    const lineHeightPx = 34 * 1.25;
-    const maxHeight = lineHeightPx * 2;
+    const maxHeight = 85; // 2 lines at 34px × 1.25 line-height
     let size = 34;
     el.style.fontSize = size + 'px';
     while (el.scrollHeight > maxHeight && size > 14) {
