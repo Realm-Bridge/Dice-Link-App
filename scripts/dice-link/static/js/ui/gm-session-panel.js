@@ -53,8 +53,8 @@ function _startGMCountdown(container, totalSeconds) {
             <span class="gm-timer-label">Session</span>
             <span class="gm-timer-countdown" id="gm-countdown">${_formatGMTime(remaining)}</span>
             <button id="gm-stop-btn" class="gm-timer-stop-btn">Stop / Reset</button>
-            <span class="gm-timer-identity">GM</span>
             <button id="gm-break-btn" class="gm-timer-break-btn">Break</button>
+            <span class="gm-timer-identity">GM</span>
         </div>
     `;
 
