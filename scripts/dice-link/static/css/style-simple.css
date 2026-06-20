@@ -3249,22 +3249,22 @@ body {
     width:               100%;
     flex:                1;
     min-height:          0;
-    border:              24px solid transparent;
+    display:             flex;
+    align-items:         stretch;
+    border:              18px solid transparent;
     border-image-source: url('/static/images/portrait-frame.svg');
     border-image-slice:  19;
-    padding:             4px;
-    background:          #0a0610;
     box-sizing:          border-box;
     filter:              drop-shadow(0 0 10px rgba(111, 46, 154, 0.4))
                          drop-shadow(0 10px 28px rgba(0, 0, 0, 0.75));
 }
 
 .player-portrait-img {
-    display:         block;
-    width:           100%;
-    height:          100%;
-    object-fit:      contain;
-    object-position: center center;
+    flex:             1;
+    min-height:       0;
+    min-width:        0;
+    object-fit:       cover;
+    object-position:  center;
 }
 
 .player-portrait-placeholder {
@@ -3274,6 +3274,7 @@ body {
 }
 
 .player-portrait-name {
+    display:        block;
     font-family:    'Dancing Script', cursive;
     font-size:      34px;
     font-weight:    700;
